@@ -1,4 +1,4 @@
-import { prisma } from '@/lib/prisma'
+import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 
 export async function GET(request: Request) {
@@ -6,18 +6,27 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url)
     const cityCode = searchParams.get('city') || 'shenzhen'
 
-    const projects = await prisma.project.findMany({
-      where: {
-        city: {
-          code: cityCode,
-        },
-      },
-      include: {
-        city: true,
-      },
-    })
+    const supabase = await createClient()
 
-    const groupedByCategory = projects.reduce((acc, project) => {
+    const { data: city } = await supabase
+      .from('cities')
+      .select('id')
+      .eq('code', cityCode)
+      .single()
+
+    if (!city) {
+      return NextResponse.json({
+        success: true,
+        data: {},
+      })
+    }
+
+    const { data: projects } = await supabase
+      .from('projects')
+      .select('*')
+      .eq('cityId', city.id)
+
+    const groupedByCategory = (projects || []).reduce((acc, project) => {
       if (!acc[project.category]) {
         acc[project.category] = []
       }

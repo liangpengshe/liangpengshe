@@ -2,8 +2,8 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { prisma } from '@/lib/prisma'
-import bcrypt from 'bcryptjs'
+import { createClient } from '@/lib/supabase/client'
+import { useRouter } from 'next/navigation'
 
 export default function SignupPage() {
   const [email, setEmail] = useState('')
@@ -12,11 +12,14 @@ export default function SignupPage() {
   const [name, setName] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const router = useRouter()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
     setError('')
+
+    const supabase = createClient()
 
     if (password !== confirmPassword) {
       setError('两次输入的密码不一致')
@@ -31,28 +34,38 @@ export default function SignupPage() {
     }
 
     try {
-      const existingUser = await prisma.user.findUnique({
-        where: { email },
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            name: name || email.split('@')[0],
+          },
+        },
       })
 
-      if (existingUser) {
-        setError('该邮箱已被注册')
+      if (authError) {
+        setError(authError.message)
         setLoading(false)
         return
       }
 
-      const hashedPassword = await bcrypt.hash(password, 10)
-
-      await prisma.user.create({
-        data: {
+      if (authData.user) {
+        const { error: dbError } = await supabase.from('users').insert({
+          id: authData.user.id,
           email,
-          password: hashedPassword,
           name: name || email.split('@')[0],
           role: 'MEMBER',
-        },
-      })
+        })
 
-      window.location.href = '/auth/login'
+        if (dbError) {
+          setError('创建用户失败，请稍后重试')
+          setLoading(false)
+          return
+        }
+
+        router.push('/auth/login')
+      }
     } catch (err) {
       setError('注册失败，请稍后重试')
     } finally {

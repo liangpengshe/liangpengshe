@@ -1,28 +1,32 @@
-import { prisma } from '@/lib/prisma'
-import { auth } from '@/lib/auth'
+import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 
 export async function GET() {
   try {
-    const session = await auth()
-    if (!session?.user) {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+
+    if (!user) {
       return NextResponse.json({ error: '未登录' }, { status: 401 })
     }
 
-    const user = await prisma.user.findUnique({
-      where: { email: session.user.email || '' },
-    })
+    const { data: userData } = await supabase
+      .from('users')
+      .select('cityId')
+      .eq('id', user.id)
+      .single()
 
-    if (!user) {
+    if (!userData) {
       return NextResponse.json({ error: '用户不存在' }, { status: 404 })
     }
 
-    const salons = await prisma.salon.findMany({
-      where: { cityId: user.cityId },
-      orderBy: { date: 'asc' },
-    })
+    const { data: salons } = await supabase
+      .from('salons')
+      .select('*')
+      .eq('cityId', userData.cityId)
+      .order('date', { ascending: true })
 
-    return NextResponse.json({ success: true, data: salons })
+    return NextResponse.json({ success: true, data: salons || [] })
   } catch (error) {
     console.error('获取沙龙列表失败:', error)
     return NextResponse.json(
@@ -34,16 +38,20 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
-    const session = await auth()
-    if (!session?.user) {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+
+    if (!user) {
       return NextResponse.json({ error: '未登录' }, { status: 401 })
     }
 
-    const user = await prisma.user.findUnique({
-      where: { email: session.user.email || '' },
-    })
+    const { data: userData } = await supabase
+      .from('users')
+      .select('cityId')
+      .eq('id', user.id)
+      .single()
 
-    if (!user) {
+    if (!userData) {
       return NextResponse.json({ error: '用户不存在' }, { status: 404 })
     }
 
@@ -57,16 +65,18 @@ export async function POST(request: Request) {
       )
     }
 
-    const salon = await prisma.salon.create({
-      data: {
+    const { data: salon } = await supabase
+      .from('salons')
+      .insert({
         title,
         description,
-        date: new Date(date),
+        date: new Date(date).toISOString(),
         location,
         maxCapacity: maxCapacity || 50,
-        cityId: user.cityId || '',
-      },
-    })
+        cityId: userData.cityId || '',
+      })
+      .select()
+      .single()
 
     return NextResponse.json({ success: true, data: salon })
   } catch (error) {

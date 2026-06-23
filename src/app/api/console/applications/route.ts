@@ -1,27 +1,21 @@
-import { prisma } from '@/lib/prisma'
-import { auth } from '@/lib/auth'
+import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 
 export async function GET() {
   try {
-    const session = await auth()
-    if (!session?.user) {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+
+    if (!user) {
       return NextResponse.json({ error: '未登录' }, { status: 401 })
     }
 
-    const user = await prisma.user.findUnique({
-      where: { email: session.user.email || '' },
-    })
+    const { data: applications } = await supabase
+      .from('partner_applications')
+      .select('*')
+      .order('createdAt', { ascending: false })
 
-    if (!user) {
-      return NextResponse.json({ error: '用户不存在' }, { status: 404 })
-    }
-
-    const applications = await prisma.partnerApplication.findMany({
-      orderBy: { createdAt: 'desc' },
-    })
-
-    return NextResponse.json({ success: true, data: applications })
+    return NextResponse.json({ success: true, data: applications || [] })
   } catch (error) {
     console.error('获取申请列表失败:', error)
     return NextResponse.json(

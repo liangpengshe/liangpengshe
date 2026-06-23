@@ -1,10 +1,17 @@
 'use client'
 
 import { useState } from 'react'
-import MobileBottomNav from '@/components/MobileBottomNav'
-import AIAssistant from '@/components/AIAssistant'
+import dynamic from 'next/dynamic'
 import CitySelector from '@/components/CitySelector'
 import Link from 'next/link'
+
+const MobileBottomNav = dynamic(() => import('@/components/MobileBottomNav'), {
+  ssr: false,
+})
+
+const AIAssistant = dynamic(() => import('@/components/AIAssistant'), {
+  ssr: false,
+})
 
 export default function ClientLayout({
   children,
@@ -14,7 +21,7 @@ export default function ClientLayout({
   const [showCitySelector, setShowCitySelector] = useState(false)
 
   return (
-    <div className="max-w-lg mx-auto md:max-w-7xl min-h-screen relative">
+    <div className="max-w-lg mx-auto md:max-w-7xl min-h-screen relative" suppressHydrationWarning>
       <header className="bg-white border-b border-gray-100 sticky top-0 z-50">
         <div className="flex items-center justify-between h-14 px-4 md:px-6">
           <div className="flex items-center gap-2">

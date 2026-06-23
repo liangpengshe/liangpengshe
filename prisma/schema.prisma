@@ -3,104 +3,30 @@ generator client {
 }
 
 datasource db {
-  provider = "mysql"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
 model User {
-  id            String    @id @default(cuid())
-  name          String?
-  email         String    @unique
-  emailVerified DateTime?
-  image         String?
-  password      String?
-  role          String    @default("MEMBER")
-  cityId        String?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-
-  accounts   Account[]
-  sessions   Session[]
-  profiles   Profile?
-  activities Activity[]
-  city       City?     @relation(fields: [cityId], references: [id], onDelete: SetNull)
-}
-
-model Account {
-  id                String  @id @default(cuid())
-  userId            String
-  type              String
-  provider          String
-  providerAccountId String
-  refresh_token     String? @db.Text
-  access_token      String? @db.Text
-  expires_at        Int?
-  token_type        String?
-  scope             String?
-  id_token          String? @db.Text
-  session_state     String?
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([provider, providerAccountId])
-}
-
-model Session {
-  id           String   @id @default(cuid())
-  sessionToken String   @unique
-  userId       String
-  expires      DateTime
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-}
-
-model VerificationToken {
-  identifier String
-  token      String   @unique
-  expires    DateTime
-
-  @@unique([identifier, token])
-}
-
-model Profile {
-  id            String   @id @default(cuid())
-  userId        String   @unique
-  bio           String?
-  title         String?
-  company       String?
-  location      String?
-  phone         String?
-  website       String?
-  skills        Json?
-  interests     Json?
-  avatar        String?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  avatar    String?
+  role      String   @default("MEMBER")
+  cityId    String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Project {
   id          String     @id @default(cuid())
   title       String
   description String
-  content     String     @db.Text
+  content     String
   category    String
   cityId      String
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
-
-  city City @relation(fields: [cityId], references: [id], onDelete: Cascade)
-}
-
-model Activity {
-  id          String   @id @default(cuid())
-  userId      String
-  type        String
-  description String
-  metadata    Json?
-  createdAt   DateTime @default(now())
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model City {
@@ -111,9 +37,6 @@ model City {
   maintainerId String?
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
-
-  projects   Project[]
-  maintainer User?     @relation(fields: [maintainerId], references: [id], onDelete: SetNull)
 }
 
 model PartnerApplication {
@@ -137,6 +60,110 @@ model Salon {
   cityId      String
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
+}
 
-  city City @relation(fields: [cityId], references: [id], onDelete: Cascade)
+model DiagnosisRequest {
+  id          String   @id @default(cuid())
+  name        String
+  phone       String
+  role        String   // 个人创业者/企业主/运营负责人
+  goals       String[] // 降本/获客/建团队
+  description String   // 自由描述
+  aiReport    String   @db.Text // 存储 AI 生成的诊断报告 Markdown
+  status      String   @default("PENDING") // PENDING / CONTACTED / CLOSED
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model ProjectPlanRequest {
+  id           String   @id @default(cuid())
+  name         String
+  birthday     DateTime // 出生年月日，用于计算年龄和人生阶段
+  targetIncome String   // 目标年收入（如："30万"）
+  background   String   // 用户当下的职业背景介绍
+  phone        String
+  aiPlan       String   @db.Text // 存储 AI 生成的人生商业规划 Markdown
+  status       String   @default("PENDING")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model ToolSubmission {
+  id            String   @id @default(cuid())
+  name          String
+  description   String   @db.Text
+  category      String   // 写作/绘画/视频/数字人
+  officialUrl   String
+  pricingModel  String   // 免费/订阅/买断
+  affiliateLink String?  // 推广链接
+  contactName   String?
+  contactInfo   String?
+  status        String   @default("PENDING")
+  submittedAt   DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model ServiceProvider {
+  id          String   @id @default(cuid())
+  name        String
+  company     String?
+  contact     String?
+  specialty   String[] // 内训/GEO/定制
+  experience  String   @db.Text
+  priceRange  String?
+  isVerified  Boolean  @default(false)
+  status      String   @default("PENDING") // PENDING/APPROVED/REJECTED
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model RevenueRecord {
+  id            String   @id @default(cuid())
+  source        String   // project/tool/service
+  orderId       String?
+  sellerId      String?
+  sellerName    String?
+  buyerId       String?
+  buyerName     String?
+  grossAmount   Float    // 总金额
+  platformFee   Float    // 平台佣金
+  sellerIncome  Float    // 服务商实收
+  status        String   @default("PENDING") // PENDING/SETTLED/REFUNDED
+  description   String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model CommissionRecord {
+  id             String   @id @default(cuid())
+  orderId        String   // 关联订单
+  sellerId       String   // 谁提供了资源（项目方/服务商）
+  referrerId     String   // 谁推荐了这个客户（通常是主理人，城市ID）
+  amount         Float    // 订单总金额
+  commissionRate Float    // 抽成比例（如 0.2）
+  commission     Float    // 结算佣金金额
+  status         String   @default("PENDING") // PENDING / SETTLED
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+// 良朋币资产账户（按手机号关联）
+model AssetBalance {
+  id          String   @id @default(cuid())
+  phone       String   @unique // 关联用户手机号
+  coins       Int      @default(0) // 当前良朋币余额
+  totalEarned Int      @default(0) // 历史累计赚取
+  updatedAt   DateTime @default(now())
+  createdAt   DateTime @default(now())
+}
+
+// 良朋币流水（增/减 + 行为来源）
+model CoinLedger {
+  id        String   @id @default(cuid())
+  phone     String   // 关联用户手机号
+  action    String   // signin/salon/tool/diagnosis/plan/referral/purchase/redeem ...
+  amount    Int      // 正数=收入 负数=支出
+  balance   Int      // 变动后余额
+  note      String?  // 备注
+  createdAt DateTime @default(now())
 }

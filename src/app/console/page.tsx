@@ -2,16 +2,12 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { Users, Calendar, FileText, Settings, LogOut, TrendingUp, ChevronRight } from 'lucide-react'
-import { auth, signOut } from '@/lib/auth'
-
-interface UserData {
-  role: string
-  cityId: string
-}
+import { useRouter } from 'next/navigation'
+import { Users, Calendar, FileText, Settings, LogOut, TrendingUp, ChevronRight, Inbox, Wallet } from 'lucide-react'
+import { createClient } from '@/lib/supabase/client'
 
 export default function ConsoleDashboard() {
-  const [userData, setUserData] = useState<UserData | null>(null)
+  const [userData, setUserData] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [stats, setStats] = useState({
     totalMembers: 0,
@@ -19,19 +15,32 @@ export default function ConsoleDashboard() {
     pendingApplications: 0,
   })
   const [cityName, setCityName] = useState('')
+  const router = useRouter()
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const userRes = await fetch('/api/user')
-        const user = await userRes.json()
-        setUserData(user)
+        const supabase = createClient()
+        const { data: { user } } = await supabase.auth.getUser()
+        
+        if (!user) {
+          router.push('/auth/login')
+          return
+        }
+
+        const { data } = await supabase
+          .from('users')
+          .select('*, city:cityId(*)')
+          .eq('id', user.id)
+          .single()
+
+        setUserData(data)
+        setCityName(data?.city?.name || '')
 
         const statsRes = await fetch('/api/console/stats')
         const statsData = await statsRes.json()
         if (statsData.success) {
           setStats(statsData.data)
-          setCityName(statsData.cityName || '')
         }
       } catch (error) {
         console.error('获取数据失败:', error)
@@ -41,12 +50,21 @@ export default function ConsoleDashboard() {
     }
 
     fetchData()
-  }, [])
+  }, [router])
+
+  const handleLogout = async () => {
+    const supabase = createClient()
+    await supabase.auth.signOut()
+    router.push('/auth/login')
+  }
 
   const navItems = [
     { icon: Calendar, label: '沙龙管理', href: '/console/salons' },
     { icon: FileText, label: '项目管理', href: '/console/projects' },
     { icon: Users, label: '合伙人申请', href: '/console/applications' },
+    { icon: TrendingUp, label: 'AI 诊断请求', href: '/console/diagnoses' },
+    { icon: Inbox, label: '专家评审（项目/工具/服务商）', href: '/console/reviews' },
+    { icon: Wallet, label: '收益分润仪表盘', href: '/console/revenue' },
     { icon: Settings, label: '设置', href: '/console/settings' },
   ]
 
@@ -67,7 +85,7 @@ export default function ConsoleDashboard() {
             <p className="text-sm text-gray-500">{cityName}</p>
           </div>
           <button
-            onClick={async () => await signOut({ redirectTo: '/auth/login' })}
+            onClick={handleLogout}
             className="flex items-center gap-2 text-red-600 hover:text-red-700 transition-colors"
           >
             <LogOut size={18} />
@@ -131,6 +149,22 @@ export default function ConsoleDashboard() {
             本周新增会员 {stats.totalMembers > 0 ? Math.floor(stats.totalMembers * 0.1) : 0} 人，沙龙报名 {stats.salonRegistrations} 人。
           </p>
         </div>
+
+        <Link
+          href="/console/revenue"
+          className="mt-4 block bg-gradient-to-r from-amber-500 via-orange-500 to-pink-500 rounded-xl p-5 text-white shadow-lg hover:scale-[1.01] transition-transform"
+        >
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Wallet size={24} />
+              <div>
+                <h3 className="font-semibold">收益分润仪表盘</h3>
+                <p className="text-xs text-white/90 mt-0.5">查看本月预估佣金、累计收益、待结算订单</p>
+              </div>
+            </div>
+            <ChevronRight size={20} />
+          </div>
+        </Link>
       </main>
     </div>
   )

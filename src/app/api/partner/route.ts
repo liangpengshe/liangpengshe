@@ -1,4 +1,4 @@
-import { prisma } from '@/lib/prisma'
+import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 
 export async function POST(request: Request) {
@@ -13,13 +13,17 @@ export async function POST(request: Request) {
       )
     }
 
-    const application = await prisma.partnerApplication.create({
-      data: {
+    const supabase = await createClient()
+
+    const { data: application } = await supabase
+      .from('partner_applications')
+      .insert({
         name,
         city,
         phone,
-      },
-    })
+      })
+      .select()
+      .single()
 
     return NextResponse.json({
       success: true,

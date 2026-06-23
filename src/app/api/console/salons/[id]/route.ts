@@ -1,35 +1,30 @@
-import { prisma } from '@/lib/prisma'
-import { auth } from '@/lib/auth'
+import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 
 export async function PUT(request: Request, { params }: { params: { id: string } }) {
   try {
-    const session = await auth()
-    if (!session?.user) {
-      return NextResponse.json({ error: '未登录' }, { status: 401 })
-    }
-
-    const user = await prisma.user.findUnique({
-      where: { email: session.user.email || '' },
-    })
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
 
     if (!user) {
-      return NextResponse.json({ error: '用户不存在' }, { status: 404 })
+      return NextResponse.json({ error: '未登录' }, { status: 401 })
     }
 
     const body = await request.json()
     const { title, description, date, location, maxCapacity } = body
 
-    const salon = await prisma.salon.update({
-      where: { id: params.id },
-      data: {
+    const { data: salon } = await supabase
+      .from('salons')
+      .update({
         title,
         description,
-        date: new Date(date),
+        date: new Date(date).toISOString(),
         location,
         maxCapacity: maxCapacity || 50,
-      },
-    })
+      })
+      .eq('id', params.id)
+      .select()
+      .single()
 
     return NextResponse.json({ success: true, data: salon })
   } catch (error) {
@@ -43,14 +38,17 @@ export async function PUT(request: Request, { params }: { params: { id: string }
 
 export async function DELETE(request: Request, { params }: { params: { id: string } }) {
   try {
-    const session = await auth()
-    if (!session?.user) {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+
+    if (!user) {
       return NextResponse.json({ error: '未登录' }, { status: 401 })
     }
 
-    await prisma.salon.delete({
-      where: { id: params.id },
-    })
+    await supabase
+      .from('salons')
+      .delete()
+      .eq('id', params.id)
 
     return NextResponse.json({ success: true })
   } catch (error) {

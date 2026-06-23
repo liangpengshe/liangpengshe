@@ -1,34 +1,29 @@
-import { prisma } from '@/lib/prisma'
-import { auth } from '@/lib/auth'
+import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 
 export async function PUT(request: Request, { params }: { params: { id: string } }) {
   try {
-    const session = await auth()
-    if (!session?.user) {
-      return NextResponse.json({ error: '未登录' }, { status: 401 })
-    }
-
-    const user = await prisma.user.findUnique({
-      where: { email: session.user.email || '' },
-    })
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
 
     if (!user) {
-      return NextResponse.json({ error: '用户不存在' }, { status: 404 })
+      return NextResponse.json({ error: '未登录' }, { status: 401 })
     }
 
     const body = await request.json()
     const { title, description, content, category } = body
 
-    const project = await prisma.project.update({
-      where: { id: params.id },
-      data: {
+    const { data: project } = await supabase
+      .from('projects')
+      .update({
         title,
         description,
         content: content || '',
         category: category || '项目库',
-      },
-    })
+      })
+      .eq('id', params.id)
+      .select()
+      .single()
 
     return NextResponse.json({ success: true, data: project })
   } catch (error) {
@@ -42,14 +37,17 @@ export async function PUT(request: Request, { params }: { params: { id: string }
 
 export async function DELETE(request: Request, { params }: { params: { id: string } }) {
   try {
-    const session = await auth()
-    if (!session?.user) {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+
+    if (!user) {
       return NextResponse.json({ error: '未登录' }, { status: 401 })
     }
 
-    await prisma.project.delete({
-      where: { id: params.id },
-    })
+    await supabase
+      .from('projects')
+      .delete()
+      .eq('id', params.id)
 
     return NextResponse.json({ success: true })
   } catch (error) {

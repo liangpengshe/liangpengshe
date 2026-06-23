@@ -2,36 +2,44 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { signIn } from '@/lib/auth'
+import { createClient } from '@/lib/supabase/client'
+import { useRouter } from 'next/navigation'
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const router = useRouter()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
     setError('')
 
+    const supabase = createClient()
+
     try {
-      const result = await signIn('credentials', {
+      const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
-        redirect: false,
       })
 
-      if (result?.error) {
+      if (error) {
         setError('邮箱或密码错误')
       } else {
-        const userRes = await fetch('/api/user')
-        const userData = await userRes.json()
+        const { data: userData } = await supabase
+          .from('users')
+          .select('role')
+          .eq('email', email)
+          .single()
+
+        const role = userData?.role || 'MEMBER'
         
-        if (userData.role === 'CITY_MAINTAINER' || userData.role === 'SUPER_ADMIN') {
-          window.location.href = '/console'
+        if (role === 'CITY_MAINTAINER' || role === 'SUPER_ADMIN') {
+          router.push('/console')
         } else {
-          window.location.href = '/'
+          router.push('/')
         }
       }
     } catch (err) {
