@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import ClientLayout from '@/components/ClientLayout'
+import { AIDailyBrief } from '@/components/AIDailyBrief'
 import {
   User,
   Mail,
@@ -178,6 +179,11 @@ export default function MemberPage() {
               </div>
             </div>
           </div>
+        </section>
+
+        {/* 🌅 AI 智富日报（每日 7:00 推送） */}
+        <section className="px-5 -mt-6 relative z-10">
+          <AIDailyBrief userId={userData.phone} />
         </section>
 
         {/* 🪙 良朋币资产卡片 */}

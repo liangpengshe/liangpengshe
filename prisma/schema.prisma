@@ -167,3 +167,20 @@ model CoinLedger {
   note      String?  // 备注
   createdAt DateTime @default(now())
 }
+
+// 用户偏好设置（按手机号关联）
+model UserPreference {
+  id         String   @id @default(cuid())
+  userId     String   @unique // 关联用户手机号
+  dailyBrief Boolean  @default(false) // 是否开启智能日报订阅
+  updatedAt  DateTime @default(now())
+}
+
+// AI 智富日报（每日推送内容）
+model DailyBrief {
+  id          String   @id @default(cuid())
+  userId      String   // 关联用户手机号
+  content     String   @db.Text // AI 生成的日报 Markdown 内容
+  isRead      Boolean  @default(false)
+  generatedAt DateTime @default(now())
+}
