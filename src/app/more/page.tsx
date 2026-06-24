@@ -22,7 +22,7 @@ import {
 const FOUR_ENGINES = [
   {
     key: 'tool',
-    title: '工具库 · 提效引擎',
+    title: '工具库 · 智富引擎',
     icon: '🔧',
     color: 'from-blue-500 to-indigo-600',
     Icon: Wrench,
@@ -32,7 +32,7 @@ const FOUR_ENGINES = [
   },
   {
     key: 'project',
-    title: '项目库 · 创收引擎',
+    title: '项目库 · 创富引擎',
     icon: '📁',
     color: 'from-emerald-500 to-teal-600',
     Icon: FileText,
@@ -119,16 +119,16 @@ export default function MorePage() {
                   🏆 四库全胜系统
                 </h1>
                 <p className="text-sm md:text-base text-blue-100 leading-relaxed mb-4">
-                  工具提效、项目创收、服务护航、资源链接。<br className="md:hidden" />
+                  工具智选、项目创富、服务护航、资源链接。<br className="md:hidden" />
                   <span className="font-bold text-yellow-200">四大引擎协同驱动</span>
                   ，助你赢在 AI 时代。
                 </p>
                 <div className="flex flex-wrap gap-2">
                   <span className="px-3 py-1 bg-white/15 backdrop-blur rounded-full text-xs font-semibold border border-white/20">
-                    🔧 提效引擎
+                    🔧 智富引擎
                   </span>
                   <span className="px-3 py-1 bg-white/15 backdrop-blur rounded-full text-xs font-semibold border border-white/20">
-                    📁 创收引擎
+                    📁 创富引擎
                   </span>
                   <span className="px-3 py-1 bg-white/15 backdrop-blur rounded-full text-xs font-semibold border border-white/20">
                     💼 护航引擎

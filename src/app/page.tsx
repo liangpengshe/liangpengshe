@@ -36,7 +36,7 @@ const fallbackBentoItems: BentoItem[] = [
     badge: { text: '招募中', icon: Rocket, color: 'bg-orange-500' },
   },
   {
-    title: '工具库 · 提效引擎',
+    title: '工具库 · 智富引擎',
     icon: '🔧',
     description: '实用AI工具推荐与教程，赋能个人创业者',
     href: '/tools',
@@ -45,7 +45,7 @@ const fallbackBentoItems: BentoItem[] = [
     textColor: '',
   },
   {
-    title: '项目库 · 创收引擎',
+    title: '项目库 · 创富引擎',
     icon: '📁',
     description: '精选AI落地项目案例，可复制到各城市运营',
     href: '/projects',
@@ -164,8 +164,8 @@ export default function HomePage() {
           const icons: Record<string, string> = { '服务库': '💼', '工具库': '🔧', '项目库': '📁', '资源库': '📚' }
           const subTags: Record<string, string> = {
             '服务库': '· 护航引擎',
-            '工具库': '· 提效引擎',
-            '项目库': '· 创收引擎',
+            '工具库': '· 智富引擎',
+            '项目库': '· 创富引擎',
             '资源库': '· 链接引擎',
           }
           const newItems = categories.map((category, index) => {
@@ -418,7 +418,7 @@ export default function HomePage() {
                 </Link>
               </div>
               <p className="text-xs md:text-sm text-gray-500 leading-relaxed">
-                工具提效、项目创收、服务护航、资源链接。<span className="font-semibold text-blue-600">四大引擎协同驱动</span>，助你赢在 AI 时代。
+                工具智选、项目创富、服务护航、资源链接。<span className="font-semibold text-blue-600">四大引擎协同驱动</span>，助你赢在 AI 时代。
               </p>
             </div>
 
