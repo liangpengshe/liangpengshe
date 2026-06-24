@@ -1,7 +1,16 @@
 'use client'
 
 import { useState } from 'react'
-import { ArrowLeft, Download, Zap, Shield, BarChart3, CheckCircle } from 'lucide-react'
+import {
+  ArrowLeft,
+  Download,
+  Zap,
+  Search,
+  PenLine,
+  MessageCircle,
+  FolderOpen,
+  CheckCircle,
+} from 'lucide-react'
 import Link from 'next/link'
 
 export default function LeopardPage() {
@@ -18,9 +27,26 @@ export default function LeopardPage() {
   }
 
   const features = [
-    { icon: Zap, title: '极速生成', desc: '毫秒级响应，一键生成高质量内容' },
-    { icon: Shield, title: '数据安全', desc: '本地处理，企业级数据加密保护' },
-    { icon: BarChart3, title: '智能分析', desc: '深度数据分析，精准洞察市场' },
+    {
+      icon: Search,
+      title: '爆款调研与灵感捕捉',
+      desc: '爆款查看 · 选题灵感一眼看。全平台爆款内容逻辑一目了然，精准捕捉热点，推荐选题灵感，让每次创作都直击用户心智。',
+    },
+    {
+      icon: PenLine,
+      title: '内容创作与一键仿改',
+      desc: '从爆款调研到一键仿改。支持链接或原文本输入，AI 自动完成结构、风格、逻辑的全面仿写与改写，轻松写出爆款，无需重复造轮子。',
+    },
+    {
+      icon: MessageCircle,
+      title: '运营互动与私域成交',
+      desc: '评论神回复 · 条条涨粉引流；私域话术 · 10 大成交场景覆盖。自动生成针对不同场景的评论互动文案、社群及私信沟通话术，打通流量到成交的最后一环。',
+    },
+    {
+      icon: FolderOpen,
+      title: '素材管理与品牌规范',
+      desc: '存储创作素材、设定品牌规范，让 AI 创作更贴合品牌调性；支持生成记录复用修改与心得计划，规范内容产出节奏。',
+    },
   ]
 
   return (
@@ -59,15 +85,24 @@ export default function LeopardPage() {
 
         <section className="bg-white rounded-xl shadow-sm p-5 mb-6">
           <h2 className="text-lg font-bold text-gray-900 mb-4">核心功能</h2>
-          <div className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {features.map((feature, index) => (
-              <div key={index} className="flex items-start gap-4">
-                <div className="w-12 h-12 bg-amber-100 rounded-xl flex items-center justify-center flex-shrink-0">
-                  <feature.icon className="text-amber-600" size={24} />
-                </div>
-                <div>
-                  <h3 className="font-semibold text-gray-900">{feature.title}</h3>
-                  <p className="text-sm text-gray-500 mt-1">{feature.desc}</p>
+              <div
+                key={index}
+                className="group relative bg-gradient-to-br from-amber-50/60 via-orange-50/40 to-yellow-50/60 border border-amber-200/60 rounded-xl p-4 hover:border-amber-400 hover:shadow-md hover:-translate-y-0.5 transition-all duration-300"
+              >
+                <div className="flex items-start gap-3">
+                  <div className="w-11 h-11 flex-shrink-0 bg-gradient-to-br from-amber-100 to-orange-100 rounded-xl flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform">
+                    <feature.icon className="text-amber-600" size={22} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-bold text-gray-900 text-sm mb-1.5 group-hover:text-amber-700 transition-colors">
+                      {feature.title}
+                    </h3>
+                    <p className="text-xs text-gray-600 leading-relaxed">
+                      {feature.desc}
+                    </p>
+                  </div>
                 </div>
               </div>
             ))}
