@@ -72,14 +72,15 @@ export default function LingxiPage() {
           </div>
         </section>
 
-        <section className="relative w-full h-40 md:h-56 overflow-hidden rounded-2xl shadow-sm mb-6">
+        <section className="relative w-full h-56 md:h-80 lg:h-[420px] overflow-hidden rounded-2xl shadow-md mb-6 bg-slate-100">
           <Image
             src="/images/lingxi-banner.png"
-            alt="灵犀 AI"
+            alt="灵犀 AI 演示界面"
             fill
-            className="object-cover"
+            className="object-cover object-center"
             priority
-            sizes="(max-width: 768px) 100vw, 50vw"
+            quality={95}
+            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 80vw, 1200px"
           />
         </section>
 
