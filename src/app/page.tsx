@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { motion } from 'framer-motion'
 import { ArrowRight, Sparkles, Rocket } from 'lucide-react'
 import ClientLayout from '@/components/ClientLayout'
@@ -315,28 +316,94 @@ export default function HomePage() {
                 </motion.div>
               </div>
 
-              {/* 右侧：3D 数字人占位 */}
+              {/* 右侧：良良数字人形象 + 赛博光带 */}
               <motion.div
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ duration: 0.8, delay: 0.4 }}
                 className="relative hidden md:flex items-center justify-center"
               >
-                <div
-                  id="three-avatar-container"
-                  className="relative w-full aspect-square max-w-md"
-                >
-                  {/* 占位装饰 */}
-                  <div className="absolute inset-0 bg-gradient-to-br from-blue-500/20 via-purple-500/20 to-pink-500/20 rounded-3xl backdrop-blur-sm border border-white/10 flex items-center justify-center">
-                    <div className="text-center">
-                      <div className="w-32 h-32 mx-auto mb-4 rounded-full bg-gradient-to-br from-blue-400 via-purple-500 to-pink-500 opacity-30 animate-pulse" />
-                      <p className="text-white/60 text-sm">3D 数字人容器</p>
-                      <p className="text-white/40 text-xs mt-1">#three-avatar-container</p>
-                    </div>
+                <div className="relative w-full aspect-square max-w-md">
+                  {/* 1) 背景：紫色光晕底 */}
+                  <div className="absolute inset-0 bg-gradient-to-br from-blue-500/20 via-purple-500/25 to-pink-500/20 rounded-3xl blur-2xl" />
+
+                  {/* 2) 赛博光带（紫色波浪腰光） */}
+                  <div className="absolute inset-0 overflow-hidden rounded-3xl pointer-events-none">
+                    <div
+                      className="absolute left-0 right-0 h-24 -translate-y-2 animate-pulse"
+                      style={{
+                        top: '58%',
+                        background:
+                          'linear-gradient(90deg, transparent 0%, rgba(168,85,247,0) 5%, rgba(168,85,247,0.55) 30%, rgba(236,72,153,0.7) 50%, rgba(99,102,241,0.55) 70%, rgba(168,85,247,0) 95%, transparent 100%)',
+                        filter: 'blur(8px)',
+                        mixBlendMode: 'screen',
+                      }}
+                    />
+                    {/* 第二层：更亮的窄光带 */}
+                    <div
+                      className="absolute left-0 right-0 h-3 -translate-y-2 animate-pulse"
+                      style={{
+                        top: '58%',
+                        background:
+                          'linear-gradient(90deg, transparent 0%, rgba(255,255,255,0) 10%, rgba(255,255,255,0.85) 50%, rgba(255,255,255,0) 90%, transparent 100%)',
+                        filter: 'blur(3px)',
+                        animationDelay: '0.6s',
+                        mixBlendMode: 'screen',
+                      }}
+                    />
+                    {/* 顶部呼吸光晕 */}
+                    <div className="absolute -top-10 -right-10 w-40 h-40 bg-purple-500/40 rounded-full blur-3xl animate-pulse" />
+                    <div
+                      className="absolute -bottom-10 -left-10 w-32 h-32 rounded-full blur-3xl animate-pulse"
+                      style={{
+                        background: 'radial-gradient(circle, rgba(99,102,241,0.5), transparent 70%)',
+                        animationDelay: '1.2s',
+                      }}
+                    />
                   </div>
-                  {/* 装饰光圈 */}
-                  <div className="absolute -inset-4 border-2 border-blue-400/30 rounded-3xl animate-spin-slow" />
-                  <div className="absolute -inset-8 border border-purple-400/20 rounded-3xl animate-spin-reverse" />
+
+                  {/* 3) 主体图片（呼吸悬浮） */}
+                  <motion.div
+                    animate={{ y: [0, -10, 0] }}
+                    transition={{
+                      duration: 4,
+                      repeat: Infinity,
+                      ease: 'easeInOut',
+                    }}
+                    className="relative w-full h-full"
+                  >
+                    <Image
+                      src="/images/liangliang.png"
+                      alt="良良 - 良朋社AI数字助手"
+                      width={400}
+                      height={400}
+                      priority
+                      quality={95}
+                      className="relative w-full h-full object-contain drop-shadow-[0_10px_30px_rgba(168,85,247,0.35)]"
+                    />
+                  </motion.div>
+
+                  {/* 4) 装饰光环 */}
+                  <div className="absolute -inset-4 border-2 border-blue-400/30 rounded-3xl animate-spin-slow pointer-events-none" />
+                  <div className="absolute -inset-8 border border-purple-400/20 rounded-3xl animate-spin-reverse pointer-events-none" />
+
+                  {/* 5) 浮动标签（强化智富心智） */}
+                  <motion.div
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 1.2, duration: 0.6 }}
+                    className="absolute top-8 -right-2 bg-white/10 backdrop-blur-md border border-white/20 rounded-full px-3 py-1.5 text-xs text-white shadow-lg"
+                  >
+                    ✨ AI 智富助理
+                  </motion.div>
+                  <motion.div
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 1.5, duration: 0.6 }}
+                    className="absolute bottom-12 -left-2 bg-gradient-to-r from-purple-500/80 to-pink-500/80 backdrop-blur-md rounded-full px-3 py-1.5 text-xs text-white shadow-lg"
+                  >
+                    🎯 一人公司 × 智富引擎
+                  </motion.div>
                 </div>
               </motion.div>
             </div>
