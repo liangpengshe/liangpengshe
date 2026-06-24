@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { callDifyChat } from '@/lib/dify'
+import { callDifyWorkflow, pickFirstStringOutput } from '@/lib/dify-workflow'
 import { prisma } from '@/lib/prisma'
 import { createClient } from '@/lib/supabase/server'
 
@@ -181,28 +181,40 @@ export async function POST(request: Request) {
 
     // ──────────── 1. 调用 Dify 生成计划 ────────────
     let plan = ''
+    let source: 'dify' | 'fallback' = 'fallback'
 
-    if (process.env.DIFY_API_KEY) {
+    // 个人商业规划师 → DIFY_API_KEY_PLAN
+    const apiKey = process.env.DIFY_API_KEY_PLAN
+    if (apiKey) {
       try {
-        const prompt = `${SYSTEM_PROMPT
-          .replace('{birthday}', birthdayDate.toLocaleDateString('zh-CN'))
-          .replace('{targetIncome}', cleanTarget)
-          .replace('{background}', cleanBg)}
-
----
-用户姓名：${cleanName}
+        const result = await callDifyWorkflow(apiKey, {
+          system_prompt: SYSTEM_PROMPT
+            .replace('{birthday}', birthdayDate.toLocaleDateString('zh-CN'))
+            .replace('{targetIncome}', cleanTarget)
+            .replace('{background}', cleanBg),
+          user_input: `用户姓名：${cleanName}
 联系方式：${cleanPhone}
 出生日期：${birthdayDate.toLocaleDateString('zh-CN')}（${age} 岁）
 目标年收入：${cleanTarget}
-职业背景：${cleanBg}`
-
-        const difyRes = await callDifyChat(prompt, `plan-${Date.now()}`)
-        const answer = (difyRes.answer || '').trim()
-        if (answer) {
-          plan = answer
+职业背景：${cleanBg}`,
+          name: cleanName,
+          phone: cleanPhone,
+          age,
+          birthday: birthdayDate.toISOString(),
+          target_income: cleanTarget,
+          background: cleanBg,
+        })
+        const text =
+          pickFirstStringOutput(result.outputs) ||
+          (result.outputs as any).plan ||
+          (result.outputs as any).result ||
+          ''
+        if (text) {
+          plan = text
+          source = 'dify'
         }
       } catch (difyErr) {
-        console.warn('[project-plan] Dify 调用失败，使用降级模板:', difyErr)
+        console.warn('[project-plan] Dify 调用失败，使用降级模板:', (difyErr as Error).message)
       }
     }
 
@@ -297,6 +309,8 @@ export async function POST(request: Request) {
       plan,
       id: savedId,
       source: storageSource,
+      aiSource: source,
+      model: 'Dify Workflows (DIFY_API_KEY_PLAN)',
     })
   } catch (error: any) {
     console.error('[project-plan] 错误:', error)

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { callDifyChat, extractJsonFromText } from '@/lib/dify'
+import { callDifyWorkflow, pickFirstStringOutput } from '@/lib/dify-workflow'
 import { prisma } from '@/lib/prisma'
 import { createClient } from '@/lib/supabase/server'
 
@@ -105,27 +105,38 @@ export async function POST(request: Request) {
 
     // ──────────── 1. 调用 Dify 生成报告 ────────────
     let report = ''
+    let source: 'dify' | 'fallback' = 'fallback'
 
-    if (process.env.DIFY_API_KEY) {
+    // 企业转型诊断师 → DIFY_API_KEY_DIAGNOSE
+    const apiKey = process.env.DIFY_API_KEY_DIAGNOSE
+    if (apiKey) {
       try {
-        const prompt = `${SYSTEM_PROMPT.replace('{role}', cleanRole)
-          .replace('{goals}', cleanGoals.join('、'))
-          .replace('{description}', cleanDescription)}
-
----
-用户姓名：${cleanName}
+        const result = await callDifyWorkflow(apiKey, {
+          system_prompt: SYSTEM_PROMPT.replace('{role}', cleanRole)
+            .replace('{goals}', cleanGoals.join('、'))
+            .replace('{description}', cleanDescription),
+          user_input: `用户姓名：${cleanName}
 联系方式：${cleanPhone}
 角色：${cleanRole}
 目标：${cleanGoals.join('、')}
-现状描述：${cleanDescription}`
-
-        const difyRes = await callDifyChat(prompt, `diagnosis-${Date.now()}`)
-        const answer = (difyRes.answer || '').trim()
-        if (answer) {
-          report = answer
+现状描述：${cleanDescription}`,
+          name: cleanName,
+          phone: cleanPhone,
+          role: cleanRole,
+          goals: cleanGoals,
+          description: cleanDescription,
+        })
+        const text =
+          pickFirstStringOutput(result.outputs) ||
+          (result.outputs as any).report ||
+          (result.outputs as any).result ||
+          ''
+        if (text) {
+          report = text
+          source = 'dify'
         }
       } catch (difyErr) {
-        console.warn('[diagnose] Dify 调用失败，使用降级报告:', difyErr)
+        console.warn('[diagnose] Dify 调用失败，使用降级报告:', (difyErr as Error).message)
       }
     }
 
@@ -224,6 +235,8 @@ export async function POST(request: Request) {
       report,
       id: savedId,
       source: storageSource,
+      aiSource: source,
+      model: 'Dify Workflows (DIFY_API_KEY_DIAGNOSE)',
     })
   } catch (error: any) {
     console.error('[diagnose] 错误:', error)

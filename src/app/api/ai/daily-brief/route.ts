@@ -95,32 +95,58 @@ function labelOf(t: Activity['type']) {
     : '沙龙报名'
 }
 
-// ────────────── Dify 调用（可选） ──────────────
+// ────────────── Dify 调用（智富日报生成器） ──────────────
 async function callDify(systemPrompt: string, userInput: string): Promise<string | null> {
-  const apiKey = process.env.DIFY_API_KEY
+  // 智富日报 → DIFY_API_KEY_DAILY
+  const apiKey = process.env.DIFY_API_KEY_DAILY
   const baseUrl = process.env.DIFY_BASE_URL || 'https://api.dify.ai/v1'
   if (!apiKey) return null
   try {
-    const res = await fetch(`${baseUrl}/chat-messages`, {
+    const res = await fetch(`${baseUrl}/workflows/run`, {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        inputs: {},
-        query: userInput,
+        inputs: {
+          system_prompt: systemPrompt,
+          user_input: userInput,
+        },
         response_mode: 'blocking',
-        user: 'liangpengshe',
-        system_prompt: systemPrompt,
+        user: 'opc_user',
       }),
     })
-    if (!res.ok) return null
+    if (!res.ok) {
+      const errText = await res.text().catch(() => '')
+      console.warn('[daily-brief] Dify workflow 状态异常', res.status, errText.slice(0, 200))
+      return null
+    }
     const data = await res.json().catch(() => null)
-    return data?.answer || null
-  } catch {
+    // 兼容两种输出：data.data.outputs.result（最常见）或 data.answer
+    const outputs = data?.data?.outputs || {}
+    const candidate =
+      outputs.result ||
+      outputs.daily_brief ||
+      outputs.content ||
+      outputs.markdown ||
+      pickFirstString(outputs) ||
+      data?.answer ||
+      ''
+    return typeof candidate === 'string' ? candidate : null
+  } catch (e) {
+    console.warn('[daily-brief] Dify workflow 调用失败', (e as Error).message)
     return null
   }
+}
+
+function pickFirstString(obj: Record<string, any>): string {
+  if (!obj) return ''
+  for (const k of Object.keys(obj)) {
+    const v = obj[k]
+    if (typeof v === 'string' && v.trim()) return v
+  }
+  return ''
 }
 
 // ────────────── GET 拉取最新 ──────────────

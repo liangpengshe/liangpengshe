@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
-import { callDifyChat, extractJsonFromText } from '@/lib/dify'
+import { callDifyWorkflow, pickFirstStringOutput } from '@/lib/dify-workflow'
+import { extractJsonFromText } from '@/lib/dify'
 
 export const dynamic = 'force-dynamic'
 
@@ -137,16 +138,22 @@ export async function POST(request: Request) {
 
     const input = userInput.trim()
     let recommendations: ToolRecommendation[] = []
+    let source: 'dify' | 'mock' = 'mock'
 
-    // 尝试调用 Dify
-    if (process.env.DIFY_API_KEY) {
+    // 调用 Dify 工作流（工具栈推荐器 → DIFY_API_KEY_TOOL）
+    const apiKey = process.env.DIFY_API_KEY_TOOL
+    if (apiKey) {
       try {
-        const difyRes = await callDifyChat(
-          `${SYSTEM_PROMPT}\n\n用户需求：${input}`,
-          `tools-advisor-${Date.now()}`
-        )
-        const parsed = extractJsonFromText(difyRes.answer || '')
-
+        const result = await callDifyWorkflow(apiKey, {
+          system_prompt: SYSTEM_PROMPT,
+          user_input: input,
+        })
+        const text =
+          pickFirstStringOutput(result.outputs) ||
+          (result.outputs as any).recommendations_text ||
+          (result.outputs as any).result ||
+          ''
+        const parsed = extractJsonFromText(text)
         if (parsed && Array.isArray(parsed)) {
           recommendations = parsed.filter(
             (item: any) =>
@@ -154,13 +161,16 @@ export async function POST(request: Request) {
               typeof item.toolName === 'string' &&
               typeof item.category === 'string'
           )
-        } else if (parsed && Array.isArray(parsed.tools)) {
-          recommendations = parsed.tools
-        } else if (parsed && parsed.recommendations && Array.isArray(parsed.recommendations)) {
-          recommendations = parsed.recommendations
+          source = 'dify'
+        } else if (parsed && Array.isArray((parsed as any).tools)) {
+          recommendations = (parsed as any).tools
+          source = 'dify'
+        } else if (parsed && (parsed as any).recommendations && Array.isArray((parsed as any).recommendations)) {
+          recommendations = (parsed as any).recommendations
+          source = 'dify'
         }
       } catch (difyErr) {
-        console.warn('[tools-recommend] Dify 调用失败，使用降级方案:', difyErr)
+        console.warn('[tools-recommend] Dify 调用失败，使用降级方案:', (difyErr as Error).message)
       }
     }
 
@@ -174,7 +184,8 @@ export async function POST(request: Request) {
       data: {
         recommendations,
         total: recommendations.length,
-        source: process.env.DIFY_API_KEY ? 'dify' : 'mock',
+        source,
+        model: 'Dify Workflows (DIFY_API_KEY_TOOL)',
       },
     })
   } catch (error: any) {
