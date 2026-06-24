@@ -251,27 +251,27 @@ export default function HomePage() {
                   </span>
                 </motion.h1>
 
-                {/* 🪙 智富渐变小字标语 */}
+                {/* 🪙 智富渐变小字标语 - 移动端 <390px 不换行 + 缩放适配 */}
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.6, delay: 0.18 }}
-                  className="mb-4 flex items-center justify-center md:justify-start gap-2 flex-wrap"
+                  className="mb-4 flex items-center justify-center md:justify-start gap-1.5 sm:gap-2 whitespace-nowrap max-w-full origin-center md:origin-left scale-90 max-[389px]:scale-[0.82] max-[359px]:scale-[0.74] max-[340px]:scale-[0.68]"
                 >
-                  <span className="text-base md:text-lg font-extrabold tracking-wide">
+                  <span className="text-lg sm:text-xl md:text-lg font-extrabold tracking-wide shrink-0">
                     <span className="bg-gradient-to-br from-blue-400 via-indigo-400 to-purple-500 bg-clip-text text-transparent drop-shadow-[0_0_12px_rgba(99,102,241,0.45)]">
                       智
                     </span>
-                    <span className="mx-1 text-slate-200">·</span>
+                    <span className="mx-0.5 text-slate-200">·</span>
                     <span className="bg-gradient-to-br from-amber-300 via-yellow-400 to-orange-500 bg-clip-text text-transparent drop-shadow-[0_0_12px_rgba(251,191,36,0.45)]">
                       富
                     </span>
                   </span>
-                  <span className="text-xs md:text-sm font-semibold text-transparent bg-clip-text bg-gradient-to-r from-amber-200 via-yellow-100 to-amber-300 tracking-wider">
+                  <span className="text-[11px] sm:text-sm md:text-sm font-semibold text-transparent bg-clip-text bg-gradient-to-r from-amber-200 via-yellow-100 to-amber-300 tracking-wider shrink min-w-0 truncate">
                     以智生财，富在当下
                   </span>
-                  <span className="text-slate-500 text-xs">·</span>
-                  <span className="text-xs md:text-sm font-semibold text-transparent bg-clip-text bg-gradient-to-r from-blue-200 via-cyan-200 to-blue-300 tracking-wider">
+                  <span className="text-slate-500 text-xs shrink-0">·</span>
+                  <span className="text-[11px] sm:text-sm md:text-sm font-semibold text-transparent bg-clip-text bg-gradient-to-r from-blue-200 via-cyan-200 to-blue-300 tracking-wider shrink min-w-0 truncate">
                     用 AI 武装你的生意
                   </span>
                 </motion.div>
