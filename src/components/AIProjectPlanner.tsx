@@ -18,6 +18,7 @@ import {
   MessageCircle,
   Wand2,
 } from 'lucide-react'
+import ShareReportCTA from '@/components/ShareReportCTA'
 
 interface ProjectPlannerProps {
   compact?: boolean
@@ -322,6 +323,15 @@ export default function AIProjectPlanner({ compact = false }: ProjectPlannerProp
                         </p>
                       </div>
                     </div>
+
+                    {/* 分享 + 微信引流 CTA */}
+                    <ShareReportCTA
+                      userName={userName}
+                      reportType="plan"
+                      title="AI 个人商业规划"
+                      summary={report.slice(0, 120)}
+                      themeColor="purple"
+                    />
 
                     <div className="flex flex-col sm:flex-row gap-3 mt-5">
                       <button

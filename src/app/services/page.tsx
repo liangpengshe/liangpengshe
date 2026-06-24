@@ -112,9 +112,9 @@ const stages = [
 // ─── 导师数据 ───
 const mentors = [
   {
-    name: '陈默',
-    title: '连续创业者 / AI 产品专家',
-    avatar: 'CM',
+    name: '弓老师',
+    title: 'AI 商业落地专家 / 良朋社 OPC 创始人',
+    avatar: '/mentors/processed/弓老师_face.jpg',
     bg: 'bg-gradient-to-br from-blue-500 to-indigo-600',
     stats: [
       { label: '操盘项目', value: '30+' },
@@ -124,9 +124,9 @@ const mentors = [
     quote: '让 AI 成为你的第一个员工，而不是竞争对手。',
   },
   {
-    name: '林薇',
+    name: '卢老师',
     title: '前字节跳动增长负责人',
-    avatar: 'LW',
+    avatar: '/mentors/processed/卢老师_face.png',
     bg: 'bg-gradient-to-br from-purple-500 to-pink-600',
     stats: [
       { label: '增长操盘', value: '¥10亿+' },
@@ -136,9 +136,9 @@ const mentors = [
     quote: 'AI 不是替代你，而是让你一个人活成一支军队。',
   },
   {
-    name: '张野',
+    name: '于老师',
     title: 'AI 技术架构师 / 开源社区 KOL',
-    avatar: 'ZY',
+    avatar: '/mentors/processed/于老师_face.jpg',
     bg: 'bg-gradient-to-br from-green-500 to-teal-600',
     stats: [
       { label: '开源贡献', value: '10万⭐' },
@@ -148,22 +148,23 @@ const mentors = [
     quote: '用 20% 的时间，创造 80% 的价值。',
   },
   {
-    name: '王澜',
+    name: '宋老师',
     title: '新消费品牌操盘手',
-    avatar: 'WL',
+    avatar: '/mentors/processed/宋老师_face.png',
     bg: 'bg-gradient-to-br from-amber-500 to-orange-600',
     stats: [
       { label: '品牌操盘', value: '¥5亿+' },
       { label: '学员创业', value: '200+' },
       { label: '成功案例', value: '50+' },
     ],
-    quote: '最好的商业模式，是你自己就是一家公司的 CEO。',
+    quote: '最好的商业模式，是你自己的 CEO。',
   },
 ]
 
 // ─── 主页面组件 ───
 export default function ServicesPage() {
   const [activeStage, setActiveStage] = useState('stage-1')
+  const [diagnosisOpen, setDiagnosisOpen] = useState(false)
   const scrollRef = useRef<HTMLDivElement>(null)
   const [formData, setFormData] = useState({ wechat: '', phone: '' })
   const [submitted, setSubmitted] = useState(false)
@@ -239,7 +240,7 @@ export default function ServicesPage() {
 
             <motion.button
               {...fadeUp}
-              onClick={() => alert('启动诊断')}
+              onClick={() => setDiagnosisOpen(true)}
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.98 }}
               className="group relative inline-flex items-center gap-3 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 text-white font-semibold text-lg px-10 py-4 rounded-2xl shadow-lg shadow-purple-500/25 transition-all duration-300"
@@ -398,6 +399,67 @@ export default function ServicesPage() {
         </div>
       </section>
 
+      {/* ═══ OPC 内部特训营 ═══ */}
+      <section className="px-5 py-20 bg-white">
+        <div className="max-w-lg mx-auto md:max-w-6xl md:mx-auto">
+          <motion.div {...fadeUp} className="text-center mb-12">
+            <span className="inline-block px-3 py-1 text-xs font-semibold text-indigo-700 bg-indigo-50 rounded-full mb-3">
+              OPC 专属培训
+            </span>
+            <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">
+              OPC 内部特训营
+            </h2>
+            <p className="text-gray-500 text-sm md:text-base max-w-2xl mx-auto leading-relaxed">
+              专为 OPC 城市主理人与核心成员设计的实战培训体系，覆盖 AI 技术、变现路径与服务体系，持续赋能。
+            </p>
+          </motion.div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* 卡片 1：AI 技术实战营 */}
+            <motion.div
+              {...fadeUp}
+              className="bg-white rounded-2xl shadow-sm p-6 border-t-4 border-blue-500 hover:shadow-md transition-shadow"
+            >
+              <div className="text-3xl mb-3">💻</div>
+              <h3 className="text-lg font-bold text-gray-900 mb-2">
+                AI 技术实战营
+              </h3>
+              <p className="text-sm text-gray-600 leading-relaxed">
+                覆盖 AI 图文、AI 视频、AI 数字人、AI 智能体等核心工具的操作与落地应用，让主理人亲自体验四库全胜系统底层能力。
+              </p>
+            </motion.div>
+
+            {/* 卡片 2：AI 变现路径特训 */}
+            <motion.div
+              {...fadeUp}
+              className="bg-white rounded-2xl shadow-sm p-6 border-t-4 border-purple-500 hover:shadow-md transition-shadow"
+            >
+              <div className="text-3xl mb-3">🚀</div>
+              <h3 className="text-lg font-bold text-gray-900 mb-2">
+                AI 变现路径特训
+              </h3>
+              <p className="text-sm text-gray-600 leading-relaxed">
+                从"工具库推荐"到"项目库 SOP"，再到"服务库高客单成交"，全程拆解一人公司和中小企业的 AI 商业变现全流程。
+              </p>
+            </motion.div>
+
+            {/* 卡片 3：OPC 服务体系构建 */}
+            <motion.div
+              {...fadeUp}
+              className="bg-white rounded-2xl shadow-sm p-6 border-t-4 border-emerald-500 hover:shadow-md transition-shadow"
+            >
+              <div className="text-3xl mb-3">🤝</div>
+              <h3 className="text-lg font-bold text-gray-900 mb-2">
+                OPC 服务体系构建
+              </h3>
+              <p className="text-sm text-gray-600 leading-relaxed">
+                深度讲解 OPC 四库全胜系统的运营逻辑、主理人分润模式、客户私域承接与高客单转化实操。
+              </p>
+            </motion.div>
+          </div>
+        </div>
+      </section>
+
       {/* ═══ 导师展示 ═══ */}
       <section className="px-5 py-20 bg-gradient-to-b from-white to-slate-50">
         <div className="max-w-lg mx-auto md:max-w-6xl md:mx-auto">
@@ -439,10 +501,15 @@ export default function ServicesPage() {
                 transition={{ delay: i * 0.1 }}
                 className="flex-shrink-0 w-[280px] md:w-[300px] snap-start bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm hover:shadow-md transition-all"
               >
-                <div className={`h-28 ${mentor.bg} flex items-center justify-center relative`}>
-                  <div className="w-20 h-20 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center shadow-lg">
-                    <span className="text-2xl font-bold text-white">{mentor.avatar}</span>
-                  </div>
+                <div className={`h-44 ${mentor.bg} flex items-end justify-center relative overflow-hidden`}>
+                  {/* 真实导师头像：使用预处理的 4:3 横图，脸部位于图片中心，object-cover 完整露出 */}
+                  <img
+                    src={mentor.avatar}
+                    alt={mentor.name}
+                    className="absolute inset-0 w-full h-full object-cover"
+                  />
+                  {/* 底部柔光渐变，保证姓名对比度 */}
+                  <div className="absolute inset-x-0 bottom-0 h-10 bg-gradient-to-t from-black/50 to-transparent pointer-events-none" />
                 </div>
 
                 <div className="p-5">
@@ -636,7 +703,11 @@ export default function ServicesPage() {
                 <br className="md:hidden" />
                 《AI 商业落地诊断报告》Markdown 版
               </p>
-              <AIDiagnosisForm compact />
+              <AIDiagnosisForm
+                compact
+                open={diagnosisOpen}
+                onOpenChange={setDiagnosisOpen}
+              />
               <p className="text-xs text-white/60 mt-5">
                 ✨ 已有 1280+ 位创业者完成诊断 · 平均节省 30% 试错成本
               </p>

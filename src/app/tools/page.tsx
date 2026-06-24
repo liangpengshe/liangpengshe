@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import { motion } from 'framer-motion'
 import Link from 'next/link'
 import {
@@ -148,6 +149,13 @@ const tools = [
 ]
 
 export default function ToolsPage() {
+  const [activeCategory, setActiveCategory] = useState('all')
+
+  const filteredTools =
+    activeCategory === 'all'
+      ? tools
+      : tools.filter((tool) => tool.category === activeCategory)
+
   return (
     <div className="min-h-screen bg-slate-50 font-sans">
       <motion.header
@@ -216,18 +224,24 @@ export default function ToolsPage() {
       >
         <div className="max-w-lg mx-auto md:max-w-6xl">
           <div className="flex gap-2 overflow-x-auto whitespace-nowrap pb-2 scrollbar-hide -mx-4 px-4">
-            {categories.map((cat, index) => (
-              <button
-                key={index}
-                className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-                  index === 0
-                    ? 'bg-blue-500 text-white'
-                    : 'bg-white text-gray-700 border border-slate-200'
-                }`}
-              >
-                {cat.label}
-              </button>
-            ))}
+            {categories.map((cat) => {
+              const isActive = activeCategory === cat.key
+              const Icon = cat.icon
+              return (
+                <button
+                  key={cat.key}
+                  onClick={() => setActiveCategory(cat.key)}
+                  className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-colors flex items-center gap-1.5 ${
+                    isActive
+                      ? 'bg-blue-500 text-white shadow-sm'
+                      : 'bg-white text-gray-700 border border-slate-200 hover:border-blue-300 hover:text-blue-600'
+                  }`}
+                >
+                  <Icon size={14} />
+                  {cat.label}
+                </button>
+              )
+            })}
           </div>
         </div>
       </motion.section>
@@ -238,11 +252,16 @@ export default function ToolsPage() {
       >
         <div className="max-w-lg mx-auto md:max-w-6xl">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {tools.map((tool) => (
-              <div
-                key={tool.id}
-                className="bg-white rounded-2xl shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden"
-              >
+            {filteredTools.length === 0 ? (
+              <div className="col-span-full text-center text-slate-400 text-sm py-12">
+                该分类下暂无工具
+              </div>
+            ) : (
+              filteredTools.map((tool) => (
+                <div
+                  key={tool.id}
+                  className="bg-white rounded-2xl shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden"
+                >
                 <div className="aspect-[2/1] bg-slate-100 overflow-hidden">
                   <img
                     src={tool.image}
@@ -287,7 +306,8 @@ export default function ToolsPage() {
                   </div>
                 </div>
               </div>
-            ))}
+            ))
+          )}
           </div>
         </div>
       </motion.section>

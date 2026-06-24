@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Search, Zap, ArrowRight, Flame } from 'lucide-react'
+import { Search, Zap, ArrowRight, Flame, Bot } from 'lucide-react'
 import Link from 'next/link'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { Card, CardContent } from '@/components/ui/card'
@@ -18,30 +18,31 @@ interface Tool {
   isMemberOnly?: boolean
   imageUrl?: string
   externalUrl?: string
+  domain?: string
 }
 
 const opcTools = [
-  { id: 1, name: '豹纹工坊', description: 'AI驱动的内容生产引擎', category: 'writing', color: 'from-amber-500 to-orange-600', bgColor: 'bg-amber-100', textColor: 'text-amber-600', icon: 'Zap', href: '/tools/leopard' },
-  { id: 2, name: '灵犀 AI', description: '智能对话助手', category: 'writing', color: 'from-purple-500 to-indigo-600', bgColor: 'bg-purple-100', textColor: 'text-purple-600', icon: 'Brain', href: '/tools/lingxi' },
-  { id: 3, name: '先锋派数字人', description: 'AI数字人视频生成平台', category: 'video', color: 'from-cyan-500 to-blue-600', bgColor: 'bg-cyan-100', textColor: 'text-cyan-600', icon: 'Users', href: '/tools/pioneer' },
+  { id: 1, name: '豹纹工坊', description: '一键生成爆款商品素材，提升电商转化', category: 'writing', color: 'from-orange-400 to-amber-500', icon: 'Zap', href: '/tools/leopard' },
+  { id: 2, name: '灵犀 AI', description: '智能内容创作助手，7×24 不间断产出', category: 'writing', color: 'from-purple-400 to-indigo-500', icon: 'Brain', href: '/tools/lingxi' },
+  { id: 3, name: '先锋派数字人', description: 'AI数字人视频生成平台，打造个人 IP', category: 'video', color: 'from-cyan-400 to-blue-500', icon: 'Users', href: '/tools/pioneer' },
 ]
 
 const aiTools: Tool[] = [
-  { id: 101, name: 'ChatGPT', description: 'OpenAI 推出的强大对话模型', category: 'writing', tags: ['免费', '推荐'], rating: 5, isHot: true, imageUrl: 'https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=ChatGPT%20AI%20chatbot%20interface%20modern%20minimalist&image_size=landscape_4_3', externalUrl: 'https://chat.openai.com' },
-  { id: 102, name: 'Claude', description: 'Anthropic 开发的 AI 助手', category: 'writing', tags: ['免费'], rating: 4, imageUrl: 'https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=Claude%20AI%20assistant%20blue%20gradient%20interface&image_size=landscape_4_3', externalUrl: 'https://claude.ai' },
-  { id: 103, name: '豆包', description: '字节跳动推出的智能助手', category: 'writing', tags: ['免费'], rating: 4, imageUrl: 'https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=Doubao%20AI%20chat%20interface%20yellow%20orange%20theme&image_size=landscape_4_3', externalUrl: 'https://www.doubao.com' },
-  { id: 201, name: 'Midjourney', description: '领先的 AI 图像生成工具', category: 'painting', tags: ['付费', '爆款'], rating: 5, isHot: true, imageUrl: 'https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=Midjourney%20AI%20art%20generation%20colorful%20creative&image_size=landscape_4_3', externalUrl: 'https://www.midjourney.com' },
-  { id: 202, name: 'DALL-E', description: 'OpenAI 的图像生成模型', category: 'painting', tags: ['免费'], rating: 4, imageUrl: 'https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=DALL-E%20AI%20image%20generator%20futuristic%20interface&image_size=landscape_4_3', externalUrl: 'https://labs.openai.com' },
-  { id: 203, name: 'Stable Diffusion', description: '开源的文本到图像模型', category: 'painting', tags: ['免费', '开源'], rating: 4, imageUrl: 'https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=Stable%20Diffusion%20AI%20art%20neural%20network%20abstract&image_size=landscape_4_3', externalUrl: 'https://stablediffusionweb.com' },
-  { id: 301, name: 'Runway', description: 'AI 视频创作平台', category: 'video', tags: ['付费', '爆款'], rating: 5, isHot: true, imageUrl: 'https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=Runway%20AI%20video%20editor%20modern%20dark%20theme&image_size=landscape_4_3', externalUrl: 'https://runwayml.com' },
-  { id: 302, name: 'Pika', description: '文本转视频 AI 工具', category: 'video', tags: ['免费'], rating: 4, imageUrl: 'https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=Pika%20AI%20video%20generation%20colorful%20motion&image_size=landscape_4_3', externalUrl: 'https://pika.art' },
-  { id: 303, name: 'Synthesia', description: 'AI 视频生成与数字人', category: 'video', tags: ['付费'], rating: 4, imageUrl: 'https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=Synthesia%20AI%20video%20digital%20human%20professional&image_size=landscape_4_3', externalUrl: 'https://www.synthesia.io' },
-  { id: 401, name: 'Character AI', description: '角色化对话 AI 平台', category: 'digitalhuman', tags: ['免费'], rating: 4, imageUrl: 'https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=Character%20AI%20avatar%20chat%20colorful%20interface&image_size=landscape_4_3', externalUrl: 'https://character.ai' },
-  { id: 402, name: 'D-ID', description: 'AI 驱动的数字人视频', category: 'digitalhuman', tags: ['付费'], rating: 4, imageUrl: 'https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=D-ID%20AI%20digital%20human%20video%20creation&image_size=landscape_4_3', externalUrl: 'https://www.d-id.com' },
-  { id: 403, name: 'HeyGen', description: 'AI 数字人视频生成', category: 'digitalhuman', tags: ['付费', '会员专享'], isMemberOnly: true, rating: 4, imageUrl: 'https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=HeyGen%20AI%20avatar%20video%20professional&image_size=landscape_4_3', externalUrl: 'https://www.heygen.com' },
-  { id: 501, name: 'IconScout', description: 'AI 图标与素材生成', category: 'design', tags: ['免费'], rating: 4, imageUrl: 'https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=IconScout%20AI%20icons%20design%20colorful&image_size=landscape_4_3', externalUrl: 'https://iconscout.com' },
-  { id: 502, name: 'Remove.bg', description: 'AI 背景去除工具', category: 'design', tags: ['免费'], rating: 4, imageUrl: 'https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=Remove.bg%20AI%20background%20removal%20tool&image_size=landscape_4_3', externalUrl: 'https://www.remove.bg' },
-  { id: 503, name: 'Uizard', description: 'AI 界面设计工具', category: 'design', tags: ['付费'], rating: 4, imageUrl: 'https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=Uizard%20AI%20UI%20design%20tool%20modern&image_size=landscape_4_3', externalUrl: 'https://uizard.io' },
+  { id: 101, name: 'ChatGPT', description: 'OpenAI 推出的强大对话模型', category: 'writing', tags: ['免费', '推荐'], rating: 5, isHot: true, domain: 'openai.com', externalUrl: 'https://chat.openai.com' },
+  { id: 102, name: 'Claude', description: 'Anthropic 开发的 AI 助手', category: 'writing', tags: ['免费'], rating: 4, domain: 'anthropic.com', externalUrl: 'https://claude.ai' },
+  { id: 103, name: '豆包', description: '字节跳动推出的智能助手', category: 'writing', tags: ['免费'], rating: 4, domain: 'doubao.com', externalUrl: 'https://www.doubao.com' },
+  { id: 201, name: 'Midjourney', description: '领先的 AI 图像生成工具', category: 'painting', tags: ['付费', '爆款'], rating: 5, isHot: true, domain: 'midjourney.com', externalUrl: 'https://www.midjourney.com' },
+  { id: 202, name: 'DALL-E', description: 'OpenAI 的图像生成模型', category: 'painting', tags: ['免费'], rating: 4, domain: 'openai.com', externalUrl: 'https://labs.openai.com' },
+  { id: 203, name: 'Stable Diffusion', description: '开源的文本到图像模型', category: 'painting', tags: ['免费', '开源'], rating: 4, domain: 'stability.ai', externalUrl: 'https://stablediffusionweb.com' },
+  { id: 301, name: 'Runway', description: 'AI 视频创作平台', category: 'video', tags: ['付费', '爆款'], rating: 5, isHot: true, domain: 'runwayml.com', externalUrl: 'https://runwayml.com' },
+  { id: 302, name: 'Pika', description: '文本转视频 AI 工具', category: 'video', tags: ['免费'], rating: 4, domain: 'pika.art', externalUrl: 'https://pika.art' },
+  { id: 303, name: 'Synthesia', description: 'AI 视频生成与数字人', category: 'video', tags: ['付费'], rating: 4, domain: 'synthesia.io', externalUrl: 'https://www.synthesia.io' },
+  { id: 401, name: 'Character AI', description: '角色化对话 AI 平台', category: 'digitalhuman', tags: ['免费'], rating: 4, domain: 'character.ai', externalUrl: 'https://character.ai' },
+  { id: 402, name: 'D-ID', description: 'AI 驱动的数字人视频', category: 'digitalhuman', tags: ['付费'], rating: 4, domain: 'd-id.com', externalUrl: 'https://www.d-id.com' },
+  { id: 403, name: 'HeyGen', description: 'AI 数字人视频生成', category: 'digitalhuman', tags: ['付费', '会员专享'], isMemberOnly: true, rating: 4, domain: 'heygen.com', externalUrl: 'https://www.heygen.com' },
+  { id: 501, name: 'IconScout', description: 'AI 图标与素材生成', category: 'design', tags: ['免费'], rating: 4, domain: 'iconscout.com', externalUrl: 'https://iconscout.com' },
+  { id: 502, name: 'Remove.bg', description: 'AI 背景去除工具', category: 'design', tags: ['免费'], rating: 4, domain: 'remove.bg', externalUrl: 'https://www.remove.bg' },
+  { id: 503, name: 'Uizard', description: 'AI 界面设计工具', category: 'design', tags: ['付费'], rating: 4, domain: 'uizard.io', externalUrl: 'https://uizard.io' },
 ]
 
 export default function ToolsMarketPage() {
@@ -192,19 +193,28 @@ export default function ToolsMarketPage() {
 }
 
 function ToolCard({ tool }: { tool: Tool }) {
+  const [imgError, setImgError] = useState(false)
+  const logoUrl = tool.domain ? `https://logo.clearbit.com/${tool.domain}?size=400` : ''
+
   return (
     <Card className="overflow-hidden hover:shadow-md transition-shadow">
       <CardContent className="p-0">
-        <div className="aspect-[2/1] bg-gray-100 relative overflow-hidden">
-          {tool.imageUrl ? (
+        <div className="aspect-[2/1] bg-white relative overflow-hidden flex items-center justify-center">
+          {tool.domain && !imgError ? (
+            // 优先用 Clearbit 拉取真实公司 logo
             <img
-              src={tool.imageUrl}
+              src={logoUrl}
               alt={tool.name}
-              className="w-full h-full object-cover"
+              onError={() => setImgError(true)}
+              className="w-full h-full object-contain p-6"
             />
           ) : (
-            <div className="w-full h-full flex items-center justify-center text-gray-400">
-              <span className="text-xl">🖼️</span>
+            // 兜底：透明背景 + Bot 图标 + 工具名
+            <div className="flex flex-col items-center justify-center gap-2 px-4 text-center">
+              <Bot className="text-gray-400" size={40} strokeWidth={1.5} />
+              <span className="text-xl md:text-2xl font-bold text-gray-700 tracking-wide">
+                {tool.name}
+              </span>
             </div>
           )}
           {tool.isHot && (

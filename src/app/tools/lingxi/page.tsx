@@ -3,12 +3,14 @@
 import { useState } from 'react'
 import {
   ArrowLeft,
-  Download,
+  Sparkles,
   Palette,
   Film,
   Zap,
   Rocket,
   CheckCircle,
+  ExternalLink,
+  Loader2,
 } from 'lucide-react'
 import Link from 'next/link'
 import Image from 'next/image'
@@ -19,11 +21,39 @@ export default function LingxiPage() {
     phone: '',
     company: '',
   })
-  const [submitted, setSubmitted] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [redirectUrl, setRedirectUrl] = useState<string | null>(null)
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setSubmitted(true)
+    if (loading) return
+    setLoading(true)
+    try {
+      const res = await fetch('/api/tools/trial', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: formData.name,
+          phone: formData.phone,
+          company: formData.company,
+          toolSlug: 'lingxi',
+        }),
+      })
+      const data = await res.json()
+      if (data.success && data.redirectUrl) {
+        setRedirectUrl(data.redirectUrl)
+        showToast(data.message || '体验账号已开通，正在跳转...', 'success')
+        setTimeout(() => {
+          window.open(data.redirectUrl, '_blank', 'noopener,noreferrer')
+        }, 600)
+      } else {
+        showToast(data.message || '提交失败，请稍后重试', 'error')
+      }
+    } catch (err) {
+      showToast('网络异常，请稍后重试', 'error')
+    } finally {
+      setLoading(false)
+    }
   }
 
   const features = [
@@ -111,13 +141,25 @@ export default function LingxiPage() {
         </section>
 
         <section className="bg-white rounded-xl shadow-sm p-5">
-          <h2 className="text-lg font-bold text-gray-900 mb-4">获取下载</h2>
-          
-          {submitted ? (
-            <div className="bg-green-50 rounded-xl p-5 text-center">
-              <CheckCircle className="text-green-600 mx-auto mb-3" size={48} />
-              <h3 className="font-semibold text-gray-900 mb-1">提交成功</h3>
-              <p className="text-sm text-gray-500">工作人员将在1个工作日内联系您</p>
+          <h2 className="text-lg font-bold text-gray-900 mb-1">立即体验 OPC 专属工具</h2>
+          <p className="text-xs text-gray-500 mb-4">填写信息后 1 个工作日内开通体验账号，享专属技术支持</p>
+
+          {redirectUrl ? (
+            <div className="bg-gradient-to-br from-emerald-50 to-teal-50 border border-emerald-200 rounded-xl p-5 text-center">
+              <div className="w-14 h-14 bg-gradient-to-br from-emerald-500 to-teal-500 rounded-2xl flex items-center justify-center mx-auto mb-3">
+                <CheckCircle className="text-white" size={28} />
+              </div>
+              <h3 className="font-semibold text-gray-900 mb-1">体验账号已开通！</h3>
+              <p className="text-sm text-gray-500 mb-4">灵犀 AI 官方页面已在新窗口打开</p>
+              <a
+                href={redirectUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 text-sm font-medium text-emerald-600 hover:text-emerald-700"
+              >
+                未自动打开？点这里
+                <ExternalLink size={14} />
+              </a>
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-4">
@@ -152,13 +194,26 @@ export default function LingxiPage() {
                   className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
                   placeholder="请输入您的公司名称（选填）"
                 />
+                <p className="mt-1.5 text-xs text-purple-700">
+                  *OPC 将为您的体验账号提供专属技术支持
+                </p>
               </div>
               <button
                 type="submit"
-                className="w-full bg-gradient-to-r from-purple-500 to-indigo-600 text-white font-medium py-3 rounded-lg hover:from-purple-600 hover:to-indigo-700 transition-all flex items-center justify-center gap-2"
+                disabled={loading}
+                className="w-full bg-gradient-to-r from-purple-500 to-indigo-600 text-white font-medium py-3 rounded-lg hover:from-purple-600 hover:to-indigo-700 active:scale-[0.99] transition-all flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
               >
-                <Download size={20} />
-                <span>立即下载</span>
+                {loading ? (
+                  <>
+                    <Loader2 size={20} className="animate-spin" />
+                    <span>正在开通体验账号...</span>
+                  </>
+                ) : (
+                  <>
+                    <Sparkles size={20} />
+                    <span>立即体验</span>
+                  </>
+                )}
               </button>
             </form>
           )}
@@ -166,4 +221,30 @@ export default function LingxiPage() {
       </main>
     </div>
   )
+}
+
+function showToast(message: string, type: 'success' | 'error' = 'success') {
+  if (typeof window === 'undefined') return
+  const palette =
+    type === 'success'
+      ? 'bg-gradient-to-r from-emerald-500 to-teal-500'
+      : 'bg-gradient-to-r from-rose-500 to-red-500'
+  const el = document.createElement('div')
+  el.setAttribute('data-lps-toast', '1')
+  el.className =
+    'fixed left-1/2 top-20 z-[100] px-5 py-3 rounded-xl shadow-2xl text-sm font-medium text-white pointer-events-none transition-all duration-300 ' +
+    palette
+  el.style.opacity = '0'
+  el.style.transform = 'translate(-50%, -10px)'
+  el.textContent = message
+  document.body.appendChild(el)
+  requestAnimationFrame(() => {
+    el.style.opacity = '1'
+    el.style.transform = 'translate(-50%, 0)'
+    setTimeout(() => {
+      el.style.opacity = '0'
+      el.style.transform = 'translate(-50%, -10px)'
+      setTimeout(() => el.remove(), 300)
+    }, 2400)
+  })
 }

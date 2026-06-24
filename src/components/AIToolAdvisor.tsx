@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Sparkles, Loader2, Target, Clock, TrendingUp, Zap } from 'lucide-react'
+import ShareReportCTA from '@/components/ShareReportCTA'
 
 interface ToolRecommendation {
   toolName: string
@@ -248,6 +249,14 @@ export default function AIToolAdvisor() {
                   <span>想深入了解某个工具？后续将开放 AI 深度追问，给你一份两周学习大纲</span>
                 </div>
               </div>
+
+              {/* 分享 + 微信引流 CTA */}
+              <ShareReportCTA
+                reportType="tools"
+                title="AI 工具栈推荐清单"
+                summary={`为你推荐 ${recommendations.length} 个工具：${recommendations.slice(0, 3).map((r) => r.toolName).join('、')}`}
+                themeColor="emerald"
+              />
             </>
           )}
         </div>

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 import { motion } from 'framer-motion'
 import {
   Tabs,
@@ -18,6 +19,17 @@ import {
   Clock,
   Tag,
   Wand2,
+  Image as ImageIcon,
+  Globe,
+  Store,
+  Users,
+  Headphones,
+  Hash,
+  Tv,
+  Mic,
+  Sparkles,
+  Inbox,
+  type LucideIcon,
 } from 'lucide-react'
 import AIProjectPlanner from '@/components/AIProjectPlanner'
 
@@ -28,137 +40,125 @@ const fadeUp = {
   transition: { duration: 0.5 },
 }
 
+// ─── 项目库数据映射 ───
+// slug 必须与 src/data/sop-projects.ts 中的 SOP 数据一致
+// 修改此数组的 slug / title / summary 即可同步更新项目库与详情页
+type ProjectCategory = 'ai-ecommerce' | 'ai-media' | 'ai-toolbox' | 'case-study'
+
 interface Project {
-  id: string
-  title: string
-  cover: string
-  tags: string
-  time: string
-  summary: string
   slug: string
-  category: string
+  title: string
+  tags: string
+  duration: string
+  summary: string
+  cover: string // Tailwind 渐变 className（占位封面）
+  icon: LucideIcon
+  category: ProjectCategory
 }
 
-const projects: Project[] = [
+const PROJECTS: Project[] = [
+  // ===== AI 电商实战 =====
   {
-    id: '1',
-    title: 'AI 选品 + 一键生成详情页',
-    cover: 'https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=AI%20ecommerce%20product%20listing%20dashboard%20with%20neon%20blue%20gradient%20modern%20UI&image_size=landscape_16_9',
-    tags: '新手友好',
-    time: '3天',
-    summary: '利用 AI 分析竞品数据，自动生成产品标题、卖点和详情页文案，配合 Midjourney 生成主图，降低 70% 运营人力成本。',
-    slug: 'ai-product-detail',
+    slug: 'ai-tiktok-shop',
+    title: 'AI 选品 + TikTok Shop 跨境带货 7 日启动 SOP',
+    tags: '高阶玩法',
+    duration: '7 天',
+    summary: '从 0 起步，用 AI 选品、数据监控、AI 翻译/详情页生成、AI 客服 4 步把 TikTok 美区小店做到首单。',
+    cover: 'bg-gradient-to-br from-purple-100 via-fuchsia-100 to-pink-100',
+    icon: Globe,
     category: 'ai-ecommerce',
   },
   {
-    id: '2',
-    title: '私域流量自动触达 SOP',
-    cover: 'https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=AI%20chatbot%20automation%20workflow%20diagram%20purple%20gradient%20futuristic&image_size=landscape_16_9',
-    tags: '进阶玩法',
-    time: '7天',
-    summary: '通过 AI 分析用户行为，自动生成个性化私聊话术，实现 7×24 小时精准触达，提升 3 倍转化效率。',
-    slug: 'ai-private-domain',
+    slug: 'ai-shopify-listing',
+    title: 'AI 一键生成 Shopify 多语种详情页 SOP',
+    tags: '新手友好',
+    duration: '3 天',
+    summary: '用 AI 翻译/重写 + AI 主图批量生成，3 天搭好一个可下单的 Shopify 多语种店铺详情页。',
+    cover: 'bg-gradient-to-br from-emerald-100 via-teal-100 to-cyan-100',
+    icon: Store,
     category: 'ai-ecommerce',
   },
   {
-    id: '3',
-    title: '小红书爆款笔记流水线',
-    cover: 'https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=social%20media%20content%20production%20workflow%20pink%20gradient%20creative&image_size=landscape_16_9',
-    tags: '新手友好',
-    time: '2天',
-    summary: '输入关键词，AI 自动生成选题、文案、配图建议，一天产出 10 篇高质量笔记，日产出提升 10 倍。',
-    slug: 'xiaohongshu-ai',
-    category: 'ai-media',
-  },
-  {
-    id: '4',
-    title: '抖音 AI 数字人直播',
-    cover: 'https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=AI%20virtual%20influencer%20live%20streaming%20studio%20cyberpunk%20aesthetic&image_size=landscape_16_9',
+    slug: 'ai-private-traffic',
+    title: 'AI 私域流量自动触达 SOP',
     tags: '进阶玩法',
-    time: '10天',
-    summary: '用 D-ID 生成数字人，配合 AI 实时问答系统，实现无人值守直播带货，24 小时不间断直播。',
-    slug: 'douyin-ai-live',
-    category: 'ai-media',
-  },
-  {
-    id: '5',
-    title: 'AI 会议纪要 + 行动追踪',
-    cover: 'https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=AI%20meeting%20notes%20productivity%20dashboard%20clean%20minimal%20design&image_size=landscape_16_9',
-    tags: '新手友好',
-    time: '1天',
-    summary: '录音转写后自动提取要点、生成会议纪要、创建待办事项，自动追踪进度，节省 80% 会议时间。',
-    slug: 'ai-meeting-notes',
-    category: 'ai-toolbox',
-  },
-  {
-    id: '6',
-    title: '一键生成 PPT 方案',
-    cover: 'https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=AI%20presentation%20generator%20professional%20slides%20golden%20gradient&image_size=landscape_16_9',
-    tags: '新手友好',
-    time: '2天',
-    summary: '输入业务需求，AI 自动生成完整 PPT 框架、内容和配图建议，秒出专业方案，效率提升 5 倍。',
-    slug: 'ai-ppt-generator',
-    category: 'ai-toolbox',
-  },
-  {
-    id: '7',
-    title: '年入百万的一人电商拆解',
-    cover: 'https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=business%20success%20story%20case%20study%20growth%20chart%20celebration&image_size=landscape_16_9',
-    tags: '进阶玩法',
-    time: '5天',
-    summary: '完整复盘一个从 0 到年入百万的一人电商案例，包含选品、流量、转化全流程，可直接复制的成功路径。',
-    slug: 'one-person-ecommerce',
-    category: 'case-study',
-  },
-  {
-    id: '8',
-    title: 'AI 律师助理实战案例',
-    cover: 'https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=AI%20legal%20assistant%20contract%20review%20professional%20office&image_size=landscape_16_9',
-    tags: '进阶玩法',
-    time: '7天',
-    summary: '如何用 AI 辅助法律文书撰写、合同审查、案例检索，大幅提升律师工作效率，效率提升 300%。',
-    slug: 'ai-legal-assistant',
-    category: 'case-study',
-  },
-  {
-    id: '9',
-    title: 'AI 客服自动回复系统',
-    cover: 'https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=AI%20customer%20service%20chatbot%20support%20center%20friendly%20interface&image_size=landscape_16_9',
-    tags: '进阶玩法',
-    time: '5天',
-    summary: '搭建基于大模型的智能客服系统，自动识别用户意图，生成标准化回复，客服成本降低 60%。',
-    slug: 'ai-customer-service',
+    duration: '7 天',
+    summary: '通过 AI 分析用户行为，自动生成个性化私聊话术，实现 7×24 小时精准触达，提升 3 倍转化。',
+    cover: 'bg-gradient-to-br from-blue-100 via-indigo-100 to-violet-100',
+    icon: Users,
     category: 'ai-ecommerce',
   },
   {
-    id: '10',
-    title: 'AI 视频字幕 + 剪辑自动化',
-    cover: 'https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=video%20editing%20AI%20automation%20timeline%20interface%20modern%20dark&image_size=landscape_16_9',
+    slug: 'ai-pinduoduo',
+    title: '拼多多 AI 主图 + 详情页批量生成 SOP',
     tags: '新手友好',
-    time: '3天',
-    summary: '自动生成字幕、识别重点片段、生成剪辑建议，大幅提升视频制作效率，剪辑时间缩短 70%。',
-    slug: 'ai-video-editing',
+    duration: '2 天',
+    summary: '用 AI 批量生成拼多多白底图、场景图和详情页，零设计基础也能日更 50 个 SKU 主图。',
+    cover: 'bg-gradient-to-br from-rose-100 via-pink-100 to-fuchsia-100',
+    icon: ShoppingBag,
+    category: 'ai-ecommerce',
+  },
+  {
+    slug: 'ai-after-sales-automation',
+    title: 'AI 客服自动回复 + 售后 SOP',
+    tags: '进阶玩法',
+    duration: '5 天',
+    summary: '搭建基于大模型的智能客服系统，自动识别用户意图生成标准化回复，客服成本降低 60%。',
+    cover: 'bg-gradient-to-br from-amber-100 via-orange-100 to-red-100',
+    icon: Headphones,
+    category: 'ai-ecommerce',
+  },
+
+  // ===== AI 自媒体引流 =====
+  {
+    slug: 'ai-xiaohongshu-matrix',
+    title: '小红书爆款笔记矩阵 SOP',
+    tags: '新手友好',
+    duration: '2 天',
+    summary: '输入关键词，AI 自动生成选题、文案、配图建议，一天产出 10 篇高质量笔记，矩阵起号 10 倍速。',
+    cover: 'bg-gradient-to-br from-pink-100 via-rose-100 to-red-100',
+    icon: Hash,
     category: 'ai-media',
   },
   {
-    id: '11',
-    title: 'AI 知识库搭建指南',
-    cover: 'https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=AI%20knowledge%20base%20library%20digital%20brain%20futuristic&image_size=landscape_16_9',
+    slug: 'ai-douyin-clone',
+    title: '抖音 AI 数字人克隆 + 直播 SOP',
     tags: '进阶玩法',
-    time: '7天',
-    summary: '将个人经验、行业资料转化为 AI 知识库，让 AI 成为你的专属顾问，开启知识变现新路径。',
-    slug: 'ai-knowledge-base',
-    category: 'ai-toolbox',
+    duration: '10 天',
+    summary: '用 D-ID / Heygen 生成数字人，配合 AI 实时问答，实现 24 小时无人值守直播带货。',
+    cover: 'bg-gradient-to-br from-cyan-100 via-sky-100 to-blue-100',
+    icon: Video,
+    category: 'ai-media',
   },
   {
-    id: '12',
-    title: 'AI 心理咨询师副业拆解',
-    cover: 'https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=AI%20mental%20health%20chatbot%20therapy%20warm%20friendly%20interface&image_size=landscape_16_9',
+    slug: 'ai-bilibili-creator',
+    title: 'B 站 AI 知识区 UP 主起号 SOP',
+    tags: '新手友好',
+    duration: '14 天',
+    summary: 'AI 写脚本、AI 配音、AI 字幕 3 件套，0 露脸也能在 B 站知识区快速起号。',
+    cover: 'bg-gradient-to-br from-indigo-100 via-purple-100 to-fuchsia-100',
+    icon: Tv,
+    category: 'ai-media',
+  },
+  {
+    slug: 'ai-youtube-faceless',
+    title: 'YouTube 无人露脸频道 SOP',
+    tags: '高阶玩法',
+    duration: '21 天',
+    summary: 'AI 脚本 + 数字人 + AI 剪辑，打造可持续变现的 YouTube Faceless 频道，吃英文长尾流量。',
+    cover: 'bg-gradient-to-br from-red-100 via-rose-100 to-pink-100',
+    icon: Sparkles,
+    category: 'ai-media',
+  },
+  {
+    slug: 'ai-podcast-newsletter',
+    title: 'AI 播客 + Newsletter 双线 SOP',
     tags: '进阶玩法',
-    time: '5天',
-    summary: '如何用 AI 辅助心理咨询，提供 7×24 小时陪伴服务，开创副业收入，副业月入过万。',
-    slug: 'ai-mental-health',
-    category: 'case-study',
+    duration: '7 天',
+    summary: 'AI 选题、写稿、合成语音，一键生成播客 + 邮件订阅，构建私域高客单订阅收入。',
+    cover: 'bg-gradient-to-br from-violet-100 via-purple-100 to-indigo-100',
+    icon: Mic,
+    category: 'ai-media',
   },
 ]
 
@@ -202,6 +202,14 @@ const promptList: PromptItem[] = [
   },
 ]
 
+// ─── 分类定义（用于 Tabs 渲染）───
+const CATEGORIES: { value: ProjectCategory; label: string; emoji: string; Icon: LucideIcon; activeGradient: string }[] = [
+  { value: 'ai-ecommerce', label: 'AI 电商实战', emoji: '🛒', Icon: ShoppingBag, activeGradient: 'data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-indigo-600' },
+  { value: 'ai-media', label: 'AI 自媒体引流', emoji: '🎬', Icon: Video, activeGradient: 'data-[state=active]:bg-gradient-to-r data-[state=active]:from-pink-500 data-[state=active]:to-rose-600' },
+  { value: 'ai-toolbox', label: 'AI 高效工具箱', emoji: '🔧', Icon: Wrench, activeGradient: 'data-[state=active]:bg-gradient-to-r data-[state=active]:from-emerald-500 data-[state=active]:to-teal-600' },
+  { value: 'case-study', label: '案例深度拆解', emoji: '📖', Icon: BookOpen, activeGradient: 'data-[state=active]:bg-gradient-to-r data-[state=active]:from-amber-500 data-[state=active]:to-orange-600' },
+]
+
 export default function ProjectsPage() {
   const [copiedId, setCopiedId] = useState<string | null>(null)
 
@@ -211,9 +219,8 @@ export default function ProjectsPage() {
     setTimeout(() => setCopiedId(null), 2000)
   }
 
-  const getCategoryProjects = (category: string) => {
-    return projects.filter((p) => p.category === category)
-  }
+  const getCategoryProjects = (category: ProjectCategory) =>
+    PROJECTS.filter((p) => p.category === category)
 
   return (
     <div className="min-h-screen bg-slate-50 font-sans">
@@ -243,67 +250,37 @@ export default function ProjectsPage() {
         <div className="max-w-lg mx-auto md:max-w-6xl">
           <Tabs defaultValue="ai-ecommerce" className="w-full">
             <TabsList className="w-full bg-white border border-gray-100 rounded-xl p-1.5 overflow-x-auto whitespace-nowrap">
-              <TabsTrigger
-                value="ai-ecommerce"
-                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all data-[state=active]:bg-gradient-to-r from-blue-500 to-indigo-600 data-[state=active]:text-white data-[state=active]:shadow-md"
-              >
-                <ShoppingBag size={16} />
-                <span>🛒 AI 电商实战</span>
-              </TabsTrigger>
-              <TabsTrigger
-                value="ai-media"
-                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all data-[state=active]:bg-gradient-to-r from-pink-500 to-rose-600 data-[state=active]:text-white data-[state=active]:shadow-md"
-              >
-                <Video size={16} />
-                <span>🎬 AI 自媒体引流</span>
-              </TabsTrigger>
-              <TabsTrigger
-                value="ai-toolbox"
-                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all data-[state=active]:bg-gradient-to-r from-emerald-500 to-teal-600 data-[state=active]:text-white data-[state=active]:shadow-md"
-              >
-                <Wrench size={16} />
-                <span>🔧 AI 高效工具箱</span>
-              </TabsTrigger>
-              <TabsTrigger
-                value="case-study"
-                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all data-[state=active]:bg-gradient-to-r from-amber-500 to-orange-600 data-[state=active]:text-white data-[state=active]:shadow-md"
-              >
-                <BookOpen size={16} />
-                <span>📖 案例深度拆解</span>
-              </TabsTrigger>
+              {CATEGORIES.map(({ value, label, emoji, Icon, activeGradient }) => (
+                <TabsTrigger
+                  key={value}
+                  value={value}
+                  className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all data-[state=active]:text-white data-[state=active]:shadow-md ${activeGradient}`}
+                >
+                  <Icon size={16} />
+                  <span>{emoji} {label}</span>
+                </TabsTrigger>
+              ))}
             </TabsList>
 
-            <TabsContent value="ai-ecommerce" className="mt-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {getCategoryProjects('ai-ecommerce').map((project) => (
-                  <ProjectCard key={project.id} project={project} />
-                ))}
-              </div>
-            </TabsContent>
-
-            <TabsContent value="ai-media" className="mt-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {getCategoryProjects('ai-media').map((project) => (
-                  <ProjectCard key={project.id} project={project} />
-                ))}
-              </div>
-            </TabsContent>
-
-            <TabsContent value="ai-toolbox" className="mt-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {getCategoryProjects('ai-toolbox').map((project) => (
-                  <ProjectCard key={project.id} project={project} />
-                ))}
-              </div>
-            </TabsContent>
-
-            <TabsContent value="case-study" className="mt-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {getCategoryProjects('case-study').map((project) => (
-                  <ProjectCard key={project.id} project={project} />
-                ))}
-              </div>
-            </TabsContent>
+            {CATEGORIES.map(({ value, label, emoji }) => {
+              const list = getCategoryProjects(value)
+              return (
+                <TabsContent key={value} value={value} className="mt-6">
+                  {list.length > 0 ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      {list.map((project) => (
+                        <ProjectCard key={project.slug} project={project} />
+                      ))}
+                    </div>
+                  ) : (
+                    <CategoryEmpty
+                      label={label}
+                      emoji={emoji}
+                    />
+                  )}
+                </TabsContent>
+              )
+            })}
           </Tabs>
         </div>
       </motion.section>
@@ -409,21 +386,55 @@ export default function ProjectsPage() {
   )
 }
 
+// ─── 空状态组件（用于 ai-toolbox / case-study 等暂无数据的分类）───
+function CategoryEmpty({ label, emoji }: { label: string; emoji: string }) {
+  return (
+    <div className="flex flex-col items-center justify-center py-20 px-6 bg-white rounded-2xl border border-dashed border-gray-200">
+      <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-slate-100 to-slate-50 flex items-center justify-center mb-4 shadow-inner">
+        <Inbox size={28} className="text-slate-400" />
+      </div>
+      <h3 className="text-base font-semibold text-gray-800 mb-1">
+        {emoji} {label} 正在搭建中
+      </h3>
+      <p className="text-sm text-gray-500 text-center max-w-md leading-relaxed">
+        更多高价值项目正在由 OPC 教研团队整理中，敬请期待。
+        <br />
+        你可以先查看上方 <span className="text-blue-600 font-medium">🛒 AI 电商实战</span> 或 <span className="text-pink-600 font-medium">🎬 AI 自媒体引流</span> 板块。
+      </p>
+    </div>
+  )
+}
+
+// ─── 卡片组件（图片区域用渐变 + 大图标占位）───
 function ProjectCard({ project }: { project: Project }) {
   const isBeginner = project.tags === '新手友好'
+  const Icon = project.icon
 
   return (
-    <div className="bg-white rounded-2xl shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden">
-      <div className="relative overflow-hidden rounded-t-2xl" style={{ aspectRatio: '2/1' }}>
-        <img
-          src={project.cover}
-          alt={project.title}
-          className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
-        />
+    <div className="bg-white rounded-2xl shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden flex flex-col">
+      {/* 封面：渐变背景 + 大图标占位（修复外部图片无法加载的问题） */}
+      <div className={`relative overflow-hidden rounded-t-2xl ${project.cover}`} style={{ aspectRatio: '2/1' }}>
+        <div className="absolute inset-0 flex items-center justify-center">
+          <Icon
+            size={64}
+            strokeWidth={1.4}
+            className="text-slate-700/40"
+          />
+        </div>
+        <div className="absolute top-3 right-3 inline-flex items-center gap-1 bg-white/80 backdrop-blur-sm text-xs text-slate-600 px-2 py-1 rounded-full">
+          <ImageIcon size={12} />
+          封面占位
+        </div>
       </div>
 
-      <div className="p-5">
-        <span className={`inline-block text-xs font-medium px-2 py-1 rounded-full ${isBeginner ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>
+      <div className="p-5 flex-1 flex flex-col">
+        <span
+          className={`inline-block self-start text-xs font-medium px-2 py-1 rounded-full ${
+            isBeginner
+              ? 'bg-green-100 text-green-700'
+              : 'bg-amber-100 text-amber-700'
+          }`}
+        >
           {project.tags}
         </span>
 
@@ -433,16 +444,19 @@ function ProjectCard({ project }: { project: Project }) {
 
         <div className="flex items-center gap-1.5 mt-1">
           <Clock size={14} className="text-slate-500" />
-          <span className="text-sm text-slate-500">预估完成：{project.time}</span>
+          <span className="text-sm text-slate-500">预估完成：{project.duration}</span>
         </div>
 
-        <p className="mt-2 text-slate-600 text-sm line-clamp-2">
+        <p className="mt-2 text-slate-600 text-sm line-clamp-2 flex-1">
           {project.summary}
         </p>
 
-        <button className="w-full mt-4 py-2.5 rounded-xl font-medium text-white bg-gradient-to-r from-blue-500 to-purple-500 hover:scale-105 transition-transform shadow-md">
+        <Link
+          href={`/projects/${project.slug}`}
+          className="block w-full mt-4 py-2.5 rounded-xl font-medium text-white bg-gradient-to-r from-blue-500 to-purple-500 hover:scale-[1.02] transition-transform shadow-md text-center"
+        >
           查看完整 SOP
-        </button>
+        </Link>
       </div>
     </div>
   )

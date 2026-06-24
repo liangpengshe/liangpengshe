@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   X,
@@ -15,9 +15,16 @@ import {
   Printer,
   MessageCircle,
 } from 'lucide-react'
+import ShareReportCTA from '@/components/ShareReportCTA'
 
 interface DiagnosisFormProps {
   compact?: boolean
+  /** 受控模式：外部传入的 open 状态 */
+  open?: boolean
+  /** 受控模式：open 状态变化回调 */
+  onOpenChange?: (open: boolean) => void
+  /** 是否隐藏内置的「开始诊断」触发按钮（外部已经有按钮时使用） */
+  hideTrigger?: boolean
 }
 
 const ROLES = [
@@ -34,8 +41,20 @@ const GOALS_OPTIONS = [
   { value: '转型', label: 'AI 转型', desc: '业务 AI 化升级', icon: '🤖' },
 ]
 
-export default function AIDiagnosisForm({ compact = false }: DiagnosisFormProps) {
-  const [open, setOpen] = useState(false)
+export default function AIDiagnosisForm({
+  compact = false,
+  open: controlledOpen,
+  onOpenChange,
+  hideTrigger = false,
+}: DiagnosisFormProps) {
+  const [internalOpen, setInternalOpen] = useState(false)
+  // 受控模式：使用外部传入的 open；非受控模式：使用内部 state
+  const isControlled = controlledOpen !== undefined
+  const open = isControlled ? controlledOpen : internalOpen
+  const setOpen = (v: boolean) => {
+    if (!isControlled) setInternalOpen(v)
+    onOpenChange?.(v)
+  }
   const [step, setStep] = useState(1)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -48,7 +67,38 @@ export default function AIDiagnosisForm({ compact = false }: DiagnosisFormProps)
   const [description, setDescription] = useState('')
   const [name, setName] = useState('')
   const [phone, setPhone] = useState('')
+  // 中文输入法（IME）合成中标记：合成期间不更新受控值，避免破坏中文输入
+  const [isComposing, setIsComposing] = useState(false)
 
+  // 第 3 步激活时，强制让 textarea 获得焦点（防止 framer-motion mount 阶段 autoFocus 失效）
+  useEffect(() => {
+    if (step === 3) {
+      // 使用 setTimeout 把 focus 推到下一个 microtask，避开 framer-motion 入场动画的 mount-时序
+      const t = setTimeout(() => {
+        const textarea = document.querySelector(
+          'textarea[data-step="3"]'
+        ) as HTMLTextAreaElement | null
+        if (textarea) {
+          textarea.focus()
+          // 把光标移到末尾，方便用户继续输入
+          const len = textarea.value.length
+          try {
+            textarea.setSelectionRange(len, len)
+          } catch {
+            /* 某些浏览器在非聚焦时调用会抛错，忽略 */
+          }
+        }
+      }, 50)
+      return () => clearTimeout(t)
+    }
+  }, [step])
+
+  const handleClose = () => {
+    setOpen(false)
+    setTimeout(reset, 300)
+  }
+
+  // 切换为受控 reset（保留 step 1 状态）
   const reset = () => {
     setStep(1)
     setRole('')
@@ -59,11 +109,6 @@ export default function AIDiagnosisForm({ compact = false }: DiagnosisFormProps)
     setReport(null)
     setRecordId(null)
     setError(null)
-  }
-
-  const handleClose = () => {
-    setOpen(false)
-    setTimeout(reset, 300)
   }
 
   const toggleGoal = (g: string) => {
@@ -108,32 +153,34 @@ export default function AIDiagnosisForm({ compact = false }: DiagnosisFormProps)
 
   return (
     <>
-      {/* 触发按钮 */}
-      <button
-        onClick={() => setOpen(true)}
-        className={`group inline-flex items-center gap-2 bg-white text-blue-600 font-bold ${compact ? 'px-5 py-2 text-sm' : 'px-8 py-3.5 text-base'} rounded-full shadow-lg hover:scale-105 active:scale-95 transition-all`}
-      >
-        <Sparkles size={18} className="group-hover:rotate-12 transition-transform" />
-        开始诊断
-        <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
-      </button>
+      {/* 触发按钮（外部有按钮时可隐藏） */}
+      {!hideTrigger && (
+        <button
+          onClick={() => setOpen(true)}
+          className={`group inline-flex items-center gap-2 bg-white text-blue-600 font-bold ${compact ? 'px-5 py-2 text-sm' : 'px-8 py-3.5 text-base'} rounded-full shadow-lg hover:scale-105 active:scale-95 transition-all`}
+        >
+          <Sparkles size={18} className="group-hover:rotate-12 transition-transform" />
+          开始诊断
+          <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
+        </button>
+      )}
 
       {/* 弹窗 */}
       <AnimatePresence>
         {open && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
+          <div
             className="fixed inset-0 z-[60] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-3 overflow-y-auto"
-            onClick={handleClose}
+            onClick={(e) => {
+              // 仅在点击 backdrop 自身（而非内部白卡）时关闭
+              if (e.target === e.currentTarget) handleClose()
+            }}
           >
             <motion.div
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
-              onClick={(e) => e.stopPropagation()}
               className="relative bg-white rounded-3xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto"
+              onClick={(e) => e.stopPropagation()}
             >
               {/* 关闭按钮 */}
               <button
@@ -244,13 +291,41 @@ export default function AIDiagnosisForm({ compact = false }: DiagnosisFormProps)
 
                 {/* 步骤 3：描述 */}
                 {step === 3 && (
-                  <div>
+                  <div
+                    className="relative z-20 pointer-events-auto"
+                    onMouseDown={(e) => e.stopPropagation()}
+                    onClick={(e) => e.stopPropagation()}
+                  >
                     <textarea
+                      // key 强制切换步骤时重新挂载，避免 step 2 → step 3 时复用旧实例状态
+                      key="step3-description"
+                      data-step="3"
+                      autoFocus
                       value={description}
-                      onChange={(e) => setDescription(e.target.value)}
+                      readOnly={false}
+                      disabled={false}
+                      onChange={(e) => {
+                        // IME 合成期间不更新受控值（避免中文/日文/韩文输入时被覆盖）
+                        if (isComposing) return
+                        setDescription(e.target.value)
+                      }}
+                      onInput={(e) => {
+                        // 兜底：onInput 与 onChange 互为冗余，确保任意浏览器都能更新
+                        if (isComposing) return
+                        const v = (e.currentTarget as HTMLTextAreaElement).value
+                        setDescription((prev) => (prev === v ? prev : v))
+                      }}
+                      onCompositionStart={() => setIsComposing(true)}
+                      onCompositionEnd={(e) => {
+                        setIsComposing(false)
+                        setDescription((e.currentTarget as HTMLTextAreaElement).value)
+                      }}
+                      onKeyDown={(e) => e.stopPropagation()}
+                      onKeyUp={(e) => e.stopPropagation()}
+                      onKeyPress={(e) => e.stopPropagation()}
                       placeholder="请详细描述您目前的业务困境，例如：&#10;- 我们是一家做美妆的电商公司，目前主要靠抖音直播，团队有 5 人&#10;- 痛点：每天只能播 4 小时，内容产出跟不上，转化率下降&#10;- 希望用 AI 提升内容产能和直播效率"
                       rows={10}
-                      className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-all resize-none leading-relaxed"
+                      className="w-full px-4 py-3 bg-white border border-gray-200 rounded-2xl text-sm cursor-text focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-all resize-none leading-relaxed"
                     />
                     <div className="flex items-center justify-between mt-2 text-xs text-gray-400">
                       <span>建议至少 20 字，越详细 AI 诊断越精准</span>
@@ -261,7 +336,11 @@ export default function AIDiagnosisForm({ compact = false }: DiagnosisFormProps)
 
                 {/* 步骤 4：联系方式 */}
                 {step === 4 && (
-                  <div className="space-y-4">
+                  <div
+                    className="space-y-4"
+                    onMouseDown={(e) => e.stopPropagation()}
+                    onClick={(e) => e.stopPropagation()}
+                  >
                     <div>
                       <label className="text-xs font-semibold text-gray-600 mb-1.5 block">
                         您的姓名
@@ -269,8 +348,9 @@ export default function AIDiagnosisForm({ compact = false }: DiagnosisFormProps)
                       <input
                         value={name}
                         onChange={(e) => setName(e.target.value)}
+                        onKeyDown={(e) => e.stopPropagation()}
                         placeholder="请输入您的姓名"
-                        className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-all"
+                        className="w-full px-4 py-3 bg-white border border-gray-200 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-all"
                       />
                     </div>
                     <div>
@@ -280,8 +360,9 @@ export default function AIDiagnosisForm({ compact = false }: DiagnosisFormProps)
                       <input
                         value={phone}
                         onChange={(e) => setPhone(e.target.value)}
+                        onKeyDown={(e) => e.stopPropagation()}
                         placeholder="请输入手机号或微信号"
-                        className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-all"
+                        className="w-full px-4 py-3 bg-white border border-gray-200 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-all"
                       />
                       <p className="text-xs text-gray-400 mt-2">
                         我们将为您加密保存，仅用于发送诊断报告
@@ -312,6 +393,16 @@ export default function AIDiagnosisForm({ compact = false }: DiagnosisFormProps)
                         </p>
                       </div>
                     </div>
+
+                    {/* 分享 + 微信引流 CTA */}
+                    <ShareReportCTA
+                      userName={name}
+                      reportType="diagnose"
+                      title="AI 商业落地诊断报告"
+                      summary={report.slice(0, 120)}
+                      reportId={recordId || undefined}
+                      themeColor="blue"
+                    />
                     <div className="flex flex-col sm:flex-row gap-3 mt-5">
                       <button
                         onClick={handlePrint}
@@ -340,7 +431,7 @@ export default function AIDiagnosisForm({ compact = false }: DiagnosisFormProps)
 
               {/* Footer：操作按钮 */}
               {step < 5 && (
-                <div className="px-6 py-4 border-t border-gray-100 flex items-center justify-between bg-gray-50">
+                <div className="relative z-10 px-6 py-4 border-t border-gray-100 flex items-center justify-between bg-gray-50">
                   {step > 1 ? (
                     <button
                       onClick={() => setStep(step - 1)}
@@ -383,7 +474,7 @@ export default function AIDiagnosisForm({ compact = false }: DiagnosisFormProps)
                 </div>
               )}
             </motion.div>
-          </motion.div>
+          </div>
         )}
       </AnimatePresence>
     </>

@@ -1,8 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import dynamic from 'next/dynamic'
-import CitySelector from '@/components/CitySelector'
+import CitySelector, { CITY_STORAGE_KEY } from '@/components/CitySelector'
 import Link from 'next/link'
 
 const MobileBottomNav = dynamic(() => import('@/components/MobileBottomNav'), {
@@ -19,15 +19,52 @@ export default function ClientLayout({
   children: React.ReactNode
 }) {
   const [showCitySelector, setShowCitySelector] = useState(false)
+  const [citySuffix, setCitySuffix] = useState<string>('') // 当前城市站后缀，例 "· 乌海站"
+
+  // 从 localStorage 读取当前城市，hydrate 后展示在 logo 旁
+  useEffect(() => {
+    const compute = () => {
+      try {
+        const code = window.localStorage.getItem(CITY_STORAGE_KEY) || 'shenzhen'
+        const map: Record<string, string> = {
+          shenzhen: '深圳站',
+          guangzhou: '广州站',
+          hangzhou: '杭州站',
+          chengdu: '成都站',
+          wuhai: '乌海站',
+        }
+        setCitySuffix(map[code] ? `· ${map[code]}` : '')
+      } catch {
+        setCitySuffix('')
+      }
+    }
+    compute()
+    const onChange = () => compute()
+    window.addEventListener('lps:cityChanged', onChange)
+    return () => window.removeEventListener('lps:cityChanged', onChange)
+  }, [])
 
   return (
     <div className="max-w-lg mx-auto md:max-w-7xl min-h-screen relative" suppressHydrationWarning>
       <header className="bg-white border-b border-gray-100 sticky top-0 z-50">
         <div className="flex items-center justify-between h-14 px-4 md:px-6">
-          <div className="flex items-center gap-2">
-            <span className="text-xl">🏢</span>
-            <span className="font-bold text-gray-900">良朋社OPC</span>
-          </div>
+          <Link href="/" className="flex items-center gap-2">
+            <img
+              src="/images/logo.png"
+              alt="良朋社 OPC 智富生态系统"
+              width={32}
+              height={32}
+              className="w-8 h-8 rounded-lg object-contain"
+            />
+            <span className="font-bold text-gray-900 whitespace-nowrap">
+              良朋社OPC
+              {citySuffix && (
+                <span className="ml-1 text-xs font-medium text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded-md align-middle">
+                  {citySuffix}
+                </span>
+              )}
+            </span>
+          </Link>
           <div className="flex items-center gap-3">
             <CitySelector />
             <div className="hidden md:flex items-center gap-2">
