@@ -4,7 +4,6 @@ import { useState } from 'react'
 import {
   ArrowLeft,
   Download,
-  Brain,
   Palette,
   Film,
   Zap,
@@ -12,6 +11,7 @@ import {
   CheckCircle,
 } from 'lucide-react'
 import Link from 'next/link'
+import Image from 'next/image'
 
 export default function LingxiPage() {
   const [formData, setFormData] = useState({
@@ -72,15 +72,15 @@ export default function LingxiPage() {
           </div>
         </section>
 
-        <section className="bg-white rounded-xl shadow-sm overflow-hidden mb-6">
-          <div className="aspect-video bg-gradient-to-br from-purple-100 to-indigo-100 flex items-center justify-center">
-            <div className="text-center">
-              <div className="w-20 h-20 bg-purple-500 rounded-2xl flex items-center justify-center mx-auto mb-3">
-                <Brain className="text-white" size={40} />
-              </div>
-              <p className="text-purple-600 font-medium">灵犀 AI 演示截图</p>
-            </div>
-          </div>
+        <section className="relative w-full h-40 md:h-56 overflow-hidden rounded-2xl shadow-sm mb-6">
+          <Image
+            src="/images/lingxi-banner.png"
+            alt="灵犀 AI"
+            fill
+            className="object-cover"
+            priority
+            sizes="(max-width: 768px) 100vw, 50vw"
+          />
         </section>
 
         <section className="bg-white rounded-xl shadow-sm p-5 mb-6">

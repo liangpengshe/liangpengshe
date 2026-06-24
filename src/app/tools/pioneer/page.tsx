@@ -8,10 +8,10 @@ import {
   Repeat,
   Sparkles,
   Zap,
-  Users,
   CheckCircle,
 } from 'lucide-react'
 import Link from 'next/link'
+import Image from 'next/image'
 
 export default function PioneerPage() {
   const [formData, setFormData] = useState({
@@ -72,15 +72,15 @@ export default function PioneerPage() {
           </div>
         </section>
 
-        <section className="bg-white rounded-xl shadow-sm overflow-hidden mb-6">
-          <div className="aspect-video bg-gradient-to-br from-cyan-100 to-blue-100 flex items-center justify-center">
-            <div className="text-center">
-              <div className="w-20 h-20 bg-cyan-500 rounded-2xl flex items-center justify-center mx-auto mb-3">
-                <Users className="text-white" size={40} />
-              </div>
-              <p className="text-cyan-600 font-medium">先锋派数字人演示截图</p>
-            </div>
-          </div>
+        <section className="relative w-full h-40 md:h-56 overflow-hidden rounded-2xl shadow-sm mb-6">
+          <Image
+            src="/images/pioneer-banner.png"
+            alt="先锋派数字人"
+            fill
+            className="object-cover"
+            priority
+            sizes="(max-width: 768px) 100vw, 50vw"
+          />
         </section>
 
         <section className="bg-white rounded-xl shadow-sm p-5 mb-6">
