@@ -1,7 +1,16 @@
 'use client'
 
 import { useState } from 'react'
-import { ArrowLeft, Download, Users, Video, Wand2, CheckCircle } from 'lucide-react'
+import {
+  ArrowLeft,
+  Download,
+  Drama,
+  Repeat,
+  Sparkles,
+  Zap,
+  Users,
+  CheckCircle,
+} from 'lucide-react'
 import Link from 'next/link'
 
 export default function PioneerPage() {
@@ -18,9 +27,26 @@ export default function PioneerPage() {
   }
 
   const features = [
-    { icon: Users, title: '数字人形象', desc: '自定义数字人外观，打造专属IP' },
-    { icon: Video, title: '视频生成', desc: '一键生成数字人视频，无需拍摄' },
-    { icon: Wand2, title: '智能驱动', desc: 'AI驱动的表情动作，自然逼真' },
+    {
+      icon: Drama,
+      title: 'AI 数字演员库与分身定制',
+      desc: '海量公共演员模型库，一键调用。无需真人出镜，1:1 超写实复刻专属数字人 IP，支持录屏、直播、口播等多种商业化场景，大幅解放生产力。',
+    },
+    {
+      icon: Repeat,
+      title: '爆款提取与超级复制',
+      desc: '深度集成抖音、小红书爆款解析引擎。一键提取热门文案、结构与关键词，快速完成内容模仿与重构。结合"超级员工"能力，实现矩阵化精准分发。',
+    },
+    {
+      icon: Sparkles,
+      title: '全模态 AI 内容生成工厂',
+      desc: '无缝覆盖文生图、文生视频、图生视频三大模态。支持"照片说话"、"AI 宠物视频"等创意玩法。一次性满足电商商品图、企业宣传视频、娱乐二次创作等多元需求。',
+    },
+    {
+      icon: Zap,
+      title: '音视频智能处理工作流',
+      desc: '集成智能水印消除、视频/音频/文案一键提取。AI 自动配音、AI 音乐创作与多语言视频翻译，打通从素材抓取、处理到成片的全链路生产闭环。',
+    },
   ]
 
   return (
@@ -59,15 +85,24 @@ export default function PioneerPage() {
 
         <section className="bg-white rounded-xl shadow-sm p-5 mb-6">
           <h2 className="text-lg font-bold text-gray-900 mb-4">核心功能</h2>
-          <div className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {features.map((feature, index) => (
-              <div key={index} className="flex items-start gap-4">
-                <div className="w-12 h-12 bg-cyan-100 rounded-xl flex items-center justify-center flex-shrink-0">
-                  <feature.icon className="text-cyan-600" size={24} />
-                </div>
-                <div>
-                  <h3 className="font-semibold text-gray-900">{feature.title}</h3>
-                  <p className="text-sm text-gray-500 mt-1">{feature.desc}</p>
+              <div
+                key={index}
+                className="group relative bg-gradient-to-br from-cyan-50/70 via-sky-50/50 to-blue-50/60 border border-cyan-200/60 rounded-xl p-4 hover:border-cyan-400 hover:shadow-md hover:-translate-y-0.5 transition-all duration-300"
+              >
+                <div className="flex items-start gap-3">
+                  <div className="w-11 h-11 flex-shrink-0 bg-gradient-to-br from-cyan-100 to-sky-100 rounded-xl flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform">
+                    <feature.icon className="text-cyan-600" size={22} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-bold text-gray-900 text-sm mb-1.5 group-hover:text-cyan-700 transition-colors">
+                      {feature.title}
+                    </h3>
+                    <p className="text-xs text-gray-600 leading-relaxed">
+                      {feature.desc}
+                    </p>
+                  </div>
                 </div>
               </div>
             ))}
