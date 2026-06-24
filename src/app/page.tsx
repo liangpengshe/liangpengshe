@@ -230,32 +230,56 @@ export default function HomePage() {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.6 }}
-                  className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-md border border-white/20 rounded-full px-4 py-1.5 mb-6"
+                  className="inline-flex items-center gap-2 bg-gradient-to-r from-amber-500/15 via-yellow-400/15 to-amber-500/15 backdrop-blur-md border border-amber-400/40 rounded-full px-4 py-1.5 mb-6 shadow-lg shadow-amber-500/10"
                 >
-                  <span className="relative flex h-2 w-2">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
+                  <span className="text-base">🏆</span>
+                  <span className="text-sm text-amber-100 font-semibold tracking-wide">
+                    良朋社<span className="text-amber-300">OPC</span> 智富生态系统
                   </span>
-                  <span className="text-sm text-slate-200 font-medium">全国 AI 创业者社群</span>
                 </motion.div>
 
                 <motion.h1
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.6, delay: 0.1 }}
-                  className="text-3xl md:text-5xl lg:text-6xl font-bold leading-tight mb-6"
+                  className="text-3xl md:text-5xl lg:text-6xl font-extrabold leading-tight mb-4"
                 >
-                  <span className="text-white">企业 AI 落地与</span>
+                  <span className="text-white">一人公司 ×</span>
                   <br />
                   <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400">
-                    商业变现实战社区
+                    AI 商业操作系统
                   </span>
                 </motion.h1>
+
+                {/* 🪙 智富渐变小字标语 */}
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.6, delay: 0.18 }}
+                  className="mb-4 flex items-center justify-center md:justify-start gap-2 flex-wrap"
+                >
+                  <span className="text-base md:text-lg font-extrabold tracking-wide">
+                    <span className="bg-gradient-to-br from-blue-400 via-indigo-400 to-purple-500 bg-clip-text text-transparent drop-shadow-[0_0_12px_rgba(99,102,241,0.45)]">
+                      智
+                    </span>
+                    <span className="mx-1 text-slate-200">·</span>
+                    <span className="bg-gradient-to-br from-amber-300 via-yellow-400 to-orange-500 bg-clip-text text-transparent drop-shadow-[0_0_12px_rgba(251,191,36,0.45)]">
+                      富
+                    </span>
+                  </span>
+                  <span className="text-xs md:text-sm font-semibold text-transparent bg-clip-text bg-gradient-to-r from-amber-200 via-yellow-100 to-amber-300 tracking-wider">
+                    以智生财，富在当下
+                  </span>
+                  <span className="text-slate-500 text-xs">·</span>
+                  <span className="text-xs md:text-sm font-semibold text-transparent bg-clip-text bg-gradient-to-r from-blue-200 via-cyan-200 to-blue-300 tracking-wider">
+                    用 AI 武装你的生意
+                  </span>
+                </motion.div>
 
                 <motion.p
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.6, delay: 0.2 }}
+                  transition={{ duration: 0.6, delay: 0.25 }}
                   className="text-slate-300 mb-8 max-w-md md:max-w-lg mx-auto md:mx-0 text-sm md:text-base"
                 >
                   汇聚全国 AI 从业者与企业家，共同探索人工智能在企业中的实际应用与商业价值
@@ -269,21 +293,23 @@ export default function HomePage() {
                 >
                   <Link
                     href="/salon"
-                    className="group relative inline-flex items-center justify-center bg-white/10 backdrop-blur-md border border-white/20 text-white font-semibold py-3.5 px-8 rounded-xl overflow-hidden transition-all duration-300 hover:bg-white hover:text-slate-900 hover:scale-105 hover:shadow-2xl hover:shadow-blue-500/30"
+                    className="group relative inline-flex items-center justify-center bg-gradient-to-r from-amber-500 to-orange-500 text-white font-bold py-3.5 px-8 rounded-xl overflow-hidden transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-amber-500/40"
                   >
+                    <span className="absolute inset-0 bg-gradient-to-r from-yellow-400 to-amber-500 opacity-0 group-hover:opacity-100 transition-opacity" />
                     <span className="relative z-10 flex items-center gap-2">
                       <Sparkles size={18} />
-                      预约线下沙龙
+                      智富沙龙 · 立即报名
                       <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
                     </span>
                   </Link>
                   <Link
                     href="/partner"
-                    className="group relative inline-flex items-center justify-center bg-white/10 backdrop-blur-md border border-white/20 text-white font-semibold py-3.5 px-8 rounded-xl overflow-hidden transition-all duration-300 hover:bg-white hover:text-slate-900 hover:scale-105 hover:shadow-2xl hover:shadow-purple-500/30"
+                    className="group relative inline-flex items-center justify-center bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 text-white font-bold py-3.5 px-8 rounded-xl overflow-hidden transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-purple-500/40"
                   >
+                    <span className="absolute inset-0 bg-gradient-to-r from-indigo-500 to-purple-700 opacity-0 group-hover:opacity-100 transition-opacity" />
                     <span className="relative z-10 flex items-center gap-2">
                       <Rocket size={18} />
-                      成为城市合伙人
+                      智富合伙人 · 城市招募
                     </span>
                   </Link>
                 </motion.div>
