@@ -3,7 +3,8 @@
 import { useState, useEffect, useMemo } from 'react'
 import { usePathname } from 'next/navigation'
 import Link from 'next/link'
-import { MessageCircle, X, Send, Sparkles, ArrowRight, Lightbulb, Wrench, FileText } from 'lucide-react'
+import { MessageCircle, X, Send, Sparkles, ArrowRight, Lightbulb, Wrench, FileText, Volume2 } from 'lucide-react'
+import { useAudio } from '@/hooks/useAudio'
 
 interface Message {
   id: string
@@ -73,6 +74,8 @@ export default function AIAssistant() {
   const [messages, setMessages] = useState<Message[]>([])
   const [inputValue, setInputValue] = useState('')
   const [loading, setLoading] = useState(false)
+  const [hasGreeted, setHasGreeted] = useState(false)
+  const { playTTS } = useAudio()
   const [conversationId, setConversationId] = useState<string>()
 
   const ctx = useMemo(() => buildContext(pathname || ''), [pathname])
@@ -269,8 +272,23 @@ export default function AIAssistant() {
         <div className="absolute inset-0 -m-1 rounded-full bg-gradient-to-br from-blue-400 to-purple-500 opacity-40 animate-ping" />
         <button
           onClick={() => {
-            setIsOpen(!isOpen)
+            const next = !isOpen
+            setIsOpen(next)
             setShowBubble(false)
+            // 首次打开时播放语音问候
+            if (next && !hasGreeted) {
+              setHasGreeted(true)
+              const greetText =
+                ctx.kind === 'tools'
+                  ? '你好老板，你正在浏览工具库，告诉我你的痛点，我帮你匹配最合适的项目案例。'
+                  : ctx.kind === 'projects'
+                  ? '老板你好，这里是项目库，要不要我推荐一个最适合你当前阶段的 SOP 案例？'
+                  : '你好，我是良朋社的良良，欢迎来到智富生态系统，需要我帮你诊断一下工具需求吗？'
+              // 稍微延后播放，避免动画与浏览器 audio 抢占
+              setTimeout(() => {
+                playTTS(greetText).catch(() => null)
+              }, 350)
+            }
           }}
           className="relative w-14 h-14 bg-gradient-to-br from-blue-500 via-indigo-500 to-purple-600 rounded-full shadow-2xl shadow-purple-500/40 flex items-center justify-center text-white hover:scale-110 active:scale-95 transition-all duration-300 border border-white/30"
         >

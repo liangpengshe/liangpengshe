@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { motion } from 'framer-motion'
+import { useAudio } from '@/hooks/useAudio'
 import {
   Clock,
   MapPin,
@@ -101,6 +102,7 @@ const galleryImages = [
 export default function SalonPage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitSuccess, setSubmitSuccess] = useState(false)
+  const { playSound, playTTS } = useAudio()
 
   const handleSignup = async () => {
     setIsSubmitting(true)
@@ -113,6 +115,9 @@ export default function SalonPage() {
       const data = await response.json()
       if (data.success) {
         setSubmitSuccess(true)
+        // 金币音效 + 语音播报成功
+        playSound('/sounds/coin.wav')
+        playTTS('报名成功，请准时到场。')
         setTimeout(() => {
           setSubmitSuccess(false)
           setIsSubmitting(false)

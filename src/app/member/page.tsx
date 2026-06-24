@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import ClientLayout from '@/components/ClientLayout'
 import { AIDailyBrief } from '@/components/AIDailyBrief'
+import { useAudio } from '@/hooks/useAudio'
 import {
   User,
   Mail,
@@ -35,6 +36,7 @@ import {
   ChevronDown,
   ChevronUp,
   History,
+  Headphones,
 } from 'lucide-react'
 
 type Step = {
@@ -612,6 +614,45 @@ function ReportStarterCard({
 /* ============================================
    📄 四库全胜报告预览弹窗
 ============================================ */
+
+// 把报告结构化数据拼成适合 TTS 朗读的中文文本
+function buildReportText(userName: string, roadmap: any): string {
+  const diag = roadmap?.diagnosis
+  const plans = roadmap?.plans || []
+  const tools = roadmap?.tools || []
+  const salons = roadmap?.salons || []
+
+  const lines: string[] = []
+  lines.push(`${userName}老板，您好。以下是您的良朋社OPC四库全胜报告。`)
+  if (diag) {
+    lines.push(
+      `第一部分，商业诊断。您的目标包括：${(diag.goals || []).join('，') || '暂未填写'}。${
+        diag.summary || '已完成 AI 商业诊断。'
+      }`
+    )
+  }
+  if (plans.length) {
+    lines.push(`第二部分，人生商业规划。您共有 ${plans.length} 份规划。`)
+    plans.slice(0, 3).forEach((p: any, i: number) => {
+      lines.push(`规划 ${i + 1}，目标年收入：${p.targetIncome}。${p.summary || ''}`)
+    })
+  }
+  if (tools.length) {
+    lines.push(`第三部分，工具清单。您已选用 ${tools.length} 款提效工具。`)
+    tools.slice(0, 5).forEach((t: any, i: number) => {
+      lines.push(`${i + 1}：${t.name}。`)
+    })
+  }
+  if (salons.length) {
+    lines.push(`第四部分，资源链接。您已参加 ${salons.length} 场沙龙。`)
+  }
+  lines.push(
+    '最后，四库全胜系统启动建议：第一，工具提效，选择 1 到 2 个高频工具深度使用 30 天。第二，项目创收，复制 1 个城市 SOP，跑通最小成交闭环。第三，服务护航，购买 1 次 AI 落地陪跑。第四，资源链接，每月参加 1 到 2 次线下沙龙。'
+  )
+  lines.push('祝您早日实现智富人生。')
+  return lines.filter(Boolean).join(' ')
+}
+
 function ReportPreviewModal({
   userName,
   roadmap,
@@ -621,6 +662,18 @@ function ReportPreviewModal({
   roadmap: any
   onClose: () => void
 }) {
+  const { playTTS, playSound } = useAudio()
+  const [isPlaying, setIsPlaying] = useState(false)
+
+  const handleListen = () => {
+    if (isPlaying) return
+    const text = buildReportText(userName, roadmap)
+    setIsPlaying(true)
+    playTTS(text).finally(() => {
+      // 延迟解锁，避免 race
+      setTimeout(() => setIsPlaying(false), 500)
+    })
+  }
   const diag = roadmap?.diagnosis
   const plans = roadmap?.plans || []
   const tools = roadmap?.tools || []
@@ -711,6 +764,17 @@ function ReportPreviewModal({
             <span className="text-sm font-bold text-gray-900">报告预览</span>
           </div>
           <div className="flex items-center gap-2">
+            <button
+              onClick={handleListen}
+              disabled={isPlaying}
+              className={`px-3 py-1.5 bg-gradient-to-r from-purple-600 to-pink-600 text-white text-xs font-semibold rounded-lg hover:opacity-90 flex items-center gap-1 disabled:opacity-60 ${
+                isPlaying ? 'animate-pulse' : ''
+              }`}
+              title="用硅基流动 AI 朗读报告"
+            >
+              <Headphones size={12} />
+              {isPlaying ? '朗读中…' : '听报告'}
+            </button>
             <button
               onClick={handleDownload}
               className="px-3 py-1.5 bg-white border border-gray-200 text-gray-700 text-xs font-semibold rounded-lg hover:bg-gray-50 flex items-center gap-1"
