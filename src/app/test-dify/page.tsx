@@ -10,7 +10,7 @@ type DifyApp = {
   emoji: string
   method: 'POST' | 'GET'
   path: string
-  body: any
+  body?: any
   enabled: boolean
   fields: Array<{
     key: string

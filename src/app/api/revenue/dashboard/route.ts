@@ -30,7 +30,7 @@ export async function GET(request: Request) {
           .order('createdAt', { ascending: false })
         if (status) query = query.eq('status', status)
         const { data, error } = await query
-        if (!error && data) data.forEach((d) => list.push(d))
+        if (!error && data) data.forEach((d: any) => list.push(d))
       } catch (e) {
         console.warn('[revenue/dashboard] Supabase 失败:', e)
       }

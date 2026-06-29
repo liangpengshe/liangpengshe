@@ -74,8 +74,8 @@ function calculateMatchScore(userTags: string[], partnerTags: string[], userCity
   const partnerSet = new Set(partnerTags.map((t) => t.toLowerCase().trim()))
 
   // Jaccard 相似度
-  const intersection = new Set([...userSet].filter((x) => partnerSet.has(x)))
-  const union = new Set([...userSet, ...partnerSet])
+  const intersection = new Set(Array.from(userSet).filter((x) => partnerSet.has(x)))
+  const union = new Set([...Array.from(userSet), ...Array.from(partnerSet)])
   let score = (intersection.size / union.size) * 100
 
   // 城市匹配加权（+15 分）
@@ -84,9 +84,9 @@ function calculateMatchScore(userTags: string[], partnerTags: string[], userCity
   }
 
   // 包含匹配加分（处理同义词/部分匹配）
-  for (const ut of userSet) {
+  for (const ut of Array.from(userSet)) {
     if (ut.length < 2) continue
-    for (const pt of partnerSet) {
+    for (const pt of Array.from(partnerSet)) {
       if (pt.length < 2) continue
       if (ut !== pt && (ut.includes(pt) || pt.includes(ut))) {
         score += 5

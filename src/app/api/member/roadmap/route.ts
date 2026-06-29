@@ -133,7 +133,7 @@ export async function GET(request: Request) {
           }
         }
         if (planRes.data) {
-          planRes.data.forEach((p) => {
+          planRes.data.forEach((p: any) => {
             if (!plans.find((x) => x.id === p.id)) {
               plans.push({
                 id: p.id,
@@ -145,7 +145,7 @@ export async function GET(request: Request) {
           })
         }
         if (toolRes.data) {
-          toolRes.data.forEach((t) => {
+          toolRes.data.forEach((t: any) => {
             if (!tools.find((x) => x.id === t.id)) {
               tools.push({
                 id: t.id,

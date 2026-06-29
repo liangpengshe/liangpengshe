@@ -26,7 +26,7 @@ export async function GET(request: Request) {
       .select('*')
       .eq('cityId', city.id)
 
-    const groupedByCategory = (projects || []).reduce((acc, project) => {
+    const groupedByCategory = (projects || []).reduce((acc: any, project: any) => {
       if (!acc[project.category]) {
         acc[project.category] = []
       }

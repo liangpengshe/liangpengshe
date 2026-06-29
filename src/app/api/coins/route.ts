@@ -9,7 +9,7 @@ import { prisma } from '@/lib/prisma'
  */
 
 // 行为积分规则
-export const COIN_RULES: Record<string, { amount: number; note: string; label: string; icon: string }> = {
+const COIN_RULES: Record<string, { amount: number; note: string; label: string; icon: string }> = {
   signin: { amount: 10, note: '每日签到', label: '每日签到', icon: '📅' },
   salon: { amount: 50, note: '沙龙报名', label: '参加沙龙', icon: '👥' },
   tool: { amount: 100, note: '工具提交', label: '提交工具', icon: '🛠️' },
@@ -175,7 +175,7 @@ export async function POST(request: NextRequest) {
     if (action === 'signin') {
       const today = new Date().toISOString().slice(0, 10)
       const hasTodaySignin = memoryStore.ledger.some(
-        (l) => l.phone === phone && l.action === 'signin' && l.createdAt.startsWith(today)
+        (l: any) => l.phone === phone && l.action === 'signin' && l.createdAt.startsWith(today)
       )
       if (hasTodaySignin) {
         const bal = await getBalance(phone)
@@ -218,7 +218,7 @@ export async function GET(request: NextRequest) {
 
     if (type === 'ledger') {
       // 统一从内存 store 读取流水
-      const ledger = memoryStore.ledger.filter((l) => l.phone === phone).slice(0, 50)
+      const ledger = memoryStore.ledger.filter((l: any) => l.phone === phone).slice(0, 50)
       return NextResponse.json({ success: true, data: ledger })
     }
 

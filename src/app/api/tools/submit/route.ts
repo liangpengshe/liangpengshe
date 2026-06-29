@@ -133,7 +133,7 @@ export async function GET() {
         .from('ToolSubmission')
         .select('*')
         .order('submittedAt', { ascending: false })
-      if (!error && data) data.forEach((d) => list.push(d))
+      if (!error && data) data.forEach((d: any) => list.push(d))
     } catch {}
   }
 
