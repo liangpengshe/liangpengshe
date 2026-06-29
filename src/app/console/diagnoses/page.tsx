@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { arrFromDb } from '@/lib/json-array'
 import {
   Loader2,
   RefreshCw,
@@ -267,7 +268,7 @@ export default function ConsoleDiagnosesPage() {
                   <div>
                     <div className="text-xs text-gray-500 mb-1">目标</div>
                     <div className="font-semibold text-gray-900 flex items-center gap-1 flex-wrap">
-                      <Target size={12} /> {detail.goals.join('、')}
+                      <Target size={12} /> {arrFromDb(detail.goals).join('、')}
                     </div>
                   </div>
                   <div className="md:col-span-2">

@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server'
 import { callDifyWorkflow, pickFirstStringOutput } from '@/lib/dify-workflow'
 import { prisma } from '@/lib/prisma'
 import { createClient } from '@/lib/supabase/server'
+import { arrToDb } from '@/lib/json-array'
+import { recordMemberEvent } from '@/lib/member-store'
 
 export const dynamic = 'force-dynamic'
 
@@ -123,7 +125,7 @@ export async function POST(request: Request) {
           name: cleanName,
           phone: cleanPhone,
           role: cleanRole,
-          goals: cleanGoals,
+          goals: arrToDb(cleanGoals),
           description: cleanDescription,
         })
         const text =
@@ -187,7 +189,7 @@ export async function POST(request: Request) {
             name: cleanName,
             phone: cleanPhone,
             role: cleanRole,
-            goals: cleanGoals,
+            goals: arrToDb(cleanGoals),
             description: cleanDescription,
             aiReport: report,
             status: 'PENDING',
@@ -220,12 +222,11 @@ export async function POST(request: Request) {
 
     // 同步写入会员路线图 store
     try {
-      const { recordMemberEvent } = await import('../../member/roadmap/route')
       recordMemberEvent(cleanPhone, 'diagnosis', {
         id: savedId,
         name: cleanName,
         createdAt: new Date().toISOString(),
-        goals: cleanGoals,
+        goals: arrToDb(cleanGoals),
         summary: (report || '').slice(0, 80) || 'AI 诊断报告',
       })
     } catch {}
@@ -322,7 +323,7 @@ export async function GET(request: Request) {
             name: p.name,
             phone: p.phone,
             role: p.role,
-            goals: p.goals,
+            goals: arrToDb(p.goals),
             description: p.description,
             aiReport: p.aiReport,
             status: p.status,

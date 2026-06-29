@@ -67,7 +67,7 @@ model DiagnosisRequest {
   name        String
   phone       String
   role        String   // 个人创业者/企业主/运营负责人
-  goals       String[] // 降本/获客/建团队
+  goals       String?  @db.Text // JSON 字符串数组: 降本/获客/建团队 (MySQL 不支持 String[], 改用 JSON 字符串)
   description String   // 自由描述
   aiReport    String   @db.Text // 存储 AI 生成的诊断报告 Markdown
   status      String   @default("PENDING") // PENDING / CONTACTED / CLOSED
@@ -108,7 +108,7 @@ model ServiceProvider {
   name        String
   company     String?
   contact     String?
-  specialty   String[] // 内训/GEO/定制
+  specialty   String?  @db.Text // JSON 字符串数组: 内训/GEO/定制 (MySQL 不支持 String[], 改用 JSON 字符串)
   experience  String   @db.Text
   priceRange  String?
   isVerified  Boolean  @default(false)

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { recordMemberEvent } from '@/lib/member-store'
 
 export async function POST(request: NextRequest) {
   try {
@@ -6,7 +7,6 @@ export async function POST(request: NextRequest) {
 
     // 同步写入会员路线图 store
     try {
-      const { recordMemberEvent } = await import('../../member/roadmap/route')
       recordMemberEvent(phone || `anon-salon-${Date.now()}`, 'salon', {
         id: salonId || `salon-${Date.now()}`,
         title: salonTitle || '沙龙报名',

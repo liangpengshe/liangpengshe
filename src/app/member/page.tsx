@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import ClientLayout from '@/components/ClientLayout'
 import { AIDailyBrief } from '@/components/AIDailyBrief'
+import { arrFromDb } from '@/lib/json-array'
 import { useAudio } from '@/hooks/useAudio'
 import {
   User,
@@ -831,7 +832,7 @@ function ReportPreviewModal({
               </h2>
               <div className="bg-white border border-gray-100 rounded-xl p-3 text-xs text-gray-700">
                 <div className="text-[11px] text-gray-500 mb-1">
-                  目标：<span className="font-semibold text-gray-700">{(diag.goals || []).join(' / ')}</span>
+                  目标：<span className="font-semibold text-gray-700">{arrFromDb(diag.goals).join(' / ')}</span>
                 </div>
                 <div className="leading-relaxed">{diag.summary || 'AI 已为您生成商业诊断报告'}</div>
               </div>

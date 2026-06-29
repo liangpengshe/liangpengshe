@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
+import { arrFromDb } from '@/lib/json-array'
 import {
   ArrowLeft,
   Inbox,
@@ -299,7 +300,7 @@ export default function ReviewsPage() {
                     title={s.name}
                     subtitle={s.experience.slice(0, 60) + (s.experience.length > 60 ? '...' : '')}
                     tags={[
-                      ...(s.specialty || []).map((sp) => SPECIALTY_LABELS[sp] || sp),
+                      ...arrFromDb(s.specialty).map((sp) => SPECIALTY_LABELS[sp] || sp),
                       s.company ? `所属: ${s.company}` : '个人服务商',
                       `入驻于 ${formatDate(s.createdAt)}`,
                     ]}
@@ -554,7 +555,7 @@ function ServiceDetail({ s }: { s: ServiceProvider }) {
       <div className="grid grid-cols-2 gap-3">
         {s.company && <Field icon={Building2} label="所属公司" value={s.company} />}
         {s.contact && <Field icon={Phone} label="联系方式" value={s.contact} />}
-        <Field icon={Tag} label="擅长领域" value={(s.specialty || []).map((sp) => SPECIALTY_LABELS[sp] || sp).join('、')} />
+        <Field icon={Tag} label="擅长领域" value={arrFromDb(s.specialty).map((sp) => SPECIALTY_LABELS[sp] || sp).join('、')} />
         {s.priceRange && <Field icon={DollarSign} label="报价区间" value={PRICE_LABELS[s.priceRange] || s.priceRange} />}
         <Field icon={Calendar} label="入驻时间" value={formatDate(s.createdAt)} />
         <Field icon={Sparkles} label="当前状态" value={s.isVerified ? '已认证' : '待认证'} />

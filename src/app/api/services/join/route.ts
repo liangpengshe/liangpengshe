@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { createClient } from '@/lib/supabase/server'
+import { arrToDb } from '@/lib/json-array'
 
 export const dynamic = 'force-dynamic'
 
@@ -53,7 +54,7 @@ export async function POST(request: Request) {
             name,
             company: company || null,
             contact: contact || null,
-            specialty,
+            specialty: arrToDb(specialty),
             experience,
             priceRange: priceRange || null,
             isVerified: false,
@@ -74,7 +75,7 @@ export async function POST(request: Request) {
         name,
         company: company || null,
         contact: contact || null,
-        specialty,
+        specialty: arrToDb(specialty),
         experience,
         priceRange: priceRange || null,
         isVerified: false,
@@ -123,7 +124,7 @@ export async function GET() {
           name: p.name,
           company: p.company,
           contact: p.contact,
-          specialty: p.specialty,
+          specialty: arrToDb(p.specialty),
           experience: p.experience,
           priceRange: p.priceRange,
           isVerified: p.isVerified,

@@ -1,14 +1,12 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
+import { arrFromDb } from '@/lib/json-array'
+import { getMemberStore } from '@/lib/member-store'
 
 // 全局内存 store（按 userId / phone 索引四类记录）
-const globalStore: any = (global as any).__memberRoadmapStore ||= {
-  // 用 phone 作为关联键，跨设备合并
-  byPhone: {} as Record<string, any>,
-  byUserId: {} as Record<string, any>,
-  // 兜底 demo
-  demoInit: false,
-}
+const globalStore = getMemberStore()
+
+// 本地 ensureDemo 包装（已搬进 member-store.ts，本文件继续调用）
 
 function ensureDemo() {
   if (globalStore.demoInit) return
@@ -51,8 +49,9 @@ function ensureDemo() {
   }
 }
 
-// 记录提交到全局 store（可被其他 API 调用）
-export function recordMemberEvent(phone: string, type: 'diagnosis' | 'plan' | 'tool' | 'salon', payload: any) {
+// 记录提交到全局 store（可被其他 API 调用）— 本地版本，与 @/lib/member-store 保持同步
+// Next.js 14 route.ts 不允许 export 函数，但代码可保留作为 fallback
+function recordMemberEvent(phone: string, type: 'diagnosis' | 'plan' | 'tool' | 'salon', payload: any) {
   if (!phone) return
   ensureDemo()
   if (!globalStore.byPhone[phone]) {
@@ -245,7 +244,7 @@ function getDemoData() {
       id: 'demo-diag',
       title: '自我诊断',
       desc: demo.diagnosis.summary,
-      meta: `目标：${demo.diagnosis.goals.join(' / ')}`,
+      meta: `目标：${(demo.diagnosis.goals || []).join(' / ')}`,
       at: demo.diagnosis.createdAt,
     },
     ...demo.plans.map((p: any) => ({

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { createClient } from '@/lib/supabase/server'
+import { recordMemberEvent } from '@/lib/member-store'
 
 export const dynamic = 'force-dynamic'
 
@@ -99,7 +100,6 @@ export async function POST(request: Request) {
 
     // 同步写入会员路线图 store
     try {
-      const { recordMemberEvent } = await import('../../member/roadmap/route')
       recordMemberEvent(contactInfo || `anon-${savedId}`, 'tool', {
         id: savedId,
         name,
