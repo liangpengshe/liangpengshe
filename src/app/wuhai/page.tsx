@@ -29,7 +29,7 @@ const fallbackBentoItems: BentoItem[] = [
   {
     title: 'OPC 城市主理人生态圈',
     icon: '🚀',
-    description: '全国 5 座城市已联动，招募更多城市合伙人共拓 AI 市场',
+    description: '全国 7 座城市已联动，招募更多城市合伙人共拓 AI 市场',
     href: '/partner',
     large: true,
     bgColor: 'bg-gradient-to-br from-blue-700 via-indigo-700 to-purple-800',
@@ -165,7 +165,7 @@ const wuhaiBentoItems: BentoItem[] = fallbackBentoItems.map((item, idx) =>
     ? {
         ...item,
         title: 'OPC 城市主理人生态圈',
-        description: '全国 6 座城市已联动（含乌海），招募更多城市合伙人共拓 AI 市场',
+        description: '全国 7 座城市已联动（含乌海），招募更多城市合伙人共拓 AI 市场',
       }
     : item,
 )
@@ -425,7 +425,7 @@ export default function WuhaiHomePage() {
                   </div>
                   <h2 className="text-2xl md:text-3xl font-bold mb-1.5">OPC 城市主理人生态圈</h2>
                   <p className="text-sm md:text-base text-white/90 leading-relaxed">
-                    全国 6 座城市已联动（含乌海），招募更多城市合伙人共拓 AI 市场
+                    全国 7 座城市已联动（含乌海），招募更多城市合伙人共拓 AI 市场
                   </p>
                   <div className="mt-3 inline-flex items-center gap-1 text-sm text-white font-semibold group-hover:gap-2 transition-all">
                     <span>立即加入</span>

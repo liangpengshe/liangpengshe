@@ -32,6 +32,8 @@ export default function ClientLayout({
           hangzhou: '杭州站',
           chengdu: '成都站',
           wuhai: '乌海站',
+          dongguan: '东莞站',
+          liuzhou: '柳州站',
         }
         setCitySuffix(map[code] ? `· ${map[code]}` : '')
       } catch {

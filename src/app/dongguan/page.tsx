@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { motion } from 'framer-motion'
@@ -150,81 +150,27 @@ function ActivityTicker({ activities }: { activities: Activity[] }) {
   )
 }
 
-export default function HomePage() {
-  const [bentoItems, setBentoItems] = useState<BentoItem[]>(fallbackBentoItems)
-  const [loading, setLoading] = useState(true)
-  const [activities, setActivities] = useState<Activity[]>([])
+// ─── 东莞站静态首页（与深圳首页结构一致，仅替换城市文案与右侧主理人头像）───
 
-  useEffect(() => {
-    const fetchProjects = async () => {
-      try {
-        const response = await fetch('/api/projects?city=shenzhen')
-        const data = await response.json()
-        // 仅在 API 真的返回了至少一个 category 的项目时，才覆盖 fallback
-        // 避免空数据库导致 Bento 卡片被错位覆盖，丢失"服务库"等卡
-        const hasAny = data.success && data.data && Object.keys(data.data).length > 0
-        if (hasAny) {
-          const categories = ['服务库', '工具库', '项目库', '资源库']
-          const icons: Record<string, string> = { '服务库': '💼', '工具库': '🔧', '项目库': '📁', '资源库': '📚' }
-          const subTags: Record<string, string> = {
-            '服务库': '· 护航引擎',
-            '工具库': '· 智富引擎',
-            '项目库': '· 创富引擎',
-            '资源库': '· 链接引擎',
-          }
-          // 固定 href 映射（不再用 category.replace 推导，避免中文 URL）
-          const hrefMap: Record<string, string> = {
-            '服务库': '/services',
-            '工具库': '/tools',
-            '项目库': '/projects',
-            '资源库': '/resources',
-          }
-          // 找 fallback 中同标题卡片的索引，用于 description 兜底
-          const fallbackByTitle = new Map(fallbackBentoItems.map((f) => [f.title.split(' · ')[0], f]))
-          const newItems = categories.map((category, index) => {
-            const projects = data.data[category] || []
-            const project = projects[0]
-            const fb = fallbackByTitle.get(category)
-            return {
-              title: index === 0 ? 'OPC 城市主理人生态圈' : `${category}${subTags[category]}`,
-              icon: index === 0 ? '🚀' : icons[category],
-              description: index === 0
-                ? '全国 7 座城市已联动，招募更多城市合伙人共拓 AI 市场'
-                : (project ? project.description : fb?.description || ''),
-              href: index === 0 ? '/partner' : hrefMap[category],
-              large: index === 0,
-              bgColor: index === 0
-                ? 'bg-gradient-to-br from-blue-700 via-indigo-700 to-purple-800'
-                : 'bg-white/10',
-              textColor: 'text-white',
-              badge: index === 0 ? { text: '招募中', icon: Rocket, color: 'bg-orange-500' } : undefined,
-            }
-          })
-          setBentoItems(newItems)
-        }
-      } catch (error) {
-        console.log('使用备用数据')
-      } finally {
-        setLoading(false)
+// 东莞站活动数据：静态 3 条示例，不依赖 API
+const DongguanStaticActivities: Activity[] = [
+  { id: 'w1', city: '东莞', user: '王主理人', action: '发布了新工具测评', createdAt: '2小时前' },
+  { id: 'w2', city: '东莞', user: '李同学', action: '加入了 OPC 智富社群', createdAt: '4小时前' },
+  { id: 'w3', city: '东莞', user: '张老板', action: '完成了 AI 选品陪跑', createdAt: '1天前' },
+]
+
+// 东莞站主理人卡片：直接用 fallback，不 fetch
+const DongguanBentoItems: BentoItem[] = fallbackBentoItems.map((item, idx) =>
+  idx === 0
+    ? {
+        ...item,
+        title: 'OPC 城市主理人生态圈',
+        description: '全国 7 座城市已联动（含东莞），招募更多城市合伙人共拓 AI 市场',
       }
-    }
+    : item,
+)
 
-    const fetchActivities = async () => {
-      try {
-        const res = await fetch('/api/activities')
-        const data = await res.json()
-        if (data.success && data.data) {
-          setActivities(data.data)
-        }
-      } catch {
-        setActivities([])
-      }
-    }
-
-    fetchProjects()
-    fetchActivities()
-  }, [])
-
+export default function DongguanHomePage() {
   return (
     <ClientLayout>
       <div className="min-h-screen bg-slate-50">
@@ -248,7 +194,7 @@ export default function HomePage() {
                 >
                   <span className="text-base">🏆</span>
                   <span className="text-sm text-amber-100 font-semibold tracking-wide">
-                    良朋社<span className="text-amber-300">OPC</span> 智富生态系统
+                    良朋社<span className="text-amber-300">OPC</span> 智富生态系统 · <span className="text-cyan-300">东莞站</span>
                   </span>
                 </motion.div>
 
@@ -296,7 +242,7 @@ export default function HomePage() {
                   transition={{ duration: 0.6, delay: 0.25 }}
                   className="text-slate-300 mb-8 max-w-md md:max-w-lg mx-auto md:mx-0 text-sm md:text-base"
                 >
-                  汇聚全国 AI 从业者与企业家，共同探索人工智能在企业中的实际应用与商业价值
+                  东莞站 · 汇聚全国 AI 从业者与企业家，共同探索人工智能在企业中的实际应用与商业价值
                 </motion.p>
 
                 <motion.div
@@ -329,7 +275,7 @@ export default function HomePage() {
                 </motion.div>
               </div>
 
-              {/* 右侧：良良数字人形象 + 赛博光带 */}
+              {/* 右侧：东莞站主理人形象（CSS 渐变 + 文字占位，无需图片资源）*/}
               <motion.div
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
@@ -375,7 +321,7 @@ export default function HomePage() {
                     />
                   </div>
 
-                  {/* 3) 主体图片（呼吸悬浮） */}
+                  {/* 3) 主体图片：东莞主理人照片（呼吸悬浮） */}
                   <motion.div
                     animate={{ y: [0, -10, 0] }}
                     transition={{
@@ -386,8 +332,8 @@ export default function HomePage() {
                     className="relative w-full h-full"
                   >
                     <Image
-                      src="/images/liangliang.png"
-                      alt="良良 - 良朋社AI数字助手"
+                      src="/images/dongguan.jpg"
+                      alt="东莞主理人 - 良朋社OPC 城市合伙人"
                       width={400}
                       height={400}
                       priority
@@ -397,10 +343,10 @@ export default function HomePage() {
                   </motion.div>
 
                   {/* 4) 装饰光环 */}
-                  <div className="absolute -inset-4 border-2 border-blue-400/30 rounded-3xl animate-spin-slow pointer-events-none" />
-                  <div className="absolute -inset-8 border border-purple-400/20 rounded-3xl animate-spin-reverse pointer-events-none" />
+                  <div className="absolute -inset-2 border-2 border-blue-400/30 rounded-3xl animate-spin-slow pointer-events-none" />
+                  <div className="absolute -inset-4 border border-purple-400/20 rounded-3xl animate-spin-reverse pointer-events-none" />
 
-                  {/* 5) 浮动标签（强化智富心智） */}
+                  {/* 5) 浮动标签 */}
                   <motion.div
                     initial={{ opacity: 0, x: 20 }}
                     animate={{ opacity: 1, x: 0 }}
@@ -413,9 +359,9 @@ export default function HomePage() {
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: 1.5, duration: 0.6 }}
-                    className="absolute bottom-12 -left-2 bg-gradient-to-r from-purple-500/80 to-pink-500/80 backdrop-blur-md rounded-full px-3 py-1.5 text-xs text-white shadow-lg"
+                    className="absolute bottom-12 -left-2 bg-gradient-to-r from-cyan-500/80 to-blue-500/80 backdrop-blur-md rounded-full px-3 py-1.5 text-xs text-white shadow-lg"
                   >
-                    🎯 一人公司 × 智富引擎
+                    🌆 东莞 · 一人公司
                   </motion.div>
                 </div>
               </motion.div>
@@ -423,14 +369,14 @@ export default function HomePage() {
           </div>
         </section>
 
-        {/* ═══ 实时动态横幅 ═══ */}
+        {/* ═══ 实时动态横幅：使用东莞静态数据 ═══ */}
         <section className="relative -mt-10 px-5 z-10">
           <div className="max-w-lg mx-auto md:max-w-6xl md:mx-auto">
-            <ActivityTicker activities={activities} />
+            <ActivityTicker activities={DongguanStaticActivities} />
           </div>
         </section>
 
-        {/* ═══ 数据条：玻璃拟态 + framer-motion 数字滚动 + 社区心跳 ═══ */}
+        {/* ═══ 数据条：玻璃拟态 + 静态数字 ═══ */}
         <section className="px-5 py-8">
           <div className="max-w-lg mx-auto md:max-w-6xl md:mx-auto">
             <div className="bg-gradient-to-r from-slate-800/60 to-slate-900/60 backdrop-blur-md border border-white/20 rounded-3xl px-6 py-6">
@@ -444,7 +390,16 @@ export default function HomePage() {
                     <div className="text-xs text-white/70 mt-1">{stat.label} {stat.unit}</div>
                   </div>
                 ))}
-                <CommunityHeartbeat />
+                <div className="flex-shrink-0 flex items-center gap-2 bg-white/10 backdrop-blur-md border border-white/20 rounded-full px-3 py-2 ml-2">
+                  <span className="relative flex h-2.5 w-2.5">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-green-500"></span>
+                  </span>
+                  <div className="text-xs leading-tight">
+                    <div className="text-white/70">社区今日活跃</div>
+                    <div className="text-white font-semibold">128 人</div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -470,7 +425,7 @@ export default function HomePage() {
                   </div>
                   <h2 className="text-2xl md:text-3xl font-bold mb-1.5">OPC 城市主理人生态圈</h2>
                   <p className="text-sm md:text-base text-white/90 leading-relaxed">
-                    全国 7 座城市已联动，招募更多城市合伙人共拓 AI 市场
+                    全国 7 座城市已联动（含东莞），招募更多城市合伙人共拓 AI 市场
                   </p>
                   <div className="mt-3 inline-flex items-center gap-1 text-sm text-white font-semibold group-hover:gap-2 transition-all">
                     <span>立即加入</span>
@@ -484,7 +439,7 @@ export default function HomePage() {
           </div>
         </section>
 
-        {/* ═══ 四库全胜系统：玻璃卡片 + 四大引擎 2x2 网格 ═══ */}
+        {/* ═══ 四库全胜系统：四大引擎 2x2 网格 ═══ */}
         <section className="px-5 py-8">
           <div className="max-w-lg mx-auto md:max-w-6xl md:mx-auto">
             <div className="mb-6">
@@ -502,20 +457,10 @@ export default function HomePage() {
               </p>
             </div>
 
-            {loading ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {[1, 2, 3, 4].map((i) => (
-                  <div
-                    key={i}
-                    className="bg-gray-100 rounded-2xl p-5 animate-pulse h-40"
-                  />
-                ))}
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {bentoItems
-                  .filter((item) => !item.large) // 过滤掉 OPC 大卡（已抽到独立节）
-                  .map((item, index) => {
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {DongguanBentoItems
+                .filter((item) => !item.large)
+                .map((item, index) => {
                   return (
                     <Link
                       key={index}
@@ -538,19 +483,18 @@ export default function HomePage() {
                     </Link>
                   )
                 })}
-              </div>
-            )}
+            </div>
           </div>
         </section>
 
-        {/* ═══ CTA 区：玻璃拟态 ═══ */}
+        {/* ═══ CTA 区 ═══ */}
         <section className="px-5 py-8">
           <div className="max-w-lg mx-auto md:max-w-6xl md:mx-auto">
-            <div className="relative bg-gradient-to-br from-blue-600/90 via-indigo-600/90 to-purple-700/90 backdrop-blur-md border border-white/20 rounded-3xl p-8 overflow-hidden">
+            <div className="relative bg-gradient-to-br from-cyan-600/90 via-blue-600/90 to-violet-700/90 backdrop-blur-md border border-white/20 rounded-3xl p-8 overflow-hidden">
               <div className="absolute -top-10 -right-10 w-40 h-40 bg-pink-500/30 rounded-full blur-3xl" />
-              <div className="absolute -bottom-10 -left-10 w-40 h-40 bg-blue-500/30 rounded-full blur-3xl" />
+              <div className="absolute -bottom-10 -left-10 w-40 h-40 bg-cyan-500/30 rounded-full blur-3xl" />
               <div className="relative text-center">
-                <h3 className="text-xl font-bold text-white mb-3">加入良朋社OPC</h3>
+                <h3 className="text-xl font-bold text-white mb-3">加入东莞站 · 良朋社OPC</h3>
                 <p className="text-white/80 mb-6 text-sm">
                   与全国顶尖 AI 从业者一起，开启企业智能化转型之旅
                 </p>
@@ -565,7 +509,7 @@ export default function HomePage() {
                     href="/contact"
                     className="inline-flex items-center justify-center bg-white/10 backdrop-blur-md border border-white/30 text-white font-semibold py-3 px-6 rounded-xl hover:bg-white/20 transition-colors"
                   >
-                    联系我们
+                    联系东莞主理人
                   </Link>
                 </div>
               </div>

@@ -10,6 +10,8 @@ const cities = [
   { name: '杭州', code: 'hangzhou' },
   { name: '成都', code: 'chengdu' },
   { name: '乌海', code: 'wuhai' },
+  { name: '东莞', code: 'dongguan' },
+  { name: '柳州', code: 'liuzhou' },
 ]
 
 // localStorage 键名 + 跨组件共享当前选中城市
@@ -23,6 +25,8 @@ const CITY_HOMEPAGE: Record<string, string> = {
   hangzhou: '/',
   chengdu: '/',
   wuhai: '/wuhai',
+  dongguan: '/dongguan',
+  liuzhou: '/liuzhou',
 }
 
 function readPersistedCity(): typeof cities[number] {
