@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
@@ -8,8 +8,8 @@ import { ArrowRight, Sparkles, Rocket } from 'lucide-react'
 import ClientLayout from '@/components/ClientLayout'
 
 const stats = [
-  { label: '已赋能企业', value: 70, suffix: '+', unit: '家' },
-  { label: '举办沙龙', value: 5, suffix: '', unit: '期' },
+  { label: '已赋能企业', value: 300, suffix: '+', unit: '家' },
+  { label: '举办沙龙', value: 50, suffix: '+', unit: '期' },
   { label: '服务客户', value: 500, suffix: '+', unit: '位' },
   { label: 'AI案例', value: 100, suffix: '+', unit: '个' },
 ]
