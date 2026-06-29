@@ -4,108 +4,77 @@ import { useState, useRef } from 'react'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
 import {
-  Briefcase,
-  PenTool,
-  ChartNoAxesCombined,
-  Shield,
+  Stethoscope,
+  GraduationCap,
+  Users,
+  Building,
   Sparkles,
   Zap,
-  Target,
-  Rocket,
   ChevronRight,
   ChevronLeft,
   CheckCircle2,
   Star,
   ArrowRight,
 } from 'lucide-react'
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import AIDiagnosisForm from '@/components/AIDiagnosisForm'
 
-// ─── AI 智能体数据 ───
-const aiAgents = [
+// ─── AI 智富服务中台：四大引擎 ───
+const serviceEngines = [
   {
-    icon: Briefcase,
-    title: 'AI 战略官',
-    subtitle: 'Strategist',
-    desc: '商业模式诊断',
-    tags: ['战略咨询', '流程重构'],
-    borderColor: 'border-blue-500',
-    buttonColor: 'text-blue-600 hover:bg-blue-50',
-    lightBg: 'bg-blue-50',
-    lightText: 'text-blue-600',
+    id: 'diagnosis',
+    icon: Stethoscope,
+    title: 'AI 战略诊断与咨询',
+    desc: '面向个人与企业，通过 AI 诊断书快速定位痛点与商机。',
+    tags: ['商机诊断', '企业转型', '四库匹配'],
+    cta: '开始 AI 诊断',
+    bg: 'bg-gradient-to-br from-blue-50 via-sky-50 to-cyan-50',
+    border: 'border-blue-200',
+    iconBg: 'bg-gradient-to-br from-blue-500 to-cyan-500',
+    iconRing: 'ring-blue-200',
+    tagBg: 'bg-white/80 text-blue-700',
+    buttonGradient: 'bg-gradient-to-r from-blue-500 via-sky-500 to-cyan-500',
   },
   {
-    icon: PenTool,
-    title: 'AI 内容官',
-    subtitle: 'Content Creator',
-    desc: '7×24 内容产出',
-    tags: ['图文写作', '视频生成'],
-    borderColor: 'border-purple-500',
-    buttonColor: 'text-purple-600 hover:bg-purple-50',
-    lightBg: 'bg-purple-50',
-    lightText: 'text-purple-600',
+    id: 'coaching',
+    icon: GraduationCap,
+    title: 'AI 实战全周期陪跑',
+    desc: '12 周从 0 到 1，完成"认知→验证→放大"的陪跑闭环。',
+    tags: ['认知搭建', '闭环验证', '规模化放大'],
+    cta: '查看陪跑体系',
+    bg: 'bg-gradient-to-br from-violet-50 via-purple-50 to-fuchsia-50',
+    border: 'border-violet-200',
+    iconBg: 'bg-gradient-to-br from-violet-500 to-purple-500',
+    iconRing: 'ring-violet-200',
+    tagBg: 'bg-white/80 text-violet-700',
+    buttonGradient: 'bg-gradient-to-r from-violet-500 via-purple-500 to-fuchsia-500',
   },
   {
-    icon: ChartNoAxesCombined,
-    title: 'AI 数据官',
-    subtitle: 'Data Analyst',
-    desc: '全渠道数据看板',
-    tags: ['流量分析', 'ROI 追踪'],
-    borderColor: 'border-green-500',
-    buttonColor: 'text-green-600 hover:bg-green-50',
-    lightBg: 'bg-green-50',
-    lightText: 'text-green-600',
+    id: 'mentors',
+    icon: Users,
+    title: 'OPC 导师智库',
+    desc: '汇聚弓老师、卢老师、于老师、吕老师等 10 年+ 实战派导师，提供专属辅导。',
+    tags: ['实战导师', '1V1 私教', '行业大咖'],
+    cta: '预约导师',
+    bg: 'bg-gradient-to-br from-emerald-50 via-green-50 to-teal-50',
+    border: 'border-emerald-200',
+    iconBg: 'bg-gradient-to-br from-emerald-500 to-teal-500',
+    iconRing: 'ring-emerald-200',
+    tagBg: 'bg-white/80 text-emerald-700',
+    buttonGradient: 'bg-gradient-to-r from-emerald-500 via-green-500 to-teal-500',
   },
   {
-    icon: Shield,
-    title: 'AI 风控官',
-    subtitle: 'Risk Manager',
-    desc: '合同与财税合规',
-    tags: ['合同审核', '财税风控'],
-    borderColor: 'border-amber-500',
-    buttonColor: 'text-amber-600 hover:bg-amber-50',
-    lightBg: 'bg-amber-50',
-    lightText: 'text-amber-600',
-  },
-]
-
-// ─── 陪跑阶段数据 ───
-const stages = [
-  {
-    id: 'stage-1',
-    phase: '第一阶段',
-    title: '认知与搭建',
-    icon: Zap,
-    duration: '第 1-2 周',
-    items: [
-      'AI 工具全家桶认知',
-      '账号矩阵搭建',
-      'AI 商业模型诊断',
-    ],
-  },
-  {
-    id: 'stage-2',
-    phase: '第二阶段',
-    title: '验证与闭环',
-    icon: Target,
-    duration: '第 3-8 周',
-    items: [
-      '单点 AI 工作流跑通',
-      '内容发布 SOP 生成',
-      '首笔变现闭环验证',
-    ],
-  },
-  {
-    id: 'stage-3',
-    phase: '第三阶段',
-    title: '放大与复制',
-    icon: Rocket,
-    duration: '第 9-12 周',
-    items: [
-      '多平台矩阵放大',
-      '团队 AI 系统培训',
-      '复购与转介绍体系建立',
-    ],
+    id: 'training',
+    icon: Building,
+    title: 'OPC 总部体系内训',
+    desc: '针对新加入的 OPC 主理人和合伙人，提供全套"AI 技术 + 变现路径 + 分站运营"标准化培训。',
+    tags: ['主理人培训', '加盟赋能', '体系复制'],
+    cta: '了解内训',
+    bg: 'bg-gradient-to-br from-orange-50 via-amber-50 to-yellow-50',
+    border: 'border-orange-200',
+    iconBg: 'bg-gradient-to-br from-orange-500 to-amber-500',
+    iconRing: 'ring-orange-200',
+    tagBg: 'bg-white/80 text-orange-700',
+    buttonGradient: 'bg-gradient-to-r from-orange-500 via-amber-500 to-yellow-500',
   },
 ]
 
@@ -125,7 +94,7 @@ const mentors = [
   },
   {
     name: '卢老师',
-    title: '前字节跳动增长负责人',
+    title: 'AI电商落地专家 / 良朋社联合创始人',
     avatar: '/mentors/processed/卢老师_face.png',
     bg: 'bg-gradient-to-br from-purple-500 to-pink-600',
     stats: [
@@ -148,9 +117,9 @@ const mentors = [
     quote: '用 20% 的时间，创造 80% 的价值。',
   },
   {
-    name: '宋老师',
+    name: '吕老师',
     title: '新消费品牌操盘手',
-    avatar: '/mentors/processed/宋老师_face.png',
+    avatar: '/images/lv_teacher.png',
     bg: 'bg-gradient-to-br from-amber-500 to-orange-600',
     stats: [
       { label: '品牌操盘', value: '¥5亿+' },
@@ -163,7 +132,6 @@ const mentors = [
 
 // ─── 主页面组件 ───
 export default function ServicesPage() {
-  const [activeStage, setActiveStage] = useState('stage-1')
   const [diagnosisOpen, setDiagnosisOpen] = useState(false)
   const scrollRef = useRef<HTMLDivElement>(null)
   const [formData, setFormData] = useState({ wechat: '', phone: '' })
@@ -218,17 +186,17 @@ export default function ServicesPage() {
               {...fadeUp}
               className="text-4xl md:text-6xl font-bold tracking-tight mb-4 leading-tight"
             >
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600">
-                一人公司 × AI 商业操作系统
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-orange-400 to-rose-400">
+                ⚡️ AI 智富服务中台
               </span>
             </motion.h1>
 
             <motion.p
               {...fadeUp}
-              className="text-slate-400 text-lg md:text-xl max-w-xl mx-auto mb-10 leading-relaxed"
+              className="text-slate-400 text-lg md:text-xl max-w-2xl mx-auto mb-10 leading-relaxed"
             >
-              不招人、不租办公室、不写代码。<br className="hidden md:block" />
-              一个人 + AI 智能体矩阵 = 年入百万的一人公司。
+              从战略诊断到导师陪跑，为 OPC 主理人与企业<br className="hidden md:block" />
+              搭建一站式 AI 赋能服务体系。
             </motion.p>
 
             <motion.p
@@ -253,59 +221,69 @@ export default function ServicesPage() {
         </div>
       </motion.section>
 
-      {/* ═══ AI 智能体矩阵 ═══ */}
+      {/* ═══ AI 智富服务中台：4 宫格 Bento ═══ */}
       <section className="px-5 -mt-16 relative z-10">
         <div className="max-w-lg mx-auto md:max-w-6xl md:mx-auto">
           <motion.div
             {...fadeUp}
             className="text-center mb-8"
           >
+            <div className="inline-flex items-center gap-2 bg-white/80 backdrop-blur-sm border border-amber-200 rounded-full px-3 py-1 mb-3">
+              <Zap size={14} className="text-amber-500" />
+              <span className="text-xs text-slate-700 font-medium">四大引擎 · 一站式中台</span>
+            </div>
             <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">
-              AI 智能体矩阵
+              战略诊断 · 实战陪跑 · 导师智库 · 生态连接
             </h2>
-            <p className="text-gray-500">你的 4 位 7×24 小时 AI 员工</p>
+            <p className="text-gray-500 text-sm md:text-base">
+              从商机识别到 1V1 陪跑，再到体系复制与总部赋能
+            </p>
           </motion.div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {aiAgents.map((agent, i) => (
+            {serviceEngines.map((engine, i) => (
               <motion.div
-                key={i}
+                key={engine.id}
                 {...fadeUp}
-                transition={{ delay: i * 0.1 }}
-                className={`group bg-white rounded-2xl border-t-4 ${agent.borderColor} shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden`}
+                transition={{ delay: i * 0.08 }}
+                className={`group relative ${engine.bg} border-2 ${engine.border} rounded-2xl p-5 shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300 overflow-hidden flex flex-col`}
               >
-                <div className="p-6">
-                  <div className="flex items-start gap-4 mb-4">
-                    <div className={`w-12 h-12 rounded-xl ${agent.lightBg} flex items-center justify-center`}>
-                      <agent.icon className={`${agent.lightText}`} size={24} />
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-2 mb-1">
-                        <h3 className="font-bold text-gray-900 text-lg">{agent.title}</h3>
-                        <span className="text-xs text-gray-400 font-medium tracking-wide">
-                          {agent.subtitle}
-                        </span>
-                      </div>
-                      <p className="text-sm text-gray-500">{agent.desc}</p>
+                {/* 装饰光晕 */}
+                <div className={`absolute -top-12 -right-12 w-32 h-32 ${engine.iconBg} opacity-10 rounded-full blur-2xl`} />
+
+                <div className="relative flex flex-col h-full">
+                  {/* 大图标 */}
+                  <div className="flex items-start gap-3 mb-3">
+                    <div className={`flex-shrink-0 w-14 h-14 rounded-2xl ${engine.iconBg} flex items-center justify-center shadow-md ring-4 ${engine.iconRing}`}>
+                      <engine.icon size={28} className="text-white" />
                     </div>
                   </div>
 
-                  <div className="flex flex-wrap gap-2 mb-4">
-                    {agent.tags.map((tag) => (
+                  <h3 className="font-bold text-gray-900 text-lg leading-tight mb-2">
+                    {engine.title}
+                  </h3>
+                  <p className="text-xs md:text-sm text-slate-700 leading-relaxed mb-3">
+                    {engine.desc}
+                  </p>
+
+                  {/* 标签 */}
+                  <div className="flex flex-wrap gap-1.5 mb-4">
+                    {engine.tags.map((tag) => (
                       <span
                         key={tag}
-                        className={`${agent.lightBg} ${agent.lightText} text-xs font-medium px-2.5 py-1 rounded-full`}
+                        className={`text-[11px] font-medium px-2 py-0.5 rounded-full border border-white/60 ${engine.tagBg}`}
                       >
                         {tag}
                       </span>
                     ))}
                   </div>
 
+                  {/* 渐变 CTA 按钮 */}
                   <button
-                    className={`w-full py-2.5 rounded-xl font-medium text-sm flex items-center justify-center gap-2 border border-gray-200 ${agent.buttonColor} transition-colors`}
+                    className={`mt-auto w-full inline-flex items-center justify-center gap-1.5 px-4 py-2.5 text-sm font-bold text-white ${engine.buttonGradient} rounded-xl shadow-md hover:shadow-xl hover:scale-[1.02] active:scale-95 transition-all`}
                   >
-                    <span>一键定制</span>
-                    <ChevronRight size={16} />
+                    <span>{engine.cta}</span>
+                    <ChevronRight size={14} />
                   </button>
                 </div>
               </motion.div>
@@ -333,69 +311,6 @@ export default function ServicesPage() {
               </Link>
             </div>
           </div>
-        </div>
-      </section>
-
-
-      {/* ═══ AI 赋能陪跑 ═══ */}
-      <section className="px-5 py-20">
-        <div className="max-w-lg mx-auto md:max-w-6xl md:mx-auto">
-          <motion.div
-            {...fadeUp}
-            className="text-center mb-10"
-          >
-            <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">
-              AI 赋能陪跑体系
-            </h2>
-            <p className="text-gray-500">12 周从 0 到 1，搭建你的 AI 商业操作系统</p>
-          </motion.div>
-
-          <motion.div {...fadeUp}>
-            <Tabs value={activeStage} onValueChange={setActiveStage} className="w-full">
-              <TabsList className="w-full justify-center gap-2 bg-transparent mb-8">
-                {stages.map((stage) => (
-                  <TabsTrigger
-                    key={stage.id}
-                    value={stage.id}
-                    className="flex-1 max-w-[180px] data-[state=active]:bg-white data-[state=active]:shadow-md data-[state=active]:border-blue-200 border border-transparent rounded-xl py-4 px-4 flex flex-col items-center gap-1"
-                  >
-                    <span className="text-xs text-gray-400">{stage.phase}</span>
-                    <span className="font-semibold text-sm">{stage.title}</span>
-                  </TabsTrigger>
-                ))}
-              </TabsList>
-
-              {stages.map((stage) => (
-                <TabsContent key={stage.id} value={stage.id} className="mt-0">
-                  <div className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm">
-                    <div className="flex items-center gap-4 mb-6">
-                      <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
-                        <stage.icon className="text-white" size={24} />
-                      </div>
-                      <div>
-                        <h3 className="font-bold text-lg text-gray-900">{stage.title}</h3>
-                        <p className="text-sm text-blue-600 font-medium">{stage.duration}</p>
-                      </div>
-                    </div>
-
-                    <div className="space-y-4">
-                      {stage.items.map((item, idx) => (
-                        <div
-                          key={idx}
-                          className="flex items-start gap-3 p-4 bg-slate-50 rounded-xl"
-                        >
-                          <div className="w-6 h-6 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0 mt-0.5">
-                            <CheckCircle2 size={14} className="text-green-600" />
-                          </div>
-                          <span className="text-gray-700 text-sm leading-relaxed">{item}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </TabsContent>
-              ))}
-            </Tabs>
-          </motion.div>
         </div>
       </section>
 
@@ -501,12 +416,22 @@ export default function ServicesPage() {
                 transition={{ delay: i * 0.1 }}
                 className="flex-shrink-0 w-[280px] md:w-[300px] snap-start bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm hover:shadow-md transition-all"
               >
-                <div className={`h-44 ${mentor.bg} flex items-end justify-center relative overflow-hidden`}>
-                  {/* 真实导师头像：使用预处理的 4:3 横图，脸部位于图片中心，object-cover 完整露出 */}
-                  <img
-                    src={mentor.avatar}
-                    alt={mentor.name}
-                    className="absolute inset-0 w-full h-full object-cover"
+                <div className={`h-44 ${mentor.bg} flex items-start justify-center pt-2 relative overflow-hidden`}>
+                  {/* 导师头像：背景图 + 圆形裁切 + 白色描边 + 阴影
+                      关键：源图都是 1:1 方形（940×940 / 2048×2048），容器是 112×112 圆形
+                      background-size: cover — 缩放至完整覆盖圆，保持比例
+                      background-position: center 28% — 人脸在原图偏上，向下移动 28% 把人脸移到圆形正中央
+                      （每人脸部在原图的 Y 位置略有差异，28% 是四张图统一居中的折中值） */}
+                  <div
+                    className="relative w-28 h-28 rounded-full border-4 border-white/90 shadow-lg overflow-hidden bg-gray-200"
+                    style={{
+                      backgroundImage: `url(${mentor.avatar})`,
+                      backgroundSize: 'cover',
+                      backgroundPosition: 'center 28%',
+                      backgroundRepeat: 'no-repeat',
+                    }}
+                    aria-label={mentor.name}
+                    role="img"
                   />
                   {/* 底部柔光渐变，保证姓名对比度 */}
                   <div className="absolute inset-x-0 bottom-0 h-10 bg-gradient-to-t from-black/50 to-transparent pointer-events-none" />

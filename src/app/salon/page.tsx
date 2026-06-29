@@ -25,34 +25,35 @@ const fadeUp = {
   transition: { duration: 0.5 },
 }
 
+// ─── 导师阵容（与 /services 页面同步：弓/卢/于/吕 4 位老师） ───
 const mentors = [
   {
-    name: '陈默',
-    title: 'AI商业战略专家',
-    avatar: 'https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=professional%20asian%20business%20man%20portrait%20headshot%20confident%20smile&image_size=square',
-    stats: ['助力 500+ 企业', '单个项目降本 30%', 'AI变现顾问'],
-    quote: 'AI不是取代人，而是让每个人都拥有一支军队',
+    name: '弓老师',
+    title: 'AI 商业落地专家',
+    avatar: '/mentors/processed/弓老师_face.jpg',
+    stats: ['操盘项目 30+', '学员变现 ¥2.8亿', '陪跑周期 12周'],
+    quote: '让 AI 成为你的第一个员工，而不是竞争对手。',
   },
   {
-    name: '林薇',
-    title: '内容增长操盘手',
-    avatar: 'https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=professional%20asian%20business%20woman%20portrait%20headshot%20confident%20smile&image_size=square',
-    stats: ['操盘GMV 10亿+', '小红书涨粉百万', '内容变现导师'],
-    quote: '好内容自带流量，AI让好内容量产',
+    name: '卢老师',
+    title: 'AI电商落地专家',
+    avatar: '/mentors/processed/卢老师_face.png',
+    stats: ['增长操盘 ¥10亿+', '孵化 IP 50+', '私域沉淀 200万+'],
+    quote: 'AI 不是替代你，而是让你一个人活成一支军队。',
   },
   {
-    name: '张野',
-    title: '数据驱动专家',
-    avatar: 'https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=professional%20asian%20tech%20man%20portrait%20headshot%20smart%20glasses&image_size=square',
-    stats: ['流量ROI提升 200%', '数据看板搭建', '增长黑客'],
-    quote: '没有数据的决策，都是赌博',
+    name: '于老师',
+    title: 'AI 技术架构师',
+    avatar: '/mentors/processed/于老师_face.jpg',
+    stats: ['开源贡献 10万⭐', '技术咨询 100+', '效率提升 10x'],
+    quote: '用 20% 的时间，创造 80% 的价值。',
   },
   {
-    name: '王澜',
-    title: 'AI工具应用导师',
-    avatar: 'https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=professional%20asian%20creative%20woman%20portrait%20headshot%20modern%20style&image_size=square',
-    stats: ['培训 1000+ 学员', 'AI工具矩阵搭建', '效率专家'],
-    quote: '工具的差距，就是效率的差距',
+    name: '吕老师',
+    title: '新消费品牌操盘手',
+    avatar: '/images/lv_teacher.png',
+    stats: ['品牌操盘 ¥5亿+', '学员创业 200+', '成功案例 50+'],
+    quote: '最好的商业模式，是你自己的 CEO。',
   },
 ]
 
@@ -239,10 +240,13 @@ export default function SalonPage() {
                 className="snap-center flex-shrink-0 w-64 bg-slate-50 rounded-2xl p-5"
               >
                 <div className="relative mb-4">
+                  {/* 导师头像：源图均为 1:1 方形
+                      object-cover — 完整覆盖 80×80 圆
+                      object-[center_28%] — 统一把偏上的人脸下移到圆心 */}
                   <img
                     src={mentor.avatar}
                     alt={mentor.name}
-                    className="w-20 h-20 rounded-full mx-auto object-cover ring-4 ring-white shadow-lg"
+                    className="w-20 h-20 rounded-full mx-auto object-cover object-[center_28%] ring-4 ring-white shadow-lg"
                   />
                   <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 bg-gradient-to-r from-blue-500 to-purple-500 text-white text-xs font-medium px-2 py-0.5 rounded-full">
                     {mentor.title}

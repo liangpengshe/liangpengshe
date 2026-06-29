@@ -1,10 +1,10 @@
-﻿'use client'
+'use client'
 
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { motion } from 'framer-motion'
-import { ArrowRight, Sparkles, Rocket } from 'lucide-react'
+import { ArrowRight, Sparkles, Rocket, Briefcase } from 'lucide-react'
 import ClientLayout from '@/components/ClientLayout'
 
 const stats = [
@@ -478,6 +478,44 @@ export default function HomePage() {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                     </svg>
                   </div>
+                </div>
+              </div>
+            </Link>
+          </div>
+        </section>
+
+        {/* ═══ 商业全景沙盘：投资人 / 城市主理人专属入口 ═══ */}
+        <section className="px-5 pt-4">
+          <div className="max-w-lg mx-auto md:max-w-6xl md:mx-auto">
+            <Link
+              href="/pitch"
+              className="group relative block bg-gradient-to-r from-slate-900 to-indigo-900 text-white rounded-2xl p-6 overflow-hidden hover:shadow-2xl hover:shadow-indigo-500/30 hover:-translate-y-0.5 transition-all duration-300"
+            >
+              {/* 装饰光晕 */}
+              <div className="absolute -top-12 -right-12 w-40 h-40 bg-indigo-500/30 rounded-full blur-3xl" />
+              <div className="absolute -bottom-12 -left-12 w-32 h-32 bg-amber-400/15 rounded-full blur-3xl" />
+
+              <div className="relative flex flex-col md:flex-row md:justify-between md:items-center gap-4">
+                {/* 左侧内容 */}
+                <div className="flex-1">
+                  <div className="inline-flex items-center gap-1 bg-emerald-500/15 text-emerald-300 text-[11px] font-medium px-2 py-0.5 rounded-full mb-2.5 border border-emerald-400/30">
+                    <span>📈 深圳样板间数据已接入</span>
+                  </div>
+                  <h3 className="text-xl md:text-2xl font-bold leading-tight flex items-center gap-2">
+                    <Briefcase size={20} className="text-amber-400" />
+                    <span>💎 商业全景沙盘</span>
+                  </h3>
+                  <p className="text-xs md:text-sm text-white/75 leading-relaxed mt-1.5">
+                    已跑通的变现模型、分润体系与城市扩张版图，专为投资人与城市主理人开放。
+                  </p>
+                </div>
+
+                {/* 右侧按钮 */}
+                <div className="md:flex-shrink-0 flex justify-center md:justify-end">
+                  <span className="inline-flex items-center gap-1 bg-amber-500 hover:bg-amber-600 text-slate-900 font-bold px-4 py-2 rounded-full text-sm transition-colors group-hover:scale-105 transform shadow-lg">
+                    <span>进入全景沙盘</span>
+                    <span>→</span>
+                  </span>
                 </div>
               </div>
             </Link>

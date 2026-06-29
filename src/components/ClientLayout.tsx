@@ -5,13 +5,11 @@ import dynamic from 'next/dynamic'
 import CitySelector, { CITY_STORAGE_KEY } from '@/components/CitySelector'
 import Link from 'next/link'
 
-const MobileBottomNav = dynamic(() => import('@/components/MobileBottomNav'), {
-  ssr: false,
-})
+// 这些组件本身就是 'use client'，SSR 正常；
+// 保留 dynamic 拆包，但不再 ssr:false（避免触发 Next.js 14 BAILOUT_TO_CLIENT_SIDE_RENDERING）
+const MobileBottomNav = dynamic(() => import('@/components/MobileBottomNav'))
 
-const AIAssistant = dynamic(() => import('@/components/AIAssistant'), {
-  ssr: false,
-})
+const AIAssistant = dynamic(() => import('@/components/AIAssistant'))
 
 export default function ClientLayout({
   children,
@@ -69,7 +67,13 @@ export default function ClientLayout({
           </Link>
           <div className="flex items-center gap-3">
             <CitySelector />
-            <div className="hidden md:flex items-center gap-2">
+            <div className="hidden md:flex items-center gap-3">
+              <Link
+                href="/pitch"
+                className="text-sm font-medium text-slate-600 hover:text-blue-600 transition-colors"
+              >
+                💼 商业全景
+              </Link>
               <Link href="/auth/login" className="text-sm text-gray-600 hover:text-blue-600 transition-colors">
                 登录
               </Link>

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Search, Zap, ArrowRight, Flame, Bot } from 'lucide-react'
+import { Search, Zap, ArrowRight, Flame, Bot, Code } from 'lucide-react'
 import Link from 'next/link'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { Card, CardContent } from '@/components/ui/card'
@@ -43,6 +43,14 @@ const aiTools: Tool[] = [
   { id: 501, name: 'IconScout', description: 'AI 图标与素材生成', category: 'design', tags: ['免费'], rating: 4, domain: 'iconscout.com', externalUrl: 'https://iconscout.com' },
   { id: 502, name: 'Remove.bg', description: 'AI 背景去除工具', category: 'design', tags: ['免费'], rating: 4, domain: 'remove.bg', externalUrl: 'https://www.remove.bg' },
   { id: 503, name: 'Uizard', description: 'AI 界面设计工具', category: 'design', tags: ['付费'], rating: 4, domain: 'uizard.io', externalUrl: 'https://uizard.io' },
+  // ── 智能体 ──
+  { id: 601, name: 'Coze 扣子', description: '字节跳动出品的 AI 智能体开发平台，零代码搭建专属助手', category: 'agent', tags: ['免费', '推荐'], rating: 5, isHot: true, domain: 'coze.com', externalUrl: 'https://www.coze.com' },
+  { id: 602, name: 'Dify', description: '开源的 LLM 应用开发平台，支持工作流编排和智能体发布', category: 'agent', tags: ['免费', '开源'], rating: 5, domain: 'dify.ai', externalUrl: 'https://dify.ai' },
+  { id: 603, name: 'FastGPT', description: '基于大语言模型的知识库问答系统，快速构建企业级智能客服', category: 'agent', tags: ['免费', '开源'], rating: 4, domain: 'fastgpt.in', externalUrl: 'https://fastgpt.in' },
+  // ── 编程 ──
+  { id: 701, name: 'GitHub Copilot', description: 'AI 编程助手，在编辑器内实时提供代码补全和逻辑建议', category: 'coding', tags: ['付费', '爆款'], rating: 5, isHot: true, domain: 'github.com', externalUrl: 'https://github.com/features/copilot' },
+  { id: 702, name: 'Cursor', description: '集成了 AI 的下一代代码编辑器，支持自然语言写代码', category: 'coding', tags: ['付费', '推荐'], rating: 5, isHot: true, domain: 'cursor.com', externalUrl: 'https://www.cursor.com' },
+  { id: 703, name: 'Replit', description: '在线 IDE 与 AI 编程平台，一键部署和托管应用', category: 'coding', tags: ['免费', '付费'], rating: 4, domain: 'replit.com', externalUrl: 'https://replit.com' },
 ]
 
 export default function ToolsMarketPage() {
@@ -114,6 +122,18 @@ export default function ToolsMarketPage() {
             <TabsTrigger value="painting" className="flex-shrink-0">AI绘画</TabsTrigger>
             <TabsTrigger value="video" className="flex-shrink-0">AI视频</TabsTrigger>
             <TabsTrigger value="digitalhuman" className="flex-shrink-0">AI数字人</TabsTrigger>
+            <TabsTrigger value="agent" className="flex-shrink-0">
+              <span className="inline-flex items-center gap-1.5">
+                <Bot size={14} className="text-purple-600" />
+                <span>智能体</span>
+              </span>
+            </TabsTrigger>
+            <TabsTrigger value="coding" className="flex-shrink-0">
+              <span className="inline-flex items-center gap-1.5">
+                <Code size={14} className="text-cyan-600" />
+                <span>编程</span>
+              </span>
+            </TabsTrigger>
             <TabsTrigger value="design" className="flex-shrink-0">设计素材</TabsTrigger>
           </TabsList>
 
@@ -152,6 +172,22 @@ export default function ToolsMarketPage() {
           <TabsContent value="digitalhuman" className="mt-4">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {getToolsByCategory('digitalhuman').map((tool) => (
+                <ToolCard key={tool.id} tool={tool} />
+              ))}
+            </div>
+          </TabsContent>
+
+          <TabsContent value="agent" className="mt-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {getToolsByCategory('agent').map((tool) => (
+                <ToolCard key={tool.id} tool={tool} />
+              ))}
+            </div>
+          </TabsContent>
+
+          <TabsContent value="coding" className="mt-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {getToolsByCategory('coding').map((tool) => (
                 <ToolCard key={tool.id} tool={tool} />
               ))}
             </div>

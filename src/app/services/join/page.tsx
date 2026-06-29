@@ -166,7 +166,7 @@ export default function ServiceJoinPage() {
         </motion.div>
 
         {/* 权益条 */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
           {[
             { num: '70+', label: '企业客户' },
             { num: '500+', label: '社群创业者' },
@@ -181,6 +181,27 @@ export default function ServiceJoinPage() {
             </div>
           ))}
         </div>
+
+        {/* 💡 OPC 撮合规则透明提示（必读） */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-amber-50 border border-amber-200 rounded-2xl p-4 md:p-5 mb-6 flex items-start gap-3"
+        >
+          <div className="flex-shrink-0 w-9 h-9 rounded-xl bg-amber-100 flex items-center justify-center mt-0.5">
+            <Sparkles size={18} className="text-amber-600" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="text-[11px] font-bold text-amber-700 mb-1">
+              💡 OPC 撮合规则 · 必读
+            </div>
+            <p className="text-xs md:text-sm text-slate-700 leading-relaxed">
+              通过平台成交的项目，<span className="font-bold text-amber-700">平台仅收取 15% 的撮合服务费</span>，
+              <span className="font-bold text-amber-700">城市主理人可获 10% 分润</span>，
+              <span className="font-bold text-amber-700">资源方获得 75% 净收入</span>。
+            </p>
+          </div>
+        </motion.div>
 
         {success ? (
           <motion.div

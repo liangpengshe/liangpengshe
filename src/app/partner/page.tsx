@@ -14,6 +14,12 @@ import {
   CheckCircle2,
   User,
   Smartphone,
+  Server,
+  Sparkles,
+  BookOpen,
+  Wrench,
+  Banknote,
+  Phone,
 } from 'lucide-react'
 import Link from 'next/link'
 import AIMatchmakerWidget from '@/components/AIMatchmakerWidget'
@@ -75,6 +81,42 @@ const benefits = [
     color: 'border-amber-500',
     iconBg: 'bg-amber-50',
     iconColor: 'text-amber-500',
+  },
+]
+
+// ─── 加盟模式与费用：4 大权益模块 ───
+const franchiseModules = [
+  {
+    icon: Server,
+    title: '分站系统租赁与定制费（年费）',
+    desc: '城市独立 SaaS 后台、品牌域名、客户/订单/分润数据看板，年度付费即可使用全套系统。',
+    color: 'from-blue-500 to-indigo-500',
+    lightBg: 'bg-blue-50',
+    border: 'border-blue-200',
+  },
+  {
+    icon: Sparkles,
+    title: '年度系统更新与 AI 工具升级',
+    desc: '豹纹工坊、灵犀 AI、先锋派数字人等自研工具免费同步升级，紧跟 GPT-5 / Claude 等模型迭代。',
+    color: 'from-violet-500 to-purple-500',
+    lightBg: 'bg-violet-50',
+    border: 'border-violet-200',
+  },
+  {
+    icon: BookOpen,
+    title: '总部城市主理人培训 SOP 与陪跑',
+    desc: '60 天「主理人成长训练营」+ 1V1 陪跑顾问，从 0 到 1 跑通本地第一场沙龙与第一笔订单。',
+    color: 'from-emerald-500 to-teal-500',
+    lightBg: 'bg-emerald-50',
+    border: 'border-emerald-200',
+  },
+  {
+    icon: Wrench,
+    title: '总部品牌与专利授权使用',
+    desc: '合法使用「良朋社 OPC」「OPC 智富生态」品牌、商标与软著专利，本地宣传与签约场景无忧。',
+    color: 'from-amber-500 to-orange-500',
+    lightBg: 'bg-amber-50',
+    border: 'border-amber-200',
   },
 ]
 
@@ -153,6 +195,80 @@ export default function PartnerPage() {
           </div>
         </div>
       </motion.header>
+
+      {/* ═══ 加盟模式与费用（4 大权益模块 + 报价 CTA）═══ */}
+      <motion.section
+        {...fadeUp}
+        className="px-4 py-8"
+      >
+        <div className="max-w-lg mx-auto md:max-w-6xl">
+          <div className="text-center mb-6">
+            <div className="inline-flex items-center gap-1.5 bg-amber-50 border border-amber-200 text-amber-700 text-xs font-semibold px-3 py-1 rounded-full mb-3">
+              <Banknote size={12} />
+              <span>💰 加盟模式与费用</span>
+            </div>
+            <h2 className="text-xl md:text-2xl font-bold text-gray-900">
+              4 大权益模块，构筑合伙人护城河
+            </h2>
+            <p className="text-sm text-slate-500 mt-2 max-w-xl mx-auto">
+              一次性年费涵盖以下全部模块，城市规模不同，报价区间略有差异。
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
+            {franchiseModules.map((m, i) => (
+              <div
+                key={i}
+                className={`group relative overflow-hidden ${m.lightBg} ${m.border} border rounded-2xl p-4 md:p-5 shadow-sm hover:shadow-md transition-all`}
+              >
+                <div className="flex items-start gap-3">
+                  <div
+                    className={`flex-shrink-0 w-11 h-11 rounded-xl bg-gradient-to-br ${m.color} flex items-center justify-center shadow-md`}
+                  >
+                    <m.icon size={20} className="text-white" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-[11px] font-bold text-slate-500 mb-0.5">
+                      权益模块 {i + 1}
+                    </div>
+                    <h3 className="font-bold text-gray-900 text-base leading-tight mb-1">
+                      {m.title}
+                    </h3>
+                    <p className="text-xs md:text-sm text-slate-600 leading-relaxed">
+                      {m.desc}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* 底部加盟报价 CTA 卡 */}
+          <Link
+            href="#partner-form"
+            className="group block mt-5 relative overflow-hidden bg-gradient-to-r from-amber-50 via-orange-50 to-rose-50 border-2 border-amber-200 rounded-2xl p-5 md:p-6 hover:shadow-xl hover:border-amber-300 transition-all"
+          >
+            <div className="absolute -top-10 -right-10 w-32 h-32 bg-amber-300/30 rounded-full blur-3xl" />
+            <div className="relative flex flex-col md:flex-row items-start md:items-center gap-4">
+              <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center shadow-lg">
+                <Phone size={22} className="text-white" />
+              </div>
+              <div className="flex-1">
+                <h3 className="font-bold text-slate-900 text-base md:text-lg leading-tight">
+                  🤝 联系总部获取精准报价
+                </h3>
+                <p className="text-xs md:text-sm text-slate-600 leading-relaxed mt-1">
+                  根据城市规模与预期目标定制年费，不再是“一口价”，而是“一份双方共建的增长方案”。
+                </p>
+              </div>
+              <span className="flex-shrink-0 w-full md:w-auto inline-flex items-center justify-center gap-1 bg-gradient-to-r from-amber-500 to-orange-500 text-white font-bold px-4 py-2.5 rounded-full text-sm shadow-md group-hover:scale-105 transition-transform">
+                <span>立即咨询</span>
+                <ArrowRight size={14} />
+              </span>
+            </div>
+          </Link>
+        </div>
+      </motion.section>
 
       <motion.section
         {...fadeUp}
