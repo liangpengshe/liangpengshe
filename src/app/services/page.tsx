@@ -65,9 +65,9 @@ const serviceEngines = [
   {
     id: 'training',
     icon: Building,
-    title: 'OPC 总部体系内训',
-    desc: '针对新加入的 OPC 主理人和合伙人，提供全套"AI 技术 + 变现路径 + 分站运营"标准化培训。',
-    tags: ['主理人培训', '加盟赋能', '体系复制'],
+    title: 'OPC 主理人 AI 变现商学院',
+    desc: '深度拆解【诊断表 → 直播成交 → 后端方案 → 高价课】的全链路 AI 赋能玩法。',
+    tags: ['AI 变现 4 步法', '主理人培训', '体系复制'],
     cta: '了解内训',
     bg: 'bg-gradient-to-br from-orange-50 via-amber-50 to-yellow-50',
     border: 'border-orange-200',
@@ -290,6 +290,44 @@ export default function ServicesPage() {
             ))}
           </div>
 
+          {/* ─── 1000 元 · AI 商业定位诊断报告 — 高亮单品 ─── */}
+          <motion.div
+            {...fadeUp}
+            className="mt-6 relative bg-white border-2 border-amber-300 rounded-2xl p-5 md:p-6 shadow-lg hover:shadow-xl transition-shadow overflow-hidden"
+          >
+            <div className="absolute top-0 right-0 w-40 h-40 bg-gradient-to-br from-amber-100 to-orange-100 rounded-full blur-3xl opacity-60" />
+            <div className="relative flex flex-col md:flex-row items-center gap-5">
+              <div className="flex-shrink-0 w-16 h-16 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center shadow-md ring-4 ring-amber-200">
+                <span className="text-2xl">💼</span>
+              </div>
+              <div className="flex-1 text-center md:text-left">
+                <div className="inline-flex items-center gap-1.5 bg-amber-100 text-amber-700 text-[11px] font-semibold px-2 py-0.5 rounded-full mb-2">
+                  <Sparkles size={12} />
+                  <span>高客单 · 立等可取</span>
+                </div>
+                <h3 className="font-bold text-gray-900 text-lg leading-tight mb-1.5">
+                  1000 元 · AI 商业定位诊断报告
+                </h3>
+                <p className="text-sm text-gray-600 leading-relaxed">
+                  由 AI 结合您的行业背景，生成一份几十页的具体执行方案。超值交付，立等可取。
+                </p>
+              </div>
+              <div className="flex flex-col items-center md:items-end gap-1 flex-shrink-0">
+                <div className="text-2xl md:text-3xl font-extrabold text-amber-600">¥1,000</div>
+                <div className="text-[11px] text-gray-400">一次性 · 含 1V1 解读</div>
+                <button
+                  onClick={() => {
+                    alert('请填写您的姓名与电话，助理将在 1 小时内联系您完成预约。\n（演示用：正式环境会跳转到 /booking 预约表单）')
+                  }}
+                  className="mt-2 inline-flex items-center gap-1.5 px-5 py-2.5 bg-gradient-to-r from-amber-500 to-orange-500 text-white text-sm font-bold rounded-xl shadow-md hover:shadow-xl hover:scale-[1.03] active:scale-95 transition-all"
+                >
+                  立即预约诊断
+                  <ArrowRight size={14} />
+                </button>
+              </div>
+            </div>
+          </motion.div>
+
           {/* 服务商入驻横幅 */}
           <div className="mt-8 relative bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 rounded-2xl p-5 md:p-6 shadow-xl overflow-hidden">
             <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-3xl" />
@@ -372,6 +410,144 @@ export default function ServicesPage() {
               </p>
             </motion.div>
           </div>
+        </div>
+      </section>
+
+      {/* ═══ 企业 AI 智富内训（4 步变现系统）═══ */}
+      <section className="px-5 py-20 bg-gradient-to-b from-slate-50 to-white">
+        <div className="max-w-lg mx-auto md:max-w-6xl md:mx-auto">
+          <motion.div {...fadeUp} className="text-center mb-10">
+            <span className="inline-block px-3 py-1 text-xs font-semibold text-white bg-gradient-to-r from-amber-500 to-orange-500 rounded-full mb-3">
+              🎓 通哥亲授 · 4 步变现 SOP
+            </span>
+            <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">
+              企业 AI 智富内训（4 步变现系统）
+            </h2>
+            <p className="text-gray-500 text-sm md:text-base max-w-2xl mx-auto leading-relaxed">
+              从诊断、直播到后端成交，完全复制这套 AI 知识变现 SOP。
+            </p>
+          </motion.div>
+
+          {/* 2 列网格：4 步大纲 */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-10">
+            {[
+              {
+                step: '01',
+                title: '在线诊断表设计',
+                desc: '通过 AI 抓取用户痛点，完成精准定位。',
+                color: 'from-blue-500 to-cyan-500',
+                bg: 'from-blue-50 to-cyan-50',
+                border: 'border-blue-200',
+                icon: '📝',
+              },
+              {
+                step: '02',
+                title: 'AI 直播连麦诊断',
+                desc: '用 AI 模型快速生成解决方案，建立极强信任。',
+                color: 'from-violet-500 to-purple-500',
+                bg: 'from-violet-50 to-purple-50',
+                border: 'border-violet-200',
+                icon: '🎙️',
+              },
+              {
+                step: '03',
+                title: '后端 1000 元方案交付',
+                desc: 'AI 辅助生成几十页的商业执行方案。',
+                color: 'from-amber-500 to-orange-500',
+                bg: 'from-amber-50 to-orange-50',
+                border: 'border-amber-200',
+                icon: '📄',
+              },
+              {
+                step: '04',
+                title: '高阶 3 万元课程销售',
+                desc: '用 AI 智能体辅助你完成话术、流程与系统搭建。',
+                color: 'from-emerald-500 to-teal-500',
+                bg: 'from-emerald-50 to-teal-50',
+                border: 'border-emerald-200',
+                icon: '🚀',
+              },
+            ].map((item) => (
+              <motion.div
+                key={item.step}
+                {...fadeUp}
+                className={`group relative bg-gradient-to-br ${item.bg} border ${item.border} rounded-2xl p-5 shadow-sm hover:shadow-md transition-all overflow-hidden`}
+              >
+                <div className={`absolute -top-10 -right-10 w-28 h-28 bg-gradient-to-br ${item.color} opacity-10 rounded-full blur-2xl`} />
+                <div className="relative flex items-start gap-3">
+                  <div className={`flex-shrink-0 w-12 h-12 rounded-xl bg-gradient-to-br ${item.color} flex items-center justify-center text-white text-xl shadow-md`}>
+                    {item.icon}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className={`text-[10px] font-bold tracking-wider bg-gradient-to-r ${item.color} bg-clip-text text-transparent`}>
+                        STEP {item.step}
+                      </span>
+                    </div>
+                    <h3 className="font-bold text-gray-900 text-base leading-tight mb-1.5">
+                      {item.title}
+                    </h3>
+                    <p className="text-xs md:text-sm text-slate-600 leading-relaxed">
+                      {item.desc}
+                    </p>
+                  </div>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+
+          {/* 底部 C 端转化价格卡片 */}
+          <motion.div
+            {...fadeUp}
+            className="relative bg-gradient-to-r from-slate-900 via-indigo-900 to-purple-900 rounded-2xl p-6 md:p-8 shadow-2xl overflow-hidden"
+          >
+            <div className="absolute top-0 right-0 w-48 h-48 bg-amber-500/20 rounded-full blur-3xl" />
+            <div className="absolute bottom-0 left-0 w-32 h-32 bg-pink-500/20 rounded-full blur-3xl" />
+            <div className="relative flex flex-col md:flex-row items-center gap-6 text-white">
+              <div className="flex-1 text-center md:text-left">
+                <div className="inline-flex items-center gap-1.5 bg-amber-500 text-slate-900 text-[11px] font-bold px-2.5 py-1 rounded-full mb-3">
+                  <Sparkles size={12} />
+                  <span>🔥 C 端转化 · 高客单</span>
+                </div>
+                <h3 className="text-xl md:text-2xl font-bold mb-2">
+                  企业 AI 变现内训 · 全套陪跑
+                </h3>
+                <p className="text-sm md:text-base text-slate-300 leading-relaxed mb-3">
+                  3 万元 / 套 · 提供全面陪跑与手册。
+                </p>
+                <ul className="space-y-1.5 text-sm text-slate-200">
+                  <li className="flex items-start gap-2">
+                    <CheckCircle2 size={14} className="text-amber-400 flex-shrink-0 mt-0.5" />
+                    <span>通哥亲授 · 4 步变现 SOP 完整拆解</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <CheckCircle2 size={14} className="text-amber-400 flex-shrink-0 mt-0.5" />
+                    <span>AI 智能体部署手册 + 提示词库</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <CheckCircle2 size={14} className="text-amber-400 flex-shrink-0 mt-0.5" />
+                    <span>30 天 1V1 陪跑 · 落地保驾护航</span>
+                  </li>
+                </ul>
+              </div>
+              <div className="flex flex-col items-center gap-2 flex-shrink-0">
+                <div className="text-center">
+                  <div className="text-[11px] text-amber-300 mb-1">高阶 · 一次性</div>
+                  <div className="text-4xl md:text-5xl font-extrabold text-amber-400">¥30,000</div>
+                  <div className="text-[11px] text-slate-400 mt-1">/ 套 · 含 1V1 陪跑 + 手册</div>
+                </div>
+                <button
+                  onClick={() => {
+                    alert('请私信助理「3 万课程」即可报名。\n（演示用：正式环境会跳转微信二维码 / 表单）')
+                  }}
+                  className="mt-2 inline-flex items-center gap-1.5 px-6 py-3 bg-gradient-to-r from-amber-500 to-orange-500 text-slate-900 text-sm font-bold rounded-xl shadow-lg hover:shadow-xl hover:scale-[1.03] active:scale-95 transition-all"
+                >
+                  私信助理报名
+                  <ArrowRight size={14} />
+                </button>
+              </div>
+            </div>
+          </motion.div>
         </div>
       </section>
 

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Search, Zap, ArrowRight, Flame, Bot, Code } from 'lucide-react'
+import { Search, Zap, ArrowRight, Flame, Bot, Code, FileText, Wand2 } from 'lucide-react'
 import Link from 'next/link'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { Card, CardContent } from '@/components/ui/card'
@@ -201,6 +201,36 @@ export default function ToolsMarketPage() {
             </div>
           </TabsContent>
         </Tabs>
+
+        {/* AI 调查表生成 — 通哥「AI 智能体知识变现 4 步法」入口 */}
+        <div className="mt-6 relative bg-gradient-to-r from-amber-500 via-orange-500 to-red-500 rounded-2xl p-5 md:p-6 shadow-xl overflow-hidden">
+          <div className="absolute -top-8 -right-8 w-40 h-40 bg-white/10 rounded-full blur-3xl" />
+          <div className="absolute bottom-0 left-0 w-32 h-32 bg-yellow-300/20 rounded-full blur-2xl" />
+          <div className="relative flex flex-col md:flex-row items-center gap-5 text-white">
+            <div className="flex-shrink-0 w-14 h-14 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center ring-4 ring-white/30">
+              <FileText size={28} className="text-white" />
+            </div>
+            <div className="flex-1 text-center md:text-left">
+              <div className="text-[11px] font-semibold text-amber-100 mb-1 tracking-wider">
+                📝 知识变现第一步
+              </div>
+              <h3 className="text-base md:text-lg font-bold mb-1.5">
+                AI 生成智能诊断表
+              </h3>
+              <p className="text-xs md:text-sm text-amber-50/90 leading-relaxed">
+                输入你的行业，AI 一键生成痛点调查表，帮你精准锁定目标人群。
+              </p>
+            </div>
+            <Link
+              href="/tools/survey-gen"
+              className="flex-shrink-0 inline-flex items-center gap-2 px-5 py-2.5 bg-white text-orange-600 text-sm font-bold rounded-xl hover:scale-105 transition-transform shadow-lg"
+            >
+              <Wand2 size={16} />
+              立即体验 AI 表单生成
+              <ArrowRight size={14} />
+            </Link>
+          </div>
+        </div>
 
         {/* 开发者招商横幅 */}
         <div className="mt-10 relative bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 rounded-3xl p-6 md:p-8 shadow-xl overflow-hidden">
