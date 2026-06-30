@@ -538,7 +538,7 @@ export default function ServicesPage() {
                 </div>
                 <button
                   onClick={() => {
-                    alert('请私信助理「3 万课程」即可报名。\n（演示用：正式环境会跳转微信二维码 / 表单）')
+                    window.location.href = '/booking?p=course-30000'
                   }}
                   className="mt-2 inline-flex items-center gap-1.5 px-6 py-3 bg-gradient-to-r from-amber-500 to-orange-500 text-slate-900 text-sm font-bold rounded-xl shadow-lg hover:shadow-xl hover:scale-[1.03] active:scale-95 transition-all"
                 >
