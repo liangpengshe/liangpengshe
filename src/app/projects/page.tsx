@@ -44,6 +44,7 @@ import {
   MessageCircle,
   Network,
   ChevronRight,
+  HeartHandshake,
 } from 'lucide-react'
 import AIProjectPlanner from '@/components/AIProjectPlanner'
 
@@ -405,7 +406,7 @@ const engine2Projects: EngineProject[] = [
   },
 ]
 
-// ─── 案例深度拆解（引擎一下方展示）───
+// ─── 良朋社 IP 重构实战案例库 ───
 interface CaseStudy {
   id: string
   title: string
@@ -415,6 +416,14 @@ interface CaseStudy {
   metrics: { label: string; value: string }[]
   icon: LucideIcon
   color: string
+  /** 标签（如"定位重构"、"信任重构"等） */
+  tag: string
+  /** 客户原名（化名） */
+  originalName: string
+  /** 转型路径 */
+  transformation: string
+  /** 核心结果 */
+  result: string
 }
 
 const caseStudies: CaseStudy[] = [
@@ -422,12 +431,16 @@ const caseStudies: CaseStudy[] = [
     id: 'case-1',
     title: '从程序员到 AI 数字人操盘手',
     person: '小陈 · 92 年 · 前阿里 P6',
+    originalName: '小陈',
     period: '90 天',
     highlight: '借助 OPC 数字人 SOP，单人跑通 3 个直播间，6 个月 GMV 突破 500 万。',
+    transformation: '后端程序员 → AI 数字人 IP 操盘手，搭建 3 个直播间矩阵',
+    result: '月 GMV 85 万，净利 23 万/月',
+    tag: '定位重构',
     metrics: [
-      { label: '直播间数量', value: '3 个' },
+      { label: '直播间', value: '3 个' },
       { label: '月 GMV', value: '85 万' },
-      { label: '净利润', value: '23 万/月' },
+      { label: '净利', value: '23 万/月' },
     ],
     icon: Bot,
     color: 'from-blue-500 to-cyan-500',
@@ -436,12 +449,16 @@ const caseStudies: CaseStudy[] = [
     id: 'case-2',
     title: '三线城市教培老板，AI 出海跨境',
     person: '王姐 · 85 年 · 临沂教培校长',
+    originalName: '王姐',
     period: '120 天',
     highlight: '用 OPC AI 选品 + 多语种 SOP，TikTok Shop 美区从 0 到月入 2 万美金。',
+    transformation: '教培机构 → AI 跨境电商 IP，从国内赛道切换至全球市场',
+    result: '月销售额 $28,000，复购率 34%',
+    tag: '赛道重构',
     metrics: [
-      { label: 'SKU 数量', value: '120 个' },
-      { label: '月销售额', value: '$28,000' },
-      { label: '复购率', value: '34%' },
+      { label: 'SKU', value: '120 个' },
+      { label: '月销售', value: '$28,000' },
+      { label: '复购', value: '34%' },
     ],
     icon: Globe,
     color: 'from-purple-500 to-pink-500',
@@ -450,15 +467,128 @@ const caseStudies: CaseStudy[] = [
     id: 'case-3',
     title: '国企 HR 转型 AI 私域主理人',
     person: 'Lily · 88 年 · 前央企 HR',
+    originalName: 'Lily',
     period: '60 天',
     highlight: 'OPC 私域 AI SOP + 主理人分销，单月私域成交 92 单，月入 5.8 万。',
+    transformation: '企业 HR → 私域 AI 成交教练，搭建高转化私域 SOP',
+    result: '月成交 92 单，客单价 ¥630',
+    tag: '信任重构',
     metrics: [
-      { label: '私域客户', value: '1,200+' },
-      { label: '月成交量', value: '92 单' },
+      { label: '私域', value: '1,200+' },
+      { label: '月成交', value: '92 单' },
       { label: '客单价', value: '¥630' },
     ],
     icon: MessageCircle,
     color: 'from-rose-500 to-orange-500',
+  },
+  // ===== 9 个 IP 重构实战案例（新增）=====
+  {
+    id: 'case-4',
+    title: '从疗愈大师到高客单商业导师',
+    person: '清一老师 · 78 年 · 前身心灵疗愈师',
+    originalName: '清一老师',
+    period: '75 天',
+    highlight: '用 4 步法 + 9 个 AI Agent 团队，把单次 199 元疗愈课升级为 3 万元商业导师课。',
+    transformation: '身心灵疗愈 → 商业 IP 导师，从情绪服务到财富系统',
+    result: '客单价从 199 提升到 30000+，月收 80 万+',
+    tag: '定位重构',
+    metrics: [
+      { label: '客单价', value: '¥30,000' },
+      { label: '月营收', value: '80 万+' },
+      { label: 'AI 提效', value: '10 倍' },
+    ],
+    icon: Sparkles,
+    color: 'from-violet-500 to-fuchsia-500',
+  },
+  {
+    id: 'case-5',
+    title: '亲子数字心理教练 IP 重构',
+    person: '晓燕老师 · 80 年 · 前儿童心理咨询师',
+    originalName: '晓燕老师',
+    period: '90 天',
+    highlight: 'AI 诊断表 + 直播连麦，建立"亲子心理 AI 教练"IP，月私域成交 120+ 单。',
+    transformation: '线下心理咨询 → 数字亲子心理教练 IP，AI 辅助 7x24 服务',
+    result: '月私域成交 120+ 单，客单价 980 元',
+    tag: '产品重构',
+    metrics: [
+      { label: '月成交', value: '120+ 单' },
+      { label: '客单价', value: '¥980' },
+      { label: '复购率', value: '52%' },
+    ],
+    icon: HeartHandshake,
+    color: 'from-pink-500 to-rose-500',
+  },
+  {
+    id: 'case-6',
+    title: '私域 AI 成交教练 · 母婴赛道',
+    person: '丹丹老师 · 87 年 · 前母婴店主',
+    originalName: '丹丹老师',
+    period: '60 天',
+    highlight: 'AI 工作流把私域运营从 1V1 跑成 1V100，月成交从 3 万跃升到 28 万。',
+    transformation: '传统母婴店主 → 私域 AI 成交教练，AI 工作流覆盖 5 大触点',
+    result: '月成交 28 万，AI 替代 3 个员工',
+    tag: '内容重构',
+    metrics: [
+      { label: '月成交', value: '¥28 万' },
+      { label: 'AI 替代', value: '3 人' },
+      { label: '触达', value: '10 倍' },
+    ],
+    icon: Users,
+    color: 'from-amber-500 to-orange-500',
+  },
+  {
+    id: 'case-7',
+    title: '前大厂工程师 → AI 商业 IP 讲师',
+    person: 'Leo 老师 · 90 年 · 前字节 P7',
+    originalName: 'Leo 老师',
+    period: '120 天',
+    highlight: '技术背景 + 4 步法，搭建"AI 商业 IP 讲师"定位，半年线上营收破 200 万。',
+    transformation: '技术专家 → 商业 IP 讲师，把技术能力封装成可复制产品',
+    result: '半年营收 200 万+，学员 800+',
+    tag: '内容重构',
+    metrics: [
+      { label: '半年营收', value: '200 万' },
+      { label: '学员', value: '800+' },
+      { label: '完课率', value: '87%' },
+    ],
+    icon: GraduationCap,
+    color: 'from-indigo-500 to-blue-500',
+  },
+  {
+    id: 'case-8',
+    title: '实体店老板 → AI 招商操盘手',
+    person: '陈总 · 82 年 · 前餐饮连锁创始人',
+    originalName: '陈总',
+    period: '90 天',
+    highlight: '把 10 年餐饮经验重构为"AI 招商操盘"课程，单月收 12 个城市合伙人。',
+    transformation: '实体连锁老板 → AI 招商操盘手，把单店经验封装为系统化产品',
+    result: '月签 12 个城市合伙人，单笔 5 万+',
+    tag: '成交重构',
+    metrics: [
+      { label: '月签', value: '12 城' },
+      { label: '单笔', value: '5 万+' },
+      { label: '总额', value: '60 万+/月' },
+    ],
+    icon: Building,
+    color: 'from-emerald-500 to-teal-500',
+  },
+  {
+    id: 'case-9',
+    title: '营养师 → 高客单健康 IP 操盘手',
+    person: 'Anna 老师 · 85 年 · 前医院营养师',
+    originalName: 'Anna 老师',
+    period: '90 天',
+    highlight: 'AI 直播 + 高客单交付，半年营收 150 万，私域沉淀 5000+ 高净值用户。',
+    transformation: '医院营养师 → 高客单健康 IP 操盘手，AI 直播 + 私域矩阵',
+    result: '半年营收 150 万，私域 5000+ 用户',
+    tag: '信任重构',
+    metrics: [
+      { label: '半年营收', value: '150 万' },
+      { label: '私域', value: '5,000+' },
+      { label: '客单价', value: '¥3,000' },
+    ],
+    icon: HeartHandshake,
+    color: 'from-rose-500 to-pink-500',
   },
 ]
 
@@ -621,7 +751,7 @@ export default function ProjectsPage() {
         </div>
       </motion.section>
 
-      {/* ─── 案例深度拆解（仅引擎一展示）─── */}
+      {/* ─── 良朋社 IP 重构实战案例（仅引擎一展示）─── */}
       {activeEngine === 'personal' && (
         <motion.section
           {...fadeUp}
@@ -630,8 +760,8 @@ export default function ProjectsPage() {
           <div className="max-w-lg mx-auto md:max-w-6xl">
             <div className="flex items-center gap-2 mb-4">
               <Award size={20} className="text-amber-500" />
-              <h2 className="text-lg font-bold text-gray-900">案例深度拆解</h2>
-              <span className="text-xs text-slate-500 ml-1">· 真实主理人 90 天成果</span>
+              <h2 className="text-lg font-bold text-gray-900">良朋社 IP 重构实战案例库</h2>
+              <span className="text-xs text-slate-500 ml-1">· 9 个真实主理人 90 天成果</span>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {caseStudies.map((cs) => (
@@ -881,20 +1011,33 @@ function CaseStudyCard({ caseStudy }: { caseStudy: CaseStudy }) {
           <span className="text-[10px] font-bold bg-white/25 backdrop-blur-sm rounded-full px-1.5 py-0.5">
             {caseStudy.period}
           </span>
+          <span className="text-[10px] font-bold bg-amber-300/90 text-amber-900 rounded-full px-1.5 py-0.5">
+            🏷️ {caseStudy.tag}
+          </span>
         </div>
         <h3 className="text-sm font-bold leading-tight">{caseStudy.title}</h3>
       </div>
 
       <div className="p-4 flex-1 flex flex-col">
         <div className="text-[11px] text-slate-500 mb-2">
-          👤 {caseStudy.person}
+          👤 客户原名：<span className="font-semibold text-slate-700">{caseStudy.originalName}</span>
         </div>
         <p className="text-xs text-slate-700 leading-relaxed mb-3">
           {caseStudy.highlight}
         </p>
 
+        {/* 转型路径 + 核心结果 */}
+        <div className="space-y-1.5 mb-3">
+          <div className="text-[11px] text-slate-600 bg-blue-50 border border-blue-100 rounded-lg px-2 py-1.5">
+            <span className="font-bold text-blue-700">🔀 转型路径：</span>{caseStudy.transformation}
+          </div>
+          <div className="text-[11px] text-slate-600 bg-emerald-50 border border-emerald-100 rounded-lg px-2 py-1.5">
+            <span className="font-bold text-emerald-700">🎯 核心结果：</span>{caseStudy.result}
+          </div>
+        </div>
+
         {/* 关键指标 */}
-        <div className="grid grid-cols-3 gap-1.5 mt-auto">
+        <div className="grid grid-cols-3 gap-1.5 mb-3">
           {caseStudy.metrics.map((m, i) => (
             <div key={i} className="bg-slate-50 rounded-lg p-2 text-center">
               <div className="text-[9px] text-slate-500 mb-0.5 leading-tight">{m.label}</div>
@@ -902,6 +1045,15 @@ function CaseStudyCard({ caseStudy }: { caseStudy: CaseStudy }) {
             </div>
           ))}
         </div>
+
+        {/* 查看完整案例按钮 */}
+        <Link
+          href="/ip-reconstruction"
+          className="mt-auto w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-bold text-white bg-gradient-to-r from-slate-700 to-slate-900 rounded-xl shadow-sm hover:shadow-md hover:scale-[1.02] active:scale-95 transition-all"
+        >
+          查看完整案例
+          <ChevronRight size={12} />
+        </Link>
       </div>
     </div>
   )

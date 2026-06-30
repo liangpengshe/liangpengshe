@@ -15,6 +15,21 @@ import {
   CheckCircle2,
   Star,
   ArrowRight,
+  // 9 Agent 矩阵新增图标
+  UserCog,
+  Cpu,
+  Megaphone,
+  Mail,
+  Headphones,
+  Search,
+  Target,
+  DollarSign,
+  Rocket,
+  // IP 重构 4 步法新增图标
+  ClipboardList,
+  Mic,
+  FileText,
+  Crown,
 } from 'lucide-react'
 import AIDiagnosisForm from '@/components/AIDiagnosisForm'
 
@@ -418,7 +433,7 @@ export default function ServicesPage() {
         <div className="max-w-lg mx-auto md:max-w-6xl md:mx-auto">
           <motion.div {...fadeUp} className="text-center mb-10">
             <span className="inline-block px-3 py-1 text-xs font-semibold text-white bg-gradient-to-r from-amber-500 to-orange-500 rounded-full mb-3">
-              🎓 通哥亲授 · 4 步变现 SOP
+              🎓 良朋社 AI 商业实验室 · 4 步变现 SOP
             </span>
             <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">
               企业 AI 智富内训（4 步变现系统）
@@ -518,7 +533,7 @@ export default function ServicesPage() {
                 <ul className="space-y-1.5 text-sm text-slate-200">
                   <li className="flex items-start gap-2">
                     <CheckCircle2 size={14} className="text-amber-400 flex-shrink-0 mt-0.5" />
-                    <span>通哥亲授 · 4 步变现 SOP 完整拆解</span>
+                    <span>良朋社 AI 商业实验室亲授 · 4 步变现 SOP 完整拆解</span>
                   </li>
                   <li className="flex items-start gap-2">
                     <CheckCircle2 size={14} className="text-amber-400 flex-shrink-0 mt-0.5" />
@@ -548,6 +563,277 @@ export default function ServicesPage() {
               </div>
             </div>
           </motion.div>
+        </div>
+      </section>
+
+      {/* ═══ 良朋社 · IP 重构系统：9 Agent + 4 步法 + 双产品卡 ═══ */}
+
+      {/* ── 9 个 AI 智能体团队矩阵（3x3 网格）── */}
+      <section className="px-5 py-20 bg-gradient-to-b from-slate-50 to-white">
+        <div className="max-w-lg mx-auto md:max-w-6xl md:mx-auto">
+          <motion.div {...fadeUp} className="text-center mb-10">
+            <span className="inline-block px-3 py-1 text-xs font-semibold text-white bg-gradient-to-r from-violet-500 to-purple-500 rounded-full mb-3">
+              🦾 良朋社 AI 智能体团队
+            </span>
+            <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">
+              9 个 AI Agent，陪你从 0 到 1 跑通商业增长
+            </h2>
+            <p className="text-gray-500 text-sm md:text-base max-w-2xl mx-auto">
+              每一个 Agent 都在 OPC 真实业务里跑通过，复制到你的 IP，效率提升 10 倍。
+            </p>
+          </motion.div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4">
+            {[
+              { icon: UserCog,    name: 'CEO 智能体',    desc: '战略决策 + 业务规划',  color: 'from-blue-500 to-indigo-500',     bg: 'from-blue-50 to-indigo-50',     border: 'border-blue-200' },
+              { icon: Cpu,        name: '技术智能体',    desc: 'AI 工作流 + 自动化部署', color: 'from-cyan-500 to-blue-500',     bg: 'from-cyan-50 to-blue-50',       border: 'border-cyan-200' },
+              { icon: Megaphone,  name: '营销智能体',    desc: '内容生成 + 投流优化',   color: 'from-pink-500 to-rose-500',     bg: 'from-pink-50 to-rose-50',       border: 'border-pink-200' },
+              { icon: Mail,       name: '邮件智能体',    desc: 'EDM + 私域触达',        color: 'from-amber-500 to-orange-500',  bg: 'from-amber-50 to-orange-50',    border: 'border-amber-200' },
+              { icon: Headphones, name: '客服智能体',    desc: '7x24 自动应答',         color: 'from-emerald-500 to-teal-500',  bg: 'from-emerald-50 to-teal-50',    border: 'border-emerald-200' },
+              { icon: Search,     name: '研究智能体',    desc: '行业调研 + 竞品分析',   color: 'from-violet-500 to-purple-500', bg: 'from-violet-50 to-purple-50',   border: 'border-violet-200' },
+              { icon: Target,     name: '广告智能体',    desc: '多平台投放 + ROI 优化', color: 'from-red-500 to-rose-500',     bg: 'from-red-50 to-rose-50',        border: 'border-red-200' },
+              { icon: DollarSign, name: '财务智能体',    desc: '成本核算 + 分润计算',   color: 'from-green-500 to-emerald-500', bg: 'from-green-50 to-emerald-50',   border: 'border-green-200' },
+              { icon: Rocket,     name: '执行智能体',    desc: '任务拆解 + 自动跟进',   color: 'from-orange-500 to-amber-500',  bg: 'from-orange-50 to-amber-50',    border: 'border-orange-200' },
+            ].map((agent) => (
+              <motion.div
+                key={agent.name}
+                {...fadeUp}
+                className={`group relative bg-gradient-to-br ${agent.bg} border ${agent.border} rounded-2xl p-4 md:p-5 shadow-sm hover:shadow-md transition-all overflow-hidden`}
+              >
+                <div className={`absolute -top-8 -right-8 w-24 h-24 bg-gradient-to-br ${agent.color} opacity-10 rounded-full blur-2xl`} />
+                <div className="relative flex items-center gap-3">
+                  <div className={`flex-shrink-0 w-11 h-11 md:w-12 md:h-12 rounded-xl bg-gradient-to-br ${agent.color} flex items-center justify-center text-white shadow-md`}>
+                    <agent.icon size={20} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-bold text-gray-900 text-sm md:text-base leading-tight">
+                      {agent.name}
+                    </h3>
+                    <p className="text-[11px] md:text-xs text-slate-500 mt-0.5 leading-relaxed">
+                      {agent.desc}
+                    </p>
+                  </div>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── IP 商业系统重构 4 步法（单列长流程）── */}
+      <section className="px-5 py-20 bg-white">
+        <div className="max-w-lg mx-auto md:max-w-4xl md:mx-auto">
+          <motion.div {...fadeUp} className="text-center mb-10">
+            <span className="inline-block px-3 py-1 text-xs font-semibold text-white bg-gradient-to-r from-orange-500 to-rose-500 rounded-full mb-3">
+              ⚡️ 良朋社 IP 商业系统重构
+            </span>
+            <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">
+              4 步法：从 0 到 1 跑通 IP 变现闭环
+            </h2>
+            <p className="text-gray-500 text-sm md:text-base max-w-2xl mx-auto">
+              每一步都配备专属 AI 智能体 + 标准化 SOP 模板。
+            </p>
+          </motion.div>
+
+          <div className="relative">
+            {/* 中间连接线（仅桌面端） */}
+            <div className="hidden md:block absolute left-1/2 top-0 bottom-0 w-0.5 bg-gradient-to-b from-blue-300 via-purple-300 via-amber-300 to-emerald-300 -translate-x-1/2" />
+
+            {[
+              {
+                step: '01',
+                title: '诊断表生成（AI 定制）',
+                desc: 'AI 根据你的行业、客群、痛点，1 分钟生成精准诊断表，锁定高意向用户。',
+                icon: ClipboardList,
+                color: 'from-blue-500 to-cyan-500',
+                bg: 'from-blue-50 to-cyan-50',
+                border: 'border-blue-200',
+                emoji: '📋',
+                right: false,
+              },
+              {
+                step: '02',
+                title: '直播连麦诊断（AI 知识库支撑）',
+                desc: '直播连麦时，AI 实时调取知识库生成解决方案，3 分钟建立极强信任。',
+                icon: Mic,
+                color: 'from-violet-500 to-purple-500',
+                bg: 'from-violet-50 to-purple-50',
+                border: 'border-violet-200',
+                emoji: '🎙️',
+                right: true,
+              },
+              {
+                step: '03',
+                title: '1000 元方案交付（AI 生成几十页执行案）',
+                desc: 'AI 辅助输出几十页的商业执行方案，交付即建立口碑，引爆转介绍。',
+                icon: FileText,
+                color: 'from-amber-500 to-orange-500',
+                bg: 'from-amber-50 to-orange-50',
+                border: 'border-amber-200',
+                emoji: '📄',
+                right: false,
+              },
+              {
+                step: '04',
+                title: '3 万元高级课程与 AI 系统落地',
+                desc: '升级到 3 万元高级课程，含全套 IP 重构、陪跑、AI 工具与合伙人权益。',
+                icon: Crown,
+                color: 'from-emerald-500 to-teal-500',
+                bg: 'from-emerald-50 to-teal-50',
+                border: 'border-emerald-200',
+                emoji: '👑',
+                right: true,
+              },
+            ].map((item) => (
+              <motion.div
+                key={item.step}
+                {...fadeUp}
+                className="relative mb-6 last:mb-0"
+              >
+                <div className={`md:flex items-center gap-6 ${item.right ? 'md:flex-row-reverse' : ''}`}>
+                  {/* 卡片 */}
+                  <div className={`flex-1 bg-gradient-to-br ${item.bg} border ${item.border} rounded-2xl p-5 shadow-sm hover:shadow-md transition-all`}>
+                    <div className="flex items-start gap-3">
+                      <div className={`flex-shrink-0 w-12 h-12 rounded-xl bg-gradient-to-br ${item.color} flex items-center justify-center text-2xl shadow-md`}>
+                        {item.emoji}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className={`text-[10px] font-bold tracking-wider bg-gradient-to-r ${item.color} bg-clip-text text-transparent mb-1`}>
+                          STEP {item.step}
+                        </div>
+                        <h3 className="font-bold text-gray-900 text-base md:text-lg leading-tight mb-1.5">
+                          {item.title}
+                        </h3>
+                        <p className="text-xs md:text-sm text-slate-600 leading-relaxed">
+                          {item.desc}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                  {/* 中间圆点（仅桌面端） */}
+                  <div className="hidden md:flex flex-shrink-0 w-10 h-10 rounded-full bg-white border-4 border-slate-100 items-center justify-center z-10 shadow-md">
+                    <item.icon size={16} className="text-slate-600" />
+                  </div>
+                  {/* 占位（用于对齐） */}
+                  <div className="hidden md:block flex-1" />
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── 双产品售价卡片（1000 元 + 30000 元）── */}
+      <section className="px-5 py-20 bg-gradient-to-b from-slate-50 to-white">
+        <div className="max-w-lg mx-auto md:max-w-6xl md:mx-auto">
+          <motion.div {...fadeUp} className="text-center mb-10">
+            <span className="inline-block px-3 py-1 text-xs font-semibold text-slate-700 bg-slate-100 rounded-full mb-3">
+              💰 良朋社 IP 重构服务产品
+            </span>
+            <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">
+              4 步法产品化 · 两档标准化交付
+            </h2>
+            <p className="text-gray-500 text-sm md:text-base max-w-2xl mx-auto">
+              从 1000 元诊断到 30000 元全套陪跑，透明定价，按需选择。
+            </p>
+          </motion.div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            {/* 左卡片：橙色 · 1000 元 */}
+            <motion.div
+              {...fadeUp}
+              className="relative bg-gradient-to-br from-orange-500 via-amber-500 to-yellow-500 rounded-2xl p-6 md:p-7 shadow-xl text-white overflow-hidden"
+            >
+              <div className="absolute -top-12 -right-12 w-40 h-40 bg-white/15 rounded-full blur-3xl" />
+              <div className="absolute bottom-0 left-0 w-32 h-32 bg-yellow-300/20 rounded-full blur-2xl" />
+              <div className="relative">
+                <div className="text-[11px] font-bold text-amber-100 tracking-wider mb-2">
+                  🟠 入门产品 · STEP 03
+                </div>
+                <h3 className="text-xl md:text-2xl font-bold mb-2 leading-tight">
+                  《良朋社 AI 商业定位诊断》
+                </h3>
+                <p className="text-sm text-amber-50/90 leading-relaxed mb-5">
+                  一份几十页的执行方案，含行业定位、用户画像、AI 落地路径与 3 个月增长路线图。
+                </p>
+                <div className="flex items-baseline gap-1 mb-5">
+                  <span className="text-4xl md:text-5xl font-extrabold">¥1,000</span>
+                  <span className="text-sm text-amber-100">/ 份</span>
+                </div>
+                <ul className="space-y-1.5 text-sm text-amber-50/95 mb-6">
+                  <li className="flex items-start gap-2">
+                    <CheckCircle2 size={14} className="text-white flex-shrink-0 mt-0.5" />
+                    <span>几十页 AI 商业执行方案</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <CheckCircle2 size={14} className="text-white flex-shrink-0 mt-0.5" />
+                    <span>1V1 视频解读 30 分钟</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <CheckCircle2 size={14} className="text-white flex-shrink-0 mt-0.5" />
+                    <span>赠送 199 元基础会员 1 个月</span>
+                  </li>
+                </ul>
+                <button
+                  onClick={() => { window.location.href = '/booking?p=diagnose-1000' }}
+                  className="w-full inline-flex items-center justify-center gap-1.5 px-5 py-3 bg-white text-orange-600 text-sm font-bold rounded-xl shadow-lg hover:shadow-xl hover:scale-[1.02] active:scale-95 transition-all"
+                >
+                  立即购买诊断
+                  <ArrowRight size={14} />
+                </button>
+              </div>
+            </motion.div>
+
+            {/* 右卡片：紫色 · 30000 元 */}
+            <motion.div
+              {...fadeUp}
+              className="relative bg-gradient-to-br from-violet-700 via-purple-700 to-indigo-800 rounded-2xl p-6 md:p-7 shadow-xl text-white overflow-hidden"
+            >
+              <div className="absolute -top-12 -right-12 w-40 h-40 bg-white/15 rounded-full blur-3xl" />
+              <div className="absolute bottom-0 left-0 w-32 h-32 bg-pink-400/20 rounded-full blur-2xl" />
+              <div className="relative">
+                <div className="inline-flex items-center gap-1.5 bg-amber-400 text-slate-900 text-[11px] font-bold px-2.5 py-1 rounded-full mb-2">
+                  <Sparkles size={12} />
+                  <span>🔥 旗舰产品 · STEP 04</span>
+                </div>
+                <h3 className="text-xl md:text-2xl font-bold mb-2 leading-tight">
+                  《良朋社商业 IP 系统重构》
+                </h3>
+                <p className="text-sm text-violet-100/90 leading-relaxed mb-5">
+                  全套 IP 重构课程 + 30 天 1V1 陪跑 + AI 工具部署 + 城市合伙人权益。
+                </p>
+                <div className="flex items-baseline gap-1 mb-5">
+                  <span className="text-4xl md:text-5xl font-extrabold">¥30,000</span>
+                  <span className="text-sm text-violet-200">/ 套</span>
+                </div>
+                <ul className="space-y-1.5 text-sm text-violet-50/95 mb-6">
+                  <li className="flex items-start gap-2">
+                    <CheckCircle2 size={14} className="text-amber-300 flex-shrink-0 mt-0.5" />
+                    <span>4 步法全套 SOP + AI 智能体手册</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <CheckCircle2 size={14} className="text-amber-300 flex-shrink-0 mt-0.5" />
+                    <span>30 天 1V1 落地陪跑</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <CheckCircle2 size={14} className="text-amber-300 flex-shrink-0 mt-0.5" />
+                    <span>3 款自研 AI 工具年度使用权</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <CheckCircle2 size={14} className="text-amber-300 flex-shrink-0 mt-0.5" />
+                    <span>城市合伙人权益 + 主理人分销</span>
+                  </li>
+                </ul>
+                <button
+                  onClick={() => { window.location.href = '/booking?p=course-30000' }}
+                  className="w-full inline-flex items-center justify-center gap-1.5 px-5 py-3 bg-gradient-to-r from-amber-400 to-orange-400 text-slate-900 text-sm font-bold rounded-xl shadow-lg hover:shadow-xl hover:scale-[1.02] active:scale-95 transition-all"
+                >
+                  私信助理报名
+                  <ArrowRight size={14} />
+                </button>
+              </div>
+            </motion.div>
+          </div>
         </div>
       </section>
 

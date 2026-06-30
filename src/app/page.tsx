@@ -261,7 +261,7 @@ export default function HomePage() {
                   <span className="text-white">一人公司 ×</span>
                   <br />
                   <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400">
-                    AI 商业操作系统
+                    AI 商业重构操作系统
                   </span>
                 </motion.h1>
 
@@ -423,7 +423,7 @@ export default function HomePage() {
           </div>
         </section>
 
-        {/* ═══ 实时动态横幅 ═══ */}
+        {/* ═══ 实时动态滚动条（Hero 正下方）═══ */}
         <section className="relative -mt-10 px-5 z-10">
           <div className="max-w-lg mx-auto md:max-w-6xl md:mx-auto">
             <ActivityTicker activities={activities} />
@@ -431,7 +431,7 @@ export default function HomePage() {
         </section>
 
         {/* ═══ 数据条：玻璃拟态 + framer-motion 数字滚动 + 社区心跳 ═══ */}
-        <section className="px-5 py-8">
+        <section className="px-5 pt-6 pb-6">
           <div className="max-w-lg mx-auto md:max-w-6xl md:mx-auto">
             <div className="bg-gradient-to-r from-slate-800/60 to-slate-900/60 backdrop-blur-md border border-white/20 rounded-3xl px-6 py-6">
               <div className="flex items-center gap-4 overflow-x-auto pb-2 scrollbar-hide">
@@ -451,7 +451,7 @@ export default function HomePage() {
         </section>
 
         {/* ═══ OPC 城市主理人生态圈：顶部蓝色大横幅 ═══ */}
-        <section className="px-5 py-4">
+        <section className="px-5 pt-2 pb-3">
           <div className="max-w-lg mx-auto md:max-w-6xl md:mx-auto">
             <Link
               href="/partner"
@@ -484,46 +484,47 @@ export default function HomePage() {
           </div>
         </section>
 
-        {/* ═══ 商业全景沙盘：投资人 / 城市主理人专属入口 ═══ */}
-        <section className="px-5 pt-4">
+        {/* ═══ AI 商业诊断卡片（城市主理人下方）═══ */}
+        <section className="px-5 pt-3 pb-2 relative z-10">
           <div className="max-w-lg mx-auto md:max-w-6xl md:mx-auto">
-            <Link
-              href="/pitch"
-              className="group relative block bg-gradient-to-r from-slate-900 to-indigo-900 text-white rounded-2xl p-6 overflow-hidden hover:shadow-2xl hover:shadow-indigo-500/30 hover:-translate-y-0.5 transition-all duration-300"
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.2 }}
+              className="relative bg-gradient-to-r from-amber-500 via-orange-500 to-rose-500 rounded-2xl p-5 md:p-6 shadow-2xl shadow-orange-500/30 overflow-hidden"
             >
-              {/* 装饰光晕 */}
-              <div className="absolute -top-12 -right-12 w-40 h-40 bg-indigo-500/30 rounded-full blur-3xl" />
-              <div className="absolute -bottom-12 -left-12 w-32 h-32 bg-amber-400/15 rounded-full blur-3xl" />
-
-              <div className="relative flex flex-col md:flex-row md:justify-between md:items-center gap-4">
-                {/* 左侧内容 */}
-                <div className="flex-1">
-                  <div className="inline-flex items-center gap-1 bg-emerald-500/15 text-emerald-300 text-[11px] font-medium px-2 py-0.5 rounded-full mb-2.5 border border-emerald-400/30">
-                    <span>📈 深圳样板间数据已接入</span>
+              <div className="absolute -top-8 -right-8 w-40 h-40 bg-white/15 rounded-full blur-3xl" />
+              <div className="absolute bottom-0 left-0 w-32 h-32 bg-yellow-300/30 rounded-full blur-2xl" />
+              <div className="relative flex flex-col md:flex-row items-center gap-4 text-white">
+                <div className="flex-shrink-0 w-14 h-14 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center ring-4 ring-white/30">
+                  <span className="text-2xl">🎁</span>
+                </div>
+                <div className="flex-1 text-center md:text-left">
+                  <div className="text-[11px] font-bold text-amber-100 tracking-wider mb-1">
+                    🔥 限时免费 · 每天仅 10 个名额
                   </div>
-                  <h3 className="text-xl md:text-2xl font-bold leading-tight flex items-center gap-2">
-                    <Briefcase size={20} className="text-amber-400" />
-                    <span>💎 商业全景沙盘</span>
+                  <h3 className="text-base md:text-lg font-bold mb-1.5">
+                    免费领取：AI 智能体商业 IP 诊断
                   </h3>
-                  <p className="text-xs md:text-sm text-white/75 leading-relaxed mt-1.5">
-                    已跑通的变现模型、分润体系与城市扩张版图，专为投资人与城市主理人开放。
+                  <p className="text-xs md:text-sm text-amber-50/95 leading-relaxed">
+                    良朋社用 <span className="font-bold">4 步法 + AI 智能体团队</span>，帮你系统重构 IP。
                   </p>
                 </div>
-
-                {/* 右侧按钮 */}
-                <div className="md:flex-shrink-0 flex justify-center md:justify-end">
-                  <span className="inline-flex items-center gap-1 bg-amber-500 hover:bg-amber-600 text-slate-900 font-bold px-4 py-2 rounded-full text-sm transition-colors group-hover:scale-105 transform shadow-lg">
-                    <span>进入全景沙盘</span>
-                    <span>→</span>
-                  </span>
-                </div>
+                <Link
+                  href="/ip-reconstruction"
+                  className="flex-shrink-0 inline-flex items-center gap-2 px-5 py-2.5 bg-white text-orange-600 text-sm font-bold rounded-xl hover:scale-105 transition-transform shadow-lg"
+                >
+                  <Sparkles size={16} />
+                  立即领取
+                  <ArrowRight size={14} />
+                </Link>
               </div>
-            </Link>
+            </motion.div>
           </div>
         </section>
 
         {/* ═══ 四库全胜系统：玻璃卡片 + 四大引擎 2x2 网格 ═══ */}
-        <section className="px-5 py-8">
+        <section className="px-5 pt-6 pb-6">
           <div className="max-w-lg mx-auto md:max-w-6xl md:mx-auto">
             <div className="mb-6">
               <div className="flex items-center justify-between mb-1">
@@ -581,8 +582,46 @@ export default function HomePage() {
           </div>
         </section>
 
+        {/* ═══ 商业全景沙盘：投资人 / 城市主理人专属入口（四库下方）═══ */}
+        <section className="px-5 pt-2 pb-4">
+          <div className="max-w-lg mx-auto md:max-w-6xl md:mx-auto">
+            <Link
+              href="/pitch"
+              className="group relative block bg-gradient-to-r from-slate-900 to-indigo-900 text-white rounded-2xl p-6 overflow-hidden hover:shadow-2xl hover:shadow-indigo-500/30 hover:-translate-y-0.5 transition-all duration-300"
+            >
+              {/* 装饰光晕 */}
+              <div className="absolute -top-12 -right-12 w-40 h-40 bg-indigo-500/30 rounded-full blur-3xl" />
+              <div className="absolute -bottom-12 -left-12 w-32 h-32 bg-amber-400/15 rounded-full blur-3xl" />
+
+              <div className="relative flex flex-col md:flex-row md:justify-between md:items-center gap-4">
+                {/* 左侧内容 */}
+                <div className="flex-1">
+                  <div className="inline-flex items-center gap-1 bg-emerald-500/15 text-emerald-300 text-[11px] font-medium px-2 py-0.5 rounded-full mb-2.5 border border-emerald-400/30">
+                    <span>📈 深圳样板间数据已接入</span>
+                  </div>
+                  <h3 className="text-xl md:text-2xl font-bold leading-tight flex items-center gap-2">
+                    <Briefcase size={20} className="text-amber-400" />
+                    <span>💎 商业全景沙盘</span>
+                  </h3>
+                  <p className="text-xs md:text-sm text-white/75 leading-relaxed mt-1.5">
+                    已跑通的变现模型、分润体系与城市扩张版图，专为投资人与城市主理人开放。
+                  </p>
+                </div>
+
+                {/* 右侧按钮 */}
+                <div className="md:flex-shrink-0 flex justify-center md:justify-end">
+                  <span className="inline-flex items-center gap-1 bg-amber-500 hover:bg-amber-600 text-slate-900 font-bold px-4 py-2 rounded-full text-sm transition-colors group-hover:scale-105 transform shadow-lg">
+                    <span>进入全景沙盘</span>
+                    <span>→</span>
+                  </span>
+                </div>
+              </div>
+            </Link>
+          </div>
+        </section>
+
         {/* ═══ CTA 区：玻璃拟态 ═══ */}
-        <section className="px-5 py-8">
+        <section className="px-5 pt-6 pb-10">
           <div className="max-w-lg mx-auto md:max-w-6xl md:mx-auto">
             <div className="relative bg-gradient-to-br from-blue-600/90 via-indigo-600/90 to-purple-700/90 backdrop-blur-md border border-white/20 rounded-3xl p-8 overflow-hidden">
               <div className="absolute -top-10 -right-10 w-40 h-40 bg-pink-500/30 rounded-full blur-3xl" />

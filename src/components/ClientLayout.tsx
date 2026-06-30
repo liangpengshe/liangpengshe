@@ -69,6 +69,12 @@ export default function ClientLayout({
             <CitySelector />
             <div className="hidden md:flex items-center gap-3">
               <Link
+                href="/ip-reconstruction"
+                className="text-sm font-medium text-slate-600 hover:text-amber-600 transition-colors"
+              >
+                🦾 IP 重构
+              </Link>
+              <Link
                 href="/pitch"
                 className="text-sm font-medium text-slate-600 hover:text-blue-600 transition-colors"
               >

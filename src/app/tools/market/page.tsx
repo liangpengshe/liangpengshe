@@ -202,7 +202,7 @@ export default function ToolsMarketPage() {
           </TabsContent>
         </Tabs>
 
-        {/* AI 调查表生成 — 通哥「AI 智能体知识变现 4 步法」入口 */}
+        {/* AI 调查表生成 — 良朋社 IP 重构「AI 智能体商业 IP 诊断」入口 */}
         <div className="mt-6 relative bg-gradient-to-r from-amber-500 via-orange-500 to-red-500 rounded-2xl p-5 md:p-6 shadow-xl overflow-hidden">
           <div className="absolute -top-8 -right-8 w-40 h-40 bg-white/10 rounded-full blur-3xl" />
           <div className="absolute bottom-0 left-0 w-32 h-32 bg-yellow-300/20 rounded-full blur-2xl" />
