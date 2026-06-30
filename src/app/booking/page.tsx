@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, Suspense } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { motion } from 'framer-motion'
@@ -29,6 +29,25 @@ const fadeUp = {
 }
 
 export default function BookingPage() {
+  return (
+    <Suspense fallback={<BookingSkeleton />}>
+      <BookingForm />
+    </Suspense>
+  )
+}
+
+function BookingSkeleton() {
+  return (
+    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white flex items-center justify-center">
+      <div className="flex flex-col items-center gap-3 text-slate-400">
+        <Loader2 size={32} className="animate-spin text-amber-500" />
+        <span className="text-sm">加载中...</span>
+      </div>
+    </div>
+  )
+}
+
+function BookingForm() {
   const params = useSearchParams()
   const productKey = params.get('p') || 'diagnose-1000'
   const product = productMap[productKey] || productMap['diagnose-1000']

@@ -122,9 +122,12 @@ export default function ToolsMarketPage() {
             <TabsTrigger value="painting" className="flex-shrink-0">AI绘画</TabsTrigger>
             <TabsTrigger value="video" className="flex-shrink-0">AI视频</TabsTrigger>
             <TabsTrigger value="digitalhuman" className="flex-shrink-0">AI数字人</TabsTrigger>
-            <TabsTrigger value="agent" className="flex-shrink-0">
+            <TabsTrigger
+              value="agent"
+              className="flex-shrink-0 data-[state=active]:bg-purple-500 data-[state=active]:text-white data-[state=active]:shadow-md hover:text-purple-600"
+            >
               <span className="inline-flex items-center gap-1.5">
-                <Bot size={14} className="text-purple-600" />
+                <Bot size={14} className="text-purple-600 group-data-[state=active]:text-white" />
                 <span>智能体</span>
               </span>
             </TabsTrigger>
