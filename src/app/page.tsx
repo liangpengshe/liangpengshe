@@ -520,58 +520,58 @@ function EntrepreneurLadder() {
   )
 }
 
-/** ③ 四库全胜系统（2x2 Bento 网格） */
+/** ③ AI四库全胜系统（2x2 浅色卡片 · 顶流 SaaS 风格） */
 const BENTO_CARDS: Array<{
   tab: LibraryTabValue
   title: string
   subtitle: string
   href: string
-  /** 背景渐变类名（顶流 Stripe / Linear 风格） */
-  bg: string
-  /** 装饰光晕色 */
-  glow: string
-  /** 右上角小图标 emoji */
-  emoji: string
+  /** 图标 emoji */
+  icon: string
+  /** 图标背景方块（极浅主题色 /50 透明度） */
+  iconBg: string
+  /** 右上角灰色胶囊标签 */
+  tag: string
 }> = [
   {
     tab: 'tools',
     title: 'AI智富工具库',
     subtitle: 'AI 自研工具、电商工作台、运营插件...',
     href: '/market/tools',
-    bg: 'bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-700',
-    glow: 'bg-white/10',
-    emoji: '🔧',
+    icon: '🔧',
+    iconBg: 'bg-blue-50/50',
+    tag: '自研',
   },
   {
     tab: 'projects',
     title: 'AI智富项目库',
     subtitle: '数字网店、跨境电商、AI 编程系统...',
     href: '/market/projects',
-    bg: 'bg-gradient-to-br from-rose-500 via-pink-500 to-fuchsia-600',
-    glow: 'bg-white/10',
-    emoji: '🚀',
+    icon: '🚀',
+    iconBg: 'bg-yellow-50/50',
+    tag: '落地案例',
   },
   {
     tab: 'services',
     title: 'AI智富服务库',
     subtitle: 'OPC 内训、陪跑、代运营、企业 GEO...',
     href: '/market/services',
-    bg: 'bg-gradient-to-br from-amber-500 via-orange-500 to-red-500',
-    glow: 'bg-white/10',
-    emoji: '💼',
+    icon: '💼',
+    iconBg: 'bg-red-50/50',
+    tag: '陪跑',
   },
   {
     tab: 'resources',
     title: 'AI智富资源库',
     subtitle: 'AI 硬件、精品教程、城市招商加盟...',
     href: '/market/resources',
-    bg: 'bg-gradient-to-br from-cyan-600 via-blue-700 to-indigo-800',
-    glow: 'bg-white/10',
-    emoji: '📚',
+    icon: '📚',
+    iconBg: 'bg-green-50/50',
+    tag: '链接',
   },
 ]
 
-/** 2x2 Bento 网格中的单张卡片（整张 Link 包裹） */
+/** 2x2 浅色卡片：整张 Link 包裹 · 顶流 Notion/Stripe 风 */
 function BentoLibraryCard({
   card,
   isActive,
@@ -586,50 +586,45 @@ function BentoLibraryCard({
       href={card.href}
       onClick={onClick}
       className={cn(
-        'group relative block rounded-3xl p-5 md:p-6 overflow-hidden shadow-lg hover:shadow-2xl hover:scale-[1.02] transition-all min-h-[160px] md:min-h-[180px]',
-        card.bg,
-        isActive && 'ring-2 ring-white/60 ring-offset-2 ring-offset-slate-50'
+        // 容器：纯白 · 极浅边框 · 大圆角 · 高度自适应
+        'group relative block rounded-2xl bg-white border border-slate-200 p-5 md:p-6 min-h-[160px] md:min-h-[180px]',
+        // 悬停微交互
+        'hover:shadow-lg hover:-translate-y-1 hover:border-slate-300 transition-all duration-300',
+        // 激活态（被引导区点击时高亮）
+        isActive && 'ring-2 ring-blue-400 ring-offset-2 ring-offset-slate-50'
       )}
     >
-      {/* 装饰光晕 */}
-      <div className={cn('absolute -top-10 -right-10 w-32 h-32 rounded-full blur-2xl', card.glow)} />
-      <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/5 rounded-full blur-2xl" />
-
-      <div className="relative flex flex-col h-full text-white">
-        {/* 顶部：图标 + 角标 */}
-        <div className="flex items-start justify-between mb-3">
-          <span className="text-3xl md:text-4xl drop-shadow-md">{card.emoji}</span>
-          {isActive && (
-            <span className="inline-flex items-center gap-1 px-2 h-5 rounded-full bg-white/20 backdrop-blur-sm text-white text-[10px] font-bold border border-white/30">
-              <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
-              当前
-            </span>
+      {/* 顶部：图标方块 + 右上角胶囊标签 */}
+      <div className="flex items-start justify-between mb-4">
+        <div
+          className={cn(
+            'w-11 h-11 md:w-12 md:h-12 rounded-xl flex items-center justify-center text-2xl md:text-[26px]',
+            card.iconBg
           )}
+        >
+          <span className="leading-none">{card.icon}</span>
         </div>
+        <span className="bg-slate-100 text-slate-500 text-[10px] px-2 py-0.5 rounded-full font-medium">
+          {card.tag}
+        </span>
+      </div>
 
-        {/* 标题 + 副标题 */}
-        <div className="flex-1">
-          <h3 className="text-base md:text-lg font-bold text-white drop-shadow-sm">
-            {card.title}
-          </h3>
-          <p className="mt-1 text-[11px] md:text-xs text-white/85 leading-relaxed line-clamp-2">
-            {card.subtitle}
-          </p>
-        </div>
+      {/* 标题 + 副标题 */}
+      <div className="flex-1">
+        <h3 className="text-base md:text-lg font-bold text-slate-900 leading-tight">
+          {card.title}
+        </h3>
+        <p className="mt-1.5 text-[11px] md:text-xs text-slate-500 leading-relaxed line-clamp-2">
+          {card.subtitle}
+        </p>
+      </div>
 
-        {/* 底部：前往进入 → */}
-        <div className="mt-3 flex items-center justify-between">
-          <span className="text-[10px] md:text-[11px] font-semibold text-white/70 uppercase tracking-wider">
-            {card.tab === 'tools' && 'Tools'}
-            {card.tab === 'projects' && 'Projects'}
-            {card.tab === 'services' && 'Services'}
-            {card.tab === 'resources' && 'Resources'}
-          </span>
-          <span className="inline-flex items-center gap-1 text-[11px] md:text-xs font-bold text-white group-hover:gap-2 transition-all">
-            <span>前往进入</span>
-            <ArrowRight size={12} className="group-hover:translate-x-0.5 transition-transform" />
-          </span>
-        </div>
+      {/* 底部：前往进入 →（右下角 · 蓝色 · 悬停箭头右移） */}
+      <div className="mt-4 flex items-center justify-end">
+        <span className="inline-flex items-center gap-1 text-[11px] md:text-xs text-blue-600 font-medium group-hover:gap-2 transition-all">
+          <span>前往进入</span>
+          <ArrowRight size={12} className="group-hover:translate-x-0.5 transition-transform" />
+        </span>
       </div>
     </Link>
   )
