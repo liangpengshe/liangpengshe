@@ -407,7 +407,7 @@ export default function ServicesPage() {
                 AI 变现路径特训
               </h3>
               <p className="text-sm text-gray-600 leading-relaxed">
-                从"工具库推荐"到"项目库 SOP"，再到"服务库高客单成交"，全程拆解一人公司和中小企业的 AI 商业变现全流程。
+                从&ldquo;工具库推荐&rdquo;到&ldquo;项目库 SOP&rdquo;，再到&ldquo;服务库高客单成交&rdquo;，全程拆解一人公司和中小企业的 AI 商业变现全流程。
               </p>
             </motion.div>
 

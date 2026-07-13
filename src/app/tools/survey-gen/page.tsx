@@ -116,7 +116,7 @@ export default function SurveyGenPage() {
       <div className="sticky top-0 z-10 bg-white/80 backdrop-blur-md border-b border-slate-100">
         <div className="max-w-2xl mx-auto px-4 py-3 flex items-center justify-between">
           <Link
-            href="/tools/market"
+            href="/market"
             className="inline-flex items-center gap-1.5 text-sm text-slate-600 hover:text-slate-900 transition-colors"
           >
             <ArrowLeft size={16} />

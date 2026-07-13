@@ -84,7 +84,7 @@ const benefits = [
   },
 ]
 
-// ─── 加盟模式与费用：4 大权益模块 ───
+// ─── 主理人合作模式与费用：4 大权益模块 ───
 const franchiseModules = [
   {
     icon: Server,
@@ -174,11 +174,11 @@ export default function PartnerPage() {
           </div>
 
           <h1 className="text-3xl font-bold text-white mb-3">
-            携手共赢：良朋社 OPC 全国城市合伙人招募
+            携手共赢：良朋社 OPC 全国城市主理人招募
           </h1>
 
           <p className="text-slate-400 text-lg mb-6">
-            我们在深圳跑通了 AI 商业落地的全链路闭环，现面向全国招募城市合伙人。
+            我们在深圳跑通了 AI 商业落地的全链路闭环，现面向全国招募城市主理人。
           </p>
 
           <div className="grid grid-cols-3 gap-3">
@@ -196,7 +196,7 @@ export default function PartnerPage() {
         </div>
       </motion.header>
 
-      {/* ═══ 加盟模式与费用（4 大权益模块 + 报价 CTA）═══ */}
+      {/* ═══ 主理人合作模式与费用（4 大权益模块 + 报价 CTA）═══ */}
       <motion.section
         {...fadeUp}
         className="px-4 py-8"
@@ -205,10 +205,10 @@ export default function PartnerPage() {
           <div className="text-center mb-6">
             <div className="inline-flex items-center gap-1.5 bg-amber-50 border border-amber-200 text-amber-700 text-xs font-semibold px-3 py-1 rounded-full mb-3">
               <Banknote size={12} />
-              <span>💰 加盟模式与费用</span>
+              <span>💰 主理人合作模式与费用</span>
             </div>
             <h2 className="text-xl md:text-2xl font-bold text-gray-900">
-              4 大权益模块，构筑合伙人护城河
+              4 大权益模块，构筑主理人护城河
             </h2>
             <p className="text-sm text-slate-500 mt-2 max-w-xl mx-auto">
               一次性年费涵盖以下全部模块，城市规模不同，报价区间略有差异。

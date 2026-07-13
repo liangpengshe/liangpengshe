@@ -5,11 +5,17 @@ import dynamic from 'next/dynamic'
 import CitySelector, { CITY_STORAGE_KEY } from '@/components/CitySelector'
 import Link from 'next/link'
 
-// 这些组件本身就是 'use client'，SSR 正常；
-// 保留 dynamic 拆包，但不再 ssr:false（避免触发 Next.js 14 BAILOUT_TO_CLIENT_SIDE_RENDERING）
-const MobileBottomNav = dynamic(() => import('@/components/MobileBottomNav'))
+// 这些组件含客户端副作用（localStorage、setTimeout、动画），统一 ssr:false
+// 避免它们在 SSR 时输出的 DOM 与 client 第一次渲染不一致 → Hydration 报错
+const MobileBottomNav = dynamic(() => import('@/components/MobileBottomNav'), {
+  ssr: false,
+  loading: () => null,
+})
 
-const AIAssistant = dynamic(() => import('@/components/AIAssistant'))
+const AIAssistant = dynamic(() => import('@/components/AIAssistant'), {
+  ssr: false,
+  loading: () => null,
+})
 
 export default function ClientLayout({
   children,
@@ -46,7 +52,7 @@ export default function ClientLayout({
 
   return (
     <div className="max-w-lg mx-auto md:max-w-7xl min-h-screen relative" suppressHydrationWarning>
-      <header className="bg-white border-b border-gray-100 sticky top-0 z-50">
+      <header className="bg-white border-b border-gray-100 sticky top-0 z-50" suppressHydrationWarning>
         <div className="flex items-center justify-between h-14 px-4 md:px-6">
           <Link href="/" className="flex items-center gap-2">
             <img
@@ -69,10 +75,16 @@ export default function ClientLayout({
             <CitySelector />
             <div className="hidden md:flex items-center gap-3">
               <Link
-                href="/ip-reconstruction"
+                href="/diagnosis"
                 className="text-sm font-medium text-slate-600 hover:text-amber-600 transition-colors"
               >
                 🦾 IP 重构
+              </Link>
+              <Link
+                href="/market"
+                className="text-sm font-medium text-slate-600 hover:text-blue-600 transition-colors"
+              >
+                📚 学习中心
               </Link>
               <Link
                 href="/pitch"

@@ -265,7 +265,7 @@ export default function SalonPage() {
                 </div>
 
                 <p className="mt-4 text-xs text-gray-500 italic border-l-2 border-gray-200 pl-3">
-                  "{mentor.quote}"
+                  &ldquo;{mentor.quote}&rdquo;
                 </p>
               </div>
             ))}

@@ -394,7 +394,7 @@ export default function TestDifyPage() {
             {!result && !loading && (
               <div className="text-center py-12 text-gray-400 text-sm">
                 <div className="text-4xl mb-2">⏳</div>
-                点击左侧"发送"按钮<br />开始测试 Dify 真实调用
+                点击左侧&ldquo;发送&rdquo;按钮<br />开始测试 Dify 真实调用
               </div>
             )}
 
@@ -525,16 +525,16 @@ export default function TestDifyPage() {
           <div className="font-bold text-gray-700">💡 如何解读结果</div>
           <ul className="space-y-1 list-disc list-inside">
             <li>
-              <span className="font-mono text-purple-600">aiSource: "dify"</span> = Dify 工作流调用成功，返回真实 AI 输出
+              <span className="font-mono text-purple-600">aiSource: &ldquo;dify&rdquo;</span> = Dify 工作流调用成功，返回真实 AI 输出
             </li>
             <li>
-              <span className="font-mono text-amber-600">aiSource: "fallback"</span> = Dify 调用失败（Key 错/字段名不匹配/超时），自动降级到内置模板
+              <span className="font-mono text-amber-600">aiSource: &ldquo;fallback&rdquo;</span> = Dify 调用失败（Key 错/字段名不匹配/超时），自动降级到内置模板
             </li>
             <li>
-              <span className="font-mono text-blue-600">source: "memory"</span> = 数据存储到内存（Prisma/Supabase 不可用时降级）
+              <span className="font-mono text-blue-600">source: &ldquo;memory&rdquo;</span> = 数据存储到内存（Prisma/Supabase 不可用时降级）
             </li>
             <li>
-              如果看到 <span className="font-mono">400</span> 错误，请在 Dify 控制台查看工作流"开始节点"的 input form 字段名
+              如果看到 <span className="font-mono">400</span> 错误，请在 Dify 控制台查看工作流&ldquo;开始节点&rdquo;的 input form 字段名
             </li>
             <li>
               <span className="font-mono">workflowRunId</span> = Dify 工作流运行实例 ID，可在 Dify 日志页面查询

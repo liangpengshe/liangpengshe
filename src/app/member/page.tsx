@@ -6,6 +6,25 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import ClientLayout from '@/components/ClientLayout'
 import { AIDailyBrief } from '@/components/AIDailyBrief'
+import { OPCProgressBar } from '@/components/learning/OPCProgressBar'
+import { ProfileHeader } from '@/components/member/ProfileHeader'
+import { MetricsBento } from '@/components/member/MetricsBento'
+import { DiagnosisHistoryList } from '@/components/member/DiagnosisHistoryList'
+import { NextActionCTA } from '@/components/member/NextActionCTA'
+import {
+  getUserStage,
+  subscribeUserStage,
+  type UserStage,
+  type UserStageKey,
+} from '@/lib/user-stage'
+import {
+  getDiagnosisHistory,
+  getMetrics,
+  getStageDetail,
+  type MemberMetrics,
+  type StageDetail,
+  type DiagnosisRecord,
+} from '@/lib/member-dashboard'
 import { arrFromDb } from '@/lib/json-array'
 import { useAudio } from '@/hooks/useAudio'
 import {
@@ -92,6 +111,20 @@ export default function MemberPage() {
   const [loading, setLoading] = useState(true)
   const [roadmap, setRoadmap] = useState<any>(null)
   const [showReport, setShowReport] = useState(false)
+  const [userStage, setUserStage] = useState<UserStage | null>(null)
+  // ===== 商业作战地图 · 新增 state =====
+  const [expandedStage, setExpandedStage] = useState<UserStageKey | null>(null)
+  const [stageDetail, setStageDetail] = useState<StageDetail | null>(null)
+  const [loadingDetail, setLoadingDetail] = useState(false)
+  const [historyRecords, setHistoryRecords] = useState<DiagnosisRecord[]>([])
+  const [loadingHistory, setLoadingHistory] = useState(true)
+  const [metrics, setMetrics] = useState<MemberMetrics>({
+    diagnosis: { total: 0, latestDate: null },
+    learning: { unlockedCount: 0, totalCount: 0, checkins: 0 },
+    operation: { orders: 0, tasksDone: 0, tasksTotal: 0 },
+    scaling: { matrixTasks: 0, stores: 0 },
+  })
+  const [coinsBalance, setCoinsBalance] = useState<number>(0)
   const router = useRouter()
 
   useEffect(() => {
@@ -125,6 +158,85 @@ export default function MemberPage() {
       })
       .catch(() => {})
   }, [])
+
+  // 加载用户 OPC 全流程阶段（来自 src/lib/user-stage Mock）
+  useEffect(() => {
+    if (!userData?.id) return
+    let mounted = true
+    void getUserStage(userData.id).then((s) => {
+      if (mounted) setUserStage(s)
+    })
+    const unsubscribe = subscribeUserStage((s) => {
+      if (mounted) setUserStage(s)
+    })
+    return () => {
+      mounted = false
+      unsubscribe()
+    }
+  }, [userData?.id])
+
+  // ===== 商业作战地图 · 数据加载 =====
+  // 历史诊断
+  useEffect(() => {
+    let mounted = true
+    setLoadingHistory(true)
+    void getDiagnosisHistory(userData?.phone).then((records) => {
+      if (mounted) {
+        setHistoryRecords(records)
+        setLoadingHistory(false)
+      }
+    })
+    return () => {
+      mounted = false
+    }
+  }, [userData?.phone])
+
+  // 四维核心指标
+  useEffect(() => {
+    let mounted = true
+    void getMetrics(userData?.phone, userStage).then((m) => {
+      if (mounted) setMetrics(m)
+    })
+    return () => {
+      mounted = false
+    }
+  }, [userData?.phone, userStage])
+
+  // 良朋币余额（从 /api/coins 读取）
+  useEffect(() => {
+    if (!userData?.phone) return
+    let mounted = true
+    void fetch(`/api/coins?phone=${encodeURIComponent(userData.phone)}&type=balance`, {
+      cache: 'no-store',
+    })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((j) => {
+        if (mounted && j?.success && typeof j.data?.coins === 'number') {
+          setCoinsBalance(j.data.coins)
+        }
+      })
+      .catch(() => {})
+    return () => {
+      mounted = false
+    }
+  }, [userData?.phone])
+
+  // 点击进度条节点 → 切换展开
+  const handleStageClick = (key: UserStageKey) => {
+    if (expandedStage === key) {
+      setExpandedStage(null)
+      setStageDetail(null)
+      return
+    }
+    setExpandedStage(key)
+    setLoadingDetail(true)
+    setStageDetail(null)
+    // 模拟 250ms 加载（实际可直接同步）
+    setTimeout(() => {
+      setStageDetail(getStageDetail(key, userStage, metrics))
+      setLoadingDetail(false)
+    }, 250)
+  }
 
   const handleLogout = async () => {
     const supabase = createClient()
@@ -165,32 +277,23 @@ export default function MemberPage() {
   return (
     <ClientLayout>
       <div className="min-h-screen bg-slate-50">
-        <section className="bg-gradient-to-br from-blue-600 to-indigo-700 px-5 py-10">
-          <div className="flex items-center gap-4">
-            <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center">
-              <User size={32} className="text-white" />
-            </div>
-            <div className="text-white">
-              <h1 className="text-xl font-bold">{userData.name || '用户'}</h1>
-              <div className="flex items-center gap-2 text-blue-100 text-sm mt-1">
-                <Mail size={14} />
-                <span>{userData.email}</span>
-              </div>
-              <div className="flex items-center gap-2 text-blue-100 text-sm mt-1">
-                <MapPin size={14} />
-                <span>{userData.city?.name || '深圳'}</span>
-              </div>
-            </div>
-          </div>
+        {/* 🌅 商业作战地图 · 顶部概览（替换原 Hero） */}
+        <section className="px-4 pt-4 md:px-6 md:pt-6">
+          <ProfileHeader
+            userName={userData.name || userData.email || '老板'}
+            userAvatar={userData.avatar || '🧭'}
+            userStage={userStage}
+            coinsBalance={coinsBalance}
+          />
         </section>
 
         {/* 🌅 AI 智富日报（每日 7:00 推送） */}
-        <section className="px-5 -mt-6 relative z-10">
+        <section className="px-5 mt-4">
           <AIDailyBrief userId={userData.phone} />
         </section>
 
-        {/* 🪙 良朋币资产卡片 */}
-        <section className="px-5 -mt-6 relative z-10">
+        {/* 🪙 良朋币资产卡片（保留） */}
+        <section className="px-5 mt-4">
           <CoinBalanceCard phone={userData.phone} />
         </section>
 
@@ -214,8 +317,7 @@ export default function MemberPage() {
             </div>
           </div>
         </section>
-
-        {/* ⚡️ 四库全胜启动包模块 */}
+        {/* ⚡️ 四库全胜启动包模块（保留） */}
         <section className="px-5 py-4">
           <ReportStarterCard
             userName={userData?.name || userData?.email || '老板'}
@@ -224,175 +326,36 @@ export default function MemberPage() {
           />
         </section>
 
-        {/* 🌟 商业路线图板块 */}
+        {/* 🎯 OPC 全流程进度条（升级：可点击展开历史详情） */}
         <section className="px-5 py-4">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
-              <Compass size={18} className="text-blue-600" />
-              商业路线图
-            </h2>
-            <span className="text-xs text-gray-500">
-              整体进度{' '}
-              <span className="font-bold text-blue-600">{overallProgress}%</span>
-            </span>
-          </div>
+          <OPCProgressBar
+            stage={userStage}
+            onStageClick={handleStageClick}
+            expandedStage={expandedStage}
+            stageDetail={stageDetail}
+            loadingDetail={loadingDetail}
+          />
+        </section>
 
-          {/* 总进度条 */}
-          <div className="bg-white rounded-2xl shadow-sm p-4 mb-4">
-            <div className="flex items-center justify-between text-xs text-gray-600 mb-2">
-              <span>四库进度 · 已完成 {completedSteps}/4 步</span>
-              <span className="font-bold text-blue-600">{overallProgress}%</span>
-            </div>
-            <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-              <div
-                className="h-full bg-gradient-to-r from-rose-500 via-amber-500 via-blue-500 to-emerald-500 rounded-full transition-all duration-700"
-                style={{ width: `${overallProgress}%` }}
-              />
-            </div>
-          </div>
+        {/* 📊 商业数据看板 · 2x2 Bento */}
+        <section className="px-5 py-4">
+          <MetricsBento metrics={metrics} />
+        </section>
 
-          {/* 四阶段卡片 */}
-          <div className="grid grid-cols-4 gap-2 mb-5">
-            {FOUR_STAGES.map((s) => {
-              const done = progress[s.key as keyof typeof progress] === 100
-              const Icon = s.icon
-              return (
-                <Link
-                  key={s.key}
-                  href={STEP_META[s.key].href}
-                  className="block group"
-                >
-                  <div
-                    className={`relative aspect-square rounded-2xl p-2 flex flex-col items-center justify-center text-center transition-all ${
-                      done
-                        ? `bg-gradient-to-br ${s.color} text-white shadow-lg`
-                        : 'bg-white border-2 border-dashed border-gray-200 text-gray-400'
-                    }`}
-                  >
-                    {done && (
-                      <div className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-white rounded-full flex items-center justify-center shadow">
-                        <CheckCircle2 size={14} className="text-emerald-500" />
-                      </div>
-                    )}
-                    <Icon size={20} className="mb-1" />
-                    <div className="text-[10px] font-bold leading-tight">{s.label}</div>
-                    <div className={`text-[9px] leading-tight mt-0.5 ${done ? 'text-white/80' : 'text-gray-400'}`}>
-                      {done ? '已完成' : '待解锁'}
-                    </div>
-                  </div>
-                </Link>
-              )
-            })}
-          </div>
+        {/* 📂 我的商业档案 · 历史诊断 */}
+        <section className="px-5 py-4">
+          <DiagnosisHistoryList
+            records={historyRecords}
+            loading={loadingHistory}
+          />
+        </section>
 
-          {/* 时间轴 */}
-          <div className="bg-white rounded-2xl shadow-sm p-4">
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="text-sm font-bold text-gray-900 flex items-center gap-1.5">
-                <TrendingUp size={14} className="text-blue-600" />
-                我的成长时间轴
-              </h3>
-              <span className="text-[10px] text-gray-400">{timeline.length} 个节点</span>
-            </div>
-
-            {timeline.length === 0 ? (
-              <div className="py-10 text-center">
-                <div className="w-14 h-14 mx-auto mb-3 bg-gradient-to-br from-blue-100 to-purple-100 rounded-2xl flex items-center justify-center">
-                  <Sparkles size={20} className="text-blue-500" />
-                </div>
-                <div className="text-sm text-gray-600 mb-1">还没有成长记录</div>
-                <div className="text-xs text-gray-400 mb-4">完成诊断、规划、工具、沙龙即可解锁路线</div>
-                <Link
-                  href="/diagnosis"
-                  className="inline-flex items-center gap-1 px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-xs font-semibold rounded-full"
-                >
-                  开始自我诊断
-                  <ArrowRight size={12} />
-                </Link>
-              </div>
-            ) : (
-              <div className="relative">
-                {/* 时间轴竖线 */}
-                <div className="absolute left-[19px] top-2 bottom-2 w-0.5 bg-gradient-to-b from-rose-300 via-amber-300 via-blue-300 to-emerald-300" />
-
-                <ul className="space-y-3.5">
-                  {timeline.map((step) => {
-                    const meta = STEP_META[step.type]
-                    const Icon = meta.icon
-                    return (
-                      <li key={`${step.type}-${step.id}`} className="relative pl-12">
-                        {/* 节点圆 */}
-                        <div
-                          className={`absolute left-0 top-0 w-10 h-10 rounded-full bg-gradient-to-br ${meta.gradient} flex items-center justify-center shadow-md ring-4 ${meta.ring} z-10`}
-                        >
-                          <Icon size={16} className="text-white" />
-                        </div>
-
-                        <Link
-                          href={meta.href}
-                          className="block bg-gray-50 hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 rounded-xl p-3 transition-all group"
-                        >
-                          <div className="flex items-start justify-between gap-2">
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-1.5 mb-0.5">
-                                <span
-                                  className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-gradient-to-r ${meta.gradient} text-white`}
-                                >
-                                  {meta.badge}
-                                </span>
-                                <span className="text-xs font-bold text-gray-900">{step.title}</span>
-                              </div>
-                              <div className="text-[11px] text-gray-600 line-clamp-2 leading-relaxed">
-                                {step.desc}
-                              </div>
-                              <div className="text-[10px] text-gray-400 mt-0.5">{step.meta}</div>
-                            </div>
-                            <div className="flex flex-col items-end gap-0.5 flex-shrink-0">
-                              <span className="text-[10px] text-gray-400">
-                                {new Date(step.at).toLocaleDateString('zh-CN', {
-                                  month: '2-digit',
-                                  day: '2-digit',
-                                })}
-                              </span>
-                              <ChevronRight
-                                size={12}
-                                className="text-gray-300 group-hover:text-blue-500 group-hover:translate-x-0.5 transition-all"
-                              />
-                            </div>
-                          </div>
-                        </Link>
-                      </li>
-                    )
-                  })}
-                </ul>
-              </div>
-            )}
-
-            {/* 引导下一步 */}
-            {completedSteps < 4 && (
-              <div className="mt-4 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-100 rounded-xl p-3 flex items-center gap-3">
-                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center flex-shrink-0">
-                  <Sparkles size={14} className="text-white" />
-                </div>
-                <div className="flex-1 text-xs text-gray-700">
-                  下一步：完成{' '}
-                  {FOUR_STAGES.find((s) => progress[s.key as keyof typeof progress] === 0)?.label || '所有节点'}
-                </div>
-                <Link
-                  href={
-                    STEP_META[
-                      (FOUR_STAGES.find((s) => progress[s.key as keyof typeof progress] === 0)?.key ||
-                        'diagnosis') as string
-                    ].href
-                  }
-                  className="text-[11px] font-bold text-blue-600 hover:text-blue-700 flex items-center gap-0.5"
-                >
-                  继续
-                  <ArrowRight size={10} />
-                </Link>
-              </div>
-            )}
-          </div>
+        {/* ✨ 下一步行动 · 智能推荐 */}
+        <section className="px-5 py-4">
+          <NextActionCTA
+            userStage={userStage}
+            opcLevel={userStage?.opcLevel}
+          />
         </section>
 
         <section className="px-5 py-4">

@@ -293,7 +293,7 @@ export default function ToolsPage() {
           </p>
 
           <Link
-            href="/tools/market"
+            href="/market"
             className="inline-flex items-center gap-1 text-sm text-cyan-400 hover:text-cyan-300"
           >
             探索全部工具

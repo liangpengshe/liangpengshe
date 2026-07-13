@@ -57,7 +57,7 @@ export default function DashboardPage() {
   const quickActions = [
     { icon: '📋', label: '控制台', href: '/console' },
     { icon: '🤖', label: 'AI助手', href: '/' },
-    { icon: '📁', label: '工具库', href: '/tools/market' },
+    { icon: '📁', label: '工具库', href: '/market' },
     { icon: '👤', label: '个人中心', href: '/member' },
   ]
 

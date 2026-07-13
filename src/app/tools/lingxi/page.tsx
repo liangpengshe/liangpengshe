@@ -83,7 +83,7 @@ export default function LingxiPage() {
     <div className="min-h-screen bg-slate-50">
       <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
         <div className="flex items-center justify-between px-5 py-4">
-          <Link href="/tools/market" className="flex items-center gap-2 text-gray-600 hover:text-blue-600 transition-colors">
+          <Link href="/market" className="flex items-center gap-2 text-gray-600 hover:text-blue-600 transition-colors">
             <ArrowLeft size={20} />
             <span>返回工具库</span>
           </Link>

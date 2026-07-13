@@ -51,6 +51,9 @@ test-*.sh
 *.test.local
 coverage/
 .nyc_output/
+verify-*.js
+verify-screenshots*/
+scripts-output/
 
 # ===== Backups (huge) =====
 backups/
