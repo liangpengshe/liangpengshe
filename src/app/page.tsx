@@ -28,6 +28,7 @@ import { FlowControlBar, type LibraryTabValue } from '@/components/learning/Flow
 import { LibraryCard } from '@/components/learning/LibraryCard'
 import { resolveSmartLearningHref } from '@/lib/user-stage'
 import { cn } from '@/lib/utils'
+import { toast } from '@/components/Toast'
 
 // ════════════════════════════════════════════════════════════════
 // 静态数据
@@ -37,26 +38,62 @@ const stats = [
   { label: '已赋能企业', value: 300, suffix: '+', unit: '家' },
   { label: '举办沙龙', value: 50, suffix: '+', unit: '期' },
   { label: '服务客户', value: 500, suffix: '+', unit: '位' },
-  { label: 'AI案例', value: 100, suffix: '+', unit: '个' },
+  { label: 'AI 案例', value: 100, suffix: '+', unit: '' },
 ]
 
 // 4 步学习实操路径
-// requiresLevel: true  → 点击时按用户 opc_level 智能跳转到 /market/guide/{level}
-// 降级：未诊断 → /market（四库总览页）
+// requiresLevel: true  → 点击时按用户 opc_level 智能跳转到 /guide/{level}
+// 降级：未诊断 → /market/tools（四库总览页）
 type LearningPathItem = {
   step: string
   title: string
   desc: string
+  /** 默认/降级状态；动态计算时会覆盖 */
   status: 'done' | 'active' | 'locked'
   href: string
   requiresLevel: boolean
   icon: typeof Compass
 }
+
+// ════════════════════════════════════════════════════════════════
+// 学习进度动态状态计算（从 /api/user/learning-progress 读取）
+// ════════════════════════════════════════════════════════════════
+type LPStatus = 'done' | 'active' | 'locked'
+interface LiveProgress {
+  opcLevel?: string
+  learning_score: number
+  can_unlock_practice: boolean
+  step_diagnosis_done: boolean
+  step_learning_done: boolean
+  step_practice_done: boolean
+  step_scaleup_done: boolean
+}
+
+function computeStepStatus(step: '01' | '02' | '03' | '04', p: LiveProgress | null): LPStatus {
+  if (!p) return 'active' // 未读取到进度时保持默认 active
+  if (step === '01') return p.step_diagnosis_done ? 'done' : 'active'
+  if (step === '02') {
+    if (p.step_learning_done) return 'done'
+    if (p.step_diagnosis_done) return 'active'
+    return 'locked'
+  }
+  if (step === '03') {
+    if (p.step_practice_done) return 'done'
+    if (p.can_unlock_practice) return 'active'
+    return 'locked'
+  }
+  if (step === '04') {
+    if (p.step_scaleup_done) return 'done'
+    if (p.step_practice_done) return 'active'
+    return 'locked'
+  }
+  return 'locked'
+}
 const learningPath: LearningPathItem[] = [
   {
     step: '01',
     title: '咨询诊断',
-    desc: 'AI 商业 IP 诊断 + 行业对标',
+    desc: 'AI 评估创业起点与瓶颈，获取 1v1 专家咨询建议。',
     status: 'done' as const,
     href: '/diagnosis',
     requiresLevel: false,
@@ -65,27 +102,27 @@ const learningPath: LearningPathItem[] = [
   {
     step: '02',
     title: '学习入门',
-    desc: '通哥 SOP + AI 智能体矩阵',
+    desc: '匹配四库专属方案，完成账号注册与工具配置，执行 3-7 天入门实操。',
     status: 'active' as const,
-    href: '/market', // 降级目标：未诊断时进入四库总览页
-    requiresLevel: true,    // 智能分流：按 opc_level 跳 /market/guide/{level}
+    href: '/market', // 降级：未诊断时进入四库总览页
+    requiresLevel: true, // 智能分流：按 opc_level 跳 /guide/{level}
     icon: BookOpen,
   },
   {
     step: '03',
     title: '运营实操',
-    desc: '工具落地 + 项目跑通首单',
+    desc: '从【项目库】精准选品，跟随 SOP 执行第一套完整商业闭环节奏。',
     status: 'locked' as const,
-    href: '/market',
-    requiresLevel: true,
+    href: '/market/projects', // 降级：未诊断时进入项目库
+    requiresLevel: true, // 智能分流：按 opc_level 跳 /guide/{level}
     icon: Wrench,
   },
   {
     step: '04',
     title: '矩阵放大',
-    desc: '城市分站加盟 + 资产复制',
+    desc: '多店/多号矩阵运营，实现规模化复制，解锁多平台自动化。',
     status: 'locked' as const,
-    href: '/partner',
+    href: '/scale-up', // 矩阵放大综合控制台（深色科技风 · 5 大板块）
     requiresLevel: false,
     icon: TrendingUp,
   },
@@ -97,7 +134,7 @@ const entrepreneurLadder = [
     layer: '第一层',
     title: '� 交易型 OPC',
     desc: 'AI 网店群、智富严选、跑通首单赚第一笔钱',
-    href: '/market/guide/trader',
+    href: '/guide/trader',
     cta: '快速了解',
     color: 'bg-gradient-to-r from-orange-400 to-amber-500',
     icon: ShoppingCart,
@@ -106,7 +143,7 @@ const entrepreneurLadder = [
     layer: '第二层',
     title: '� 流量型 OPC',
     desc: '内容获客、自媒体矩阵',
-    href: '/market/guide/flow',
+    href: '/guide/flow',
     cta: '了解详情',
     color: 'bg-gradient-to-r from-pink-500 to-rose-500',
     icon: Megaphone,
@@ -115,7 +152,7 @@ const entrepreneurLadder = [
     layer: '第三层',
     title: '⚙️ 系统型 OPC',
     desc: '企业流程改造、高客单',
-    href: '/market/guide/system',
+    href: '/guide/system',
     cta: '了解详情',
     color: 'bg-gradient-to-r from-blue-500 to-indigo-600',
     icon: Settings2,
@@ -124,7 +161,7 @@ const entrepreneurLadder = [
     layer: '第四层',
     title: '� 资产型 OPC',
     desc: '数字资产、全球外包',
-    href: '/market/guide/asset',
+    href: '/guide/asset',
     cta: '了解详情',
     color: 'bg-gradient-to-r from-purple-500 to-indigo-700',
     icon: Gem,
@@ -334,12 +371,57 @@ function ActivityTicker({ activities }: { activities: Activity[] }) {
 /** ① OPC 学习实操路径（水平进度条 + 4 节点 + 状态色 + 点击平滑滚动） */
 function LearningPath() {
   const sectionRefs = useRef<Record<string, HTMLElement | null>>({})
+  const [liveProgress, setLiveProgress] = useState<LiveProgress | null>(null)
+
+  // 拉取实时学习进度（与 /guide/[level] 页面同源）
+  useEffect(() => {
+    let cancelled = false
+    const phone = (() => {
+      if (typeof window === 'undefined') return 'ssr-device'
+      let id = window.localStorage.getItem('opc_device_id')
+      if (!id) {
+        id = `dev-${Date.now()}-${Math.floor(Math.random() * 100000)}`
+        window.localStorage.setItem('opc_device_id', id)
+      }
+      return id
+    })()
+    fetch(`/api/user/learning-progress?phone=${encodeURIComponent(phone)}`)
+      .then((r) => r.json())
+      .then((resp) => {
+        if (cancelled || !resp.success) return
+        setLiveProgress(resp.data as LiveProgress)
+      })
+      .catch(() => {
+        // 静默降级到默认状态
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   const handleClick = (item: LearningPathItem) => {
     // 智能分流：STEP 02/03 按用户 opc_level 优先跳专属引导页，降级到 item.href
     const target = item.requiresLevel
       ? resolveSmartLearningHref(item.href)
       : item.href
+
+    // STEP 03 运营实操：基于 opc_level 精准推荐项目库
+    if (item.step === '03') {
+      handleStep03Click(target)
+      return
+    }
+
+    // STEP 04 矩阵放大：未解锁时弹前置拦截（必须先完成 STEP 01~03）
+    if (item.step === '04') {
+      if (!liveProgress?.can_unlock_practice) {
+        toast.warn(
+          '请先完成诊断 + 学习入门（≥ 80 分） + 运营实操（STEP 03），\n解锁「矩阵放大」后方可进入控制台。\n\n👉 当前您可先体验：项目库（/market/projects）。'
+        )
+        return
+      }
+      window.location.href = '/scale-up'
+      return
+    }
 
     // 站内锚点滚动到对应板块
     if (target.startsWith('#')) {
@@ -348,6 +430,44 @@ function LearningPath() {
     } else {
       window.location.href = target
     }
+  }
+
+  /**
+   * STEP 03 运营实操：按 opc_level 精准推荐
+   *  - TRADER → /market/projects?recommend=trader
+   *  - FLOW   → /market/projects?recommend=flow
+   *  - SYSTEM → /market/projects?recommend=system
+   *  - ASSET  → /market/projects?recommend=asset
+   *  - 未诊断 / 未达学习积分 → 弹提示
+   */
+  const handleStep03Click = (fallback: string) => {
+    let level: string | null = null
+    try {
+      level = window.localStorage.getItem('opc_level')
+    } catch {
+      level = null
+    }
+    const scoreStr = (() => {
+      try {
+        return window.localStorage.getItem('learning_score')
+      } catch {
+        return null
+      }
+    })()
+    const score = scoreStr ? parseInt(scoreStr, 10) : 0
+    const scoreOk = !isNaN(score) && score >= 80
+
+    if (!level && !scoreOk) {
+      alert('请先完成诊断与学习入门（≥ 80 分），系统才能为您精准推荐项目。')
+      window.location.href = '/diagnosis'
+      return
+    }
+
+    const normalized = (level || '').toUpperCase()
+    const recommend = ['TRADER', 'FLOW', 'SYSTEM', 'ASSET'].includes(normalized)
+      ? normalized.toLowerCase()
+      : 'trader' // 已解锁但未诊断 → 兜底推交易型
+    window.location.href = `/market/projects?recommend=${recommend}`
   }
 
   const statusConfig = {
@@ -397,7 +517,9 @@ function LearningPath() {
 
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 relative">
             {learningPath.map((item, idx) => {
-              const cfg = statusConfig[item.status]
+              // 动态状态：覆盖静态 status
+              const liveStatus = computeStepStatus(item.step as '01' | '02' | '03' | '04', liveProgress)
+              const cfg = statusConfig[liveStatus]
               const Icon = item.icon
               const StatusIcon = cfg.icon
               return (
@@ -486,7 +608,7 @@ function NewbieTaskBanner() {
 
             {/* 右侧：CTA 按钮 */}
             <Link
-              href="/market"
+              href="/market/tools"
               className="flex-shrink-0 inline-flex items-center gap-1.5 px-4 h-9 md:h-10 rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 text-white text-xs md:text-sm font-bold shadow-md shadow-blue-500/20 hover:shadow-lg hover:shadow-blue-500/30 hover:gap-2.5 hover:from-blue-600 hover:to-indigo-700 transition-all whitespace-nowrap"
             >
               <Sparkles size={12} className="md:w-3.5 md:h-3.5" />
@@ -506,9 +628,19 @@ function EntrepreneurLadder() {
     <section className="px-5 pt-6 pb-6">
       <div className="max-w-lg mx-auto md:max-w-6xl md:mx-auto">
         <div className="mb-5">
-          <h2 className="text-xl md:text-2xl font-bold text-slate-900 flex items-center gap-2">
+          <h2 className="text-xl md:text-2xl font-bold text-slate-900 flex items-center gap-2 flex-wrap">
             <span className="text-2xl">📈</span>
             OPC四层智富阶梯
+            {/* 老手跳过入口（柔性入口 · 不卡新手流程）*/}
+            <Link
+              href="/market"
+              prefetch={false}
+              className="ml-auto inline-flex items-center gap-1.5 text-[11px] md:text-xs font-bold text-slate-600 hover:text-blue-700 bg-white hover:bg-blue-50 border border-slate-300 hover:border-blue-300 px-3 py-1.5 rounded-full transition-all shadow-sm"
+            >
+              <span>🛠️</span>
+              我是老手，直接探索四库
+              <span className="text-slate-400 text-[10px]">→</span>
+            </Link>
           </h2>
           <p className="text-xs md:text-sm text-slate-500 leading-relaxed mt-1">
             从跑通首单到资产复制，四层路径让一人公司逐步做大
@@ -707,7 +839,7 @@ function LibraryTabs() {
               <span className="text-2xl">🏆</span>
               AI四库全胜系统
             </h2>
-            <Link href="/more" className="text-sm text-blue-600 hover:text-blue-700">
+            <Link href="/market" className="text-sm text-blue-600 hover:text-blue-700">
               查看全部 →
             </Link>
           </div>
@@ -880,7 +1012,7 @@ export default function HomePage() {
                   <span className="text-white">一人公司 ×</span>
                   <br />
                   <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400">
-                    AI 商业重构操作系统
+                    OPC 智富操作系统
                   </span>
                 </motion.h1>
 
@@ -914,7 +1046,7 @@ export default function HomePage() {
                   transition={{ duration: 0.6, delay: 0.25 }}
                   className="text-slate-300 mb-8 max-w-md md:max-w-lg mx-auto md:mx-0 text-sm md:text-base"
                 >
-                  汇聚全国 AI 从业者与企业家，共同探索人工智能在企业中的实际应用与商业价值
+                  汇聚全国 OPC 创业者与企业家，共同探索 AI 智富路径在实际落地中的应用与商业价值
                 </motion.p>
 
                 <motion.div
@@ -1054,7 +1186,7 @@ export default function HomePage() {
           </div>
         </section>
 
-        {/* ═══ 4. AI 智能体商业 IP 诊断（免费入口）═══ */}
+        {/* ═══ 4. OPC 智富入局诊断（免费入口）═══ */}
         <section className="px-5 pt-3 pb-2 relative z-10">
           <div className="max-w-lg mx-auto md:max-w-6xl md:mx-auto">
             <motion.div
@@ -1074,11 +1206,11 @@ export default function HomePage() {
                     🔥 限时免费 · 每天仅 10 个名额
                   </div>
                   <h3 className="text-base md:text-lg font-bold mb-1.5">
-                    免费领取：AI 智能体商业 IP 诊断
+                    免费领取：OPC 智富入局诊断
                   </h3>
                   <p className="text-xs md:text-sm text-amber-50/95 leading-relaxed">
-                    良朋社用 <span className="font-bold">4 步法 + AI 智能体团队</span>
-                    ，帮你系统重构 IP。
+                    良朋社用 <span className="font-bold">4 步法 + AI 智能体</span>
+                    ，帮你诊断创业起点与卡点，匹配专属四库方案。
                   </p>
                 </div>
                 <Link

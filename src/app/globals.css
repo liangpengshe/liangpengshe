@@ -12,6 +12,28 @@
     background-color: #f8fafc;
     color: #1e293b;
   }
+
+  /* 进化项 2.1：移动端触控舒适区
+     - 44px 最小高度（Apple HIG / WCAG AAA）
+     - touch-action: manipulation 消除 300ms 点击延迟 + 禁用双击缩放
+  */
+  button,
+  a,
+  [role="button"],
+  input,
+  select,
+  textarea {
+    min-height: 44px;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* 极小元素（图标按钮、关闭按钮）允许绕过 44px 规则
+     通过 min-h-0 或 size-* 显式控制 */
+  button[class*="size-"],
+  a[class*="size-"] {
+    min-height: 0;
+  }
 }
 
 @layer components {
@@ -98,4 +120,25 @@
 @keyframes spinReverse {
   from { transform: rotate(360deg); }
   to { transform: rotate(0deg); }
+}
+
+/* ════════ 项目 SOP 详情页（/projects/[slug]）Duolingo 风格呼吸动效 ═══════ */
+@keyframes sopPulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.0), 0 4px 16px 0 rgba(59, 130, 246, 0.08);
+    transform: translateY(0);
+  }
+  50% {
+    box-shadow: 0 0 0 6px rgba(59, 130, 246, 0.18), 0 8px 24px 0 rgba(59, 130, 246, 0.18);
+    transform: translateY(-2px);
+  }
+}
+
+@keyframes sopRing {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.35);
+  }
+  50% {
+    box-shadow: 0 0 0 8px rgba(59, 130, 246, 0);
+  }
 }

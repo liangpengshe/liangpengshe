@@ -39,6 +39,11 @@ interface InquiryBody {
     wechat?: string
     description?: string
     city?: string
+    /**
+     * 用户的 OPC 类型（由前端从 localStorage 'opc_level' 透传）
+     * 不传或 null 表示"未诊断"，走默认专家池
+     */
+    opcLevel?: 'TRADER' | 'FLOW' | 'SYSTEM' | 'ASSET' | null
   }
 }
 
@@ -47,6 +52,25 @@ interface MatchedManager {
   name: string
   phone: string
   wechat: string
+}
+
+/** 4 大 OPC 类型对应的专属专家 */
+interface AssignedExpert {
+  opcLevel: 'TRADER' | 'FLOW' | 'SYSTEM' | 'ASSET'
+  name: string
+  avatar: string
+  specialty: string
+  wechat: string
+}
+
+const OPC_LEVEL_TO_EXPERT: Record<
+  'TRADER' | 'FLOW' | 'SYSTEM' | 'ASSET',
+  AssignedExpert
+> = {
+  TRADER: { opcLevel: 'TRADER', name: '弓老师', avatar: '🏹', specialty: '交易型 OPC 专家 · 网店 SOP', wechat: 'gong_opc_trader' },
+  FLOW:   { opcLevel: 'FLOW',   name: '林薇老师', avatar: '🌸', specialty: '流量型 OPC 专家 · 自媒体增长', wechat: 'linwei_opc_flow' },
+  SYSTEM: { opcLevel: 'SYSTEM', name: '于老师', avatar: '⚙️', specialty: '系统型 OPC 专家 · 数字员工搭建', wechat: 'yu_opc_system' },
+  ASSET:  { opcLevel: 'ASSET',  name: '吕老师', avatar: '💎', specialty: '资产型 OPC 专家 · 资产倍增', wechat: 'lv_opc_asset' },
 }
 
 // 模拟：OPC 主理人库（按城市索引）
@@ -123,12 +147,19 @@ export async function POST(request: Request) {
     // 1. AI / 专家分流
     const { aiSessions, expertTickets } = dispatchByType(selectedServices)
 
-    // 2. 主理人推荐（按城市匹配）
+    // 2. 专属专家分配（按 opc_level 智能路由）
+    const opcLevel = form.opcLevel
+    const assignedExpert: AssignedExpert | { name: string; specialty: string; fallback: true } | null =
+      opcLevel && OPC_LEVEL_TO_EXPERT[opcLevel]
+        ? OPC_LEVEL_TO_EXPERT[opcLevel]
+        : null
+
+    // 3. 主理人推荐（按城市匹配）
     const city = form.city || '深圳' // TODO: 接入 IP 解析
     const matched = CITY_MANAGERS[city] || CITY_MANAGERS.default
     const matchedManagers = [matched]
 
-    // 3. 模拟网络延迟（让前端 loading 有视觉反馈）
+    // 4. 模拟网络延迟（让前端 loading 有视觉反馈）
     await new Promise((r) => setTimeout(r, 600))
 
     return NextResponse.json({
@@ -137,6 +168,11 @@ export async function POST(request: Request) {
       aiSessions,
       expertTickets,
       matchedManagers,
+      assignedExpert: assignedExpert ?? {
+        name: '总部专家池',
+        specialty: '根据您的需求画像智能匹配 · 24h 内联系您',
+        fallback: true as const,
+      },
     })
   } catch (err) {
     console.error('[services/inquiry] error:', err)

@@ -28,6 +28,7 @@ import {
   MapPin,
   ShieldCheck,
   Globe,
+  Award,
 } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter, usePathname } from 'next/navigation'
@@ -37,22 +38,31 @@ import { cn } from '@/lib/utils'
 import { serviceItems, type ServiceItem } from '@/data/service-items'
 import { projectItems, type ProjectItem } from '@/data/project-items'
 import { resourceItems, type ResourceItem } from '@/data/resource-items'
+import { FindSeniorOPCModal } from '@/components/market/FindSeniorOPCModal'
+import { UnlockResourceModal } from '@/components/market/UnlockResourceModal'
+import { UGCSubmissionSection } from '@/components/market/UGCSubmissionSection'
+import {
+  ResourceSubmissionModal,
+  NeedLoginToSubmitModal,
+} from '@/components/market/ResourceSubmissionModal'
 import {
   canUnlockResource,
   readMembershipTierFromStorage,
   type MembershipTier,
   MEMBERSHIP_TIER_META,
 } from '@/lib/user-membership'
+import { useUserProgress, type UserProgressSnapshot } from '@/lib/use-user-progress'
+import { MARKET_SEARCH_STORAGE_KEY, MARKET_SEARCH_EVENT } from '@/lib/market-search'
 
 /**
- * AI 智富四库导航（统一入口 /market）
+ * AI四库全胜系统导航（统一入口 /market）
  * ------------------------------------------------------------
  * 路由：
  *   - /market              → 默认进入 AI智富工具库
  *   - /market/services     → 直接进入 AI智富服务库
  *   - /market/projects     → 直接进入 AI智富项目库
  *   - /market/resources    → 直接进入 AI智富资源库
- *   - /market/guide/[level]→ 按诊断结果展示个性化学习方案
+ *   - /guide/[level]→ 按诊断结果展示个性化学习方案
  *
  * 4 库顺序（外层 Tabs）：
  *   1. AI智富工具库（默认）
@@ -80,8 +90,37 @@ interface Platform {
   action?: 'visit' | 'download' | 'enter'
   /** 平台 emoji，作为占位 logo */
   icon?: string
-  /** 标签：热门 / 推荐 / 必装 等 */
+  /** 标签：开店注册 / 热门 / 推荐 / 必装 / 出海 等 */
   tag?: string
+  /**
+   * AI 内容生成场景标签（决定左上班徽颜色）
+   * 仅 AI 内容生成相关分类使用
+   */
+  scene?: 'writing' | 'image' | 'video' | 'coding'
+}
+
+/** 8 个 tool 子分类的稳定 slug（用于锚点 + URL 参数） */
+type ToolSlug =
+  | 'self-tools'
+  | 'shop-workspace'
+  | 'media-login'
+  | 'shop-ops'
+  | 'daily-tools'
+  | 'scene-writing'
+  | 'scene-image'
+  | 'scene-video'
+  | 'scene-coding'
+
+const TOOL_SLUG_MAP: Record<string, ToolSlug> = {
+  '自研工具': 'self-tools',
+  'AI 网店工作台': 'shop-workspace',
+  'AI 自媒体登录页': 'media-login',
+  'AI 网店运营工具': 'shop-ops',
+  '日常工具': 'daily-tools',
+  'AI 文案写作': 'scene-writing',
+  'AI 图片创作': 'scene-image',
+  'AI 音频视频': 'scene-video',
+  'AI 智能体与编程': 'scene-coding',
 }
 
 interface ToolCategory {
@@ -95,13 +134,26 @@ interface ToolCategory {
 
 const toolCategories: ToolCategory[] = [
   {
+    title: '自研工具',
+    emoji: '🧬',
+    subtitle: 'OPC 独家自研 · 豹纹工坊 / 灵犀 AI / 先锋派数字人',
+    platforms: [
+      { name: '豹纹工坊', url: 'https://www.baowenplus.com', description: 'AI 自媒体内容生成（豹纹+）', icon: '🐆', tag: '独家' },
+      { name: '灵犀 AI', url: 'https://www.lingxixai.com', description: '智能内容创作助手', icon: '🦊', tag: '热门' },
+      { name: '先锋派数字人', url: 'https://www.xianfengpai.com.cn', description: 'AI 数字人视频生成', icon: '🎬', tag: '爆款' },
+    ],
+  },
+  {
     title: 'AI 网店工作台',
     emoji: '🏪',
     subtitle: '一站直达各大电商平台商家后台',
     platforms: [
-      { name: '淘宝商家后台', url: 'https://www.taobao.com', description: '国内领先电商后台', icon: '🛒', tag: '必装' },
-      { name: '拼多多商家后台', url: 'https://mms.pinduoduo.com', description: '拼多多商家入口', icon: '🍎', tag: '热门' },
-      { name: '亚马逊卖家中心', url: 'https://sellercentral.amazon.com', description: '全球开店', icon: '📦', tag: '出海' },
+      { name: '淘宝商家后台', url: 'https://ishop.taobao.com/openshop/tb_open_shop_landing.htm', description: '国内领先电商开店', icon: '🛒', tag: '开店注册' },
+      { name: '拼多多商家后台', url: 'https://mms.pinduoduo.com/login/register?redirectUrl=https%3A%2F%2Fmms.pinduoduo.com%2Fhome%2F', description: '拼多多商家入驻', icon: '🍎', tag: '开店注册' },
+      { name: '小红书开店', url: 'https://zhaoshang.xiaohongshu.com/merchant/login?settleFrom=login_page_pc', description: '小红书商家入驻', icon: '📕', tag: '开店注册' },
+      { name: '抖店', url: 'https://fxg.jinritemai.com/', description: '抖音电商后台', icon: '🎵', tag: '开店注册' },
+      { name: '视频号小店', url: 'https://channels.weixin.qq.com/login.html', description: '微信视频号小店', icon: '💬', tag: '开店注册' },
+      { name: '亚马逊全球开店', url: 'https://sellercentral.amazon.com', description: '全球开店出海', icon: '📦', tag: '出海' },
     ],
   },
   {
@@ -111,9 +163,11 @@ const toolCategories: ToolCategory[] = [
     platforms: [
       { name: '抖音创作者中心', url: 'https://creator.douyin.com', description: '发布短视频', icon: '🎵' },
       { name: '小红书创作者中心', url: 'https://creator.xiaohongshu.com', description: '图文笔记', icon: '📕' },
-      { name: '头条号', url: 'https://mp.toutiao.com', description: '内容分发', icon: '📰' },
-      { name: '百家号', url: 'https://baijiahao.baidu.com', description: '百度创作平台', icon: '🔍' },
-      { name: '知乎', url: 'https://www.zhihu.com', description: '问答社区', icon: '💡' },
+      { name: '头条号', url: 'https://www.toutiao.com/', description: '字节内容分发', icon: '📰' },
+      { name: '百家号', url: 'https://baijiahao.baidu.com/builder/theme/bjh/login', description: '百度创作平台', icon: '🔍' },
+      { name: '知乎', url: 'https://www.zhihu.com/signin?next=%2F', description: '问答社区', icon: '💡' },
+      { name: '微信公众号', url: 'https://mp.weixin.qq.com/cgi-bin/registermidpage?action=index', description: '微信公众平台', icon: '💬' },
+      { name: '快手', url: 'https://www.kuaishou.com/new-reco', description: '快手内容平台', icon: '⚡' },
     ],
   },
   {
@@ -122,23 +176,90 @@ const toolCategories: ToolCategory[] = [
     subtitle: '数据分析 / 自动发货 / 裂变引流',
     platforms: [
       { name: '店侦探', url: 'https://www.dianzhentan.com', description: '电商数据分析', icon: '🕵️', tag: '热门' },
-      { name: '阿奇索', url: 'https://www.aqisuo.com', description: '自动发货系统', icon: '⚡' },
+      { name: '阿奇索自动发货', url: 'https://www.agiso.com/', description: '自动发货系统', icon: '⚡' },
       { name: '抖羚羊', url: 'https://www.doulingyang.com', description: '裂变引流工具', icon: '🚀', tag: '推荐' },
+      { name: '哈士奇电商插件', url: 'https://hsq.dangxun.com/', description: '电商浏览器插件', icon: '🐺' },
+      { name: '至尊宝电商工具', url: 'https://tool.zzbtool.com/index.html#/index', description: '多功能运营工具', icon: '👑' },
+      { name: '版权著作权检测', url: 'https://banquan.tianyancha.com/zp', description: '版权查询', icon: '©️' },
     ],
   },
   {
-    title: 'AI 内容生成工具',
-    emoji: '✨',
-    subtitle: 'AI 创作生产力 · 跑通首单必备',
+    title: '日常工具',
+    emoji: '📦',
+    subtitle: '网盘 / 资源管理 / 多创收 · 资源类工具',
     platforms: [
-      { name: '豹纹工坊', url: 'https://www.baowenplus.com', description: 'AI 自媒体内容生成', icon: '🐆', tag: '热门' },
-      { name: '灵犀 AI', url: 'https://www.lingxixai.com', description: '智能内容创作', icon: '🦊' },
-      { name: '先锋派数字人', url: 'https://www.xianfengpai.com.cn', description: 'AI 数字人视频', icon: '🎬', tag: '爆款' },
-      // 内部路由：智富严选走交易型专属引导页
-      { name: '智富严选', url: '/market/guide/trader', description: 'AI 选品推荐', icon: '💎', tag: '必装', action: 'enter' },
+      { name: '百度网盘', url: 'https://pan.baidu.com/', description: '文件存储与分享', icon: '☁️' },
+      { name: '夸克网盘', url: 'https://b.quark.cn/', description: '高速云盘', icon: '⚡' },
+      { name: '任推邦', url: 'https://www.rentuibang.com/', description: '多创收工具', icon: '🚀' },
+    ],
+  },
+  {
+    title: 'AI 文案写作',
+    emoji: '✍️',
+    subtitle: 'AI 写作生产力 · 跑通首单必备',
+    platforms: [
+      { name: 'Deepseek', url: 'https://www.deepseek.com', description: '深度求索 AI', icon: '🐋', scene: 'writing' },
+      { name: '豆包', url: 'https://www.doubao.com', description: '字节跳动 AI 助手', icon: '🫘', scene: 'writing' },
+    ],
+  },
+  {
+    title: 'AI 图片创作',
+    emoji: '🎨',
+    subtitle: 'AI 生图工具集合',
+    platforms: [
+      { name: '豆包', url: 'https://www.doubao.com', description: '字节 AI 生图', icon: '🫘', scene: 'image' },
+      { name: '即梦 Dreamina', url: 'https://jimeng.jianying.com', description: '字节 AI 生图', icon: '🌟', scene: 'image' },
+      { name: '文心一格', url: 'https://yige.baidu.com', description: '百度 AI 艺术', icon: '🎭', scene: 'image' },
+      { name: 'Midjourney', url: 'https://www.midjourney.com', description: '顶级 AI 生图', icon: '🎨', scene: 'image' },
+      { name: 'StableDiffusion', url: '#', description: '开源 AI 生图模型（暂无外链）', icon: '🌀', scene: 'image' },
+      { name: 'Bing Image', url: 'https://cn.bing.com', description: 'Bing 图片搜索', icon: '🖼️', scene: 'image' },
+    ],
+  },
+  {
+    title: 'AI 音频视频',
+    emoji: '🎬',
+    subtitle: 'AI 视频 / 音频生成',
+    platforms: [
+      { name: '海绵音乐', url: 'https://www.haimian.com', description: 'AI 音乐生成', icon: '🎵', scene: 'video' },
+      { name: '可灵 AI', url: 'https://kelingai.com/', description: '快手 AI 视频', icon: '⚡', scene: 'video' },
+      { name: '即梦 AI 视频', url: 'https://jimeng.jianying.com', description: '字节 AI 视频', icon: '�', scene: 'video' },
+    ],
+  },
+  {
+    title: 'AI 智能体与编程',
+    emoji: '🤖',
+    subtitle: 'AI 智能体 / 代码生成',
+    platforms: [
+      { name: '扣子 Coze', url: 'https://www.coze.cn/overview', description: '字节 AI 智能体', icon: '🪄', scene: 'coding' },
+      { name: 'TRAE IDE', url: 'https://www.trae.cn/', description: 'AI 原生 IDE', icon: '🛠️', scene: 'coding' },
     ],
   },
 ]
+
+/**
+ * 工具库渲染顺序优先级（任务 1）
+ * 强制按 自研工具 → 开网店 → 写文案 → 做图片 → 搞视频 → 编代码 顺序渲染
+ * 未列入的分类（自媒体登录页 / 网店运营工具 / 日常工具）保持原顺序追加在尾部
+ */
+const CATEGORY_PRIORITY: Record<string, number> = {
+  '自研工具': 0,
+  'AI 网店工作台': 1,
+  'AI 文案写作': 2,
+  'AI 图片创作': 3,
+  'AI 音频视频': 4,
+  'AI 智能体与编程': 5,
+}
+
+function sortToolCategories(cats: ToolCategory[]): ToolCategory[] {
+  return [...cats].sort((a, b) => {
+    const pa = CATEGORY_PRIORITY[a.title]
+    const pb = CATEGORY_PRIORITY[b.title]
+    if (pa !== undefined && pb !== undefined) return pa - pb
+    if (pa !== undefined) return -1
+    if (pb !== undefined) return 1
+    return 0
+  })
+}
 
 // ════════════════════════════════════════════════════════════════
 // 类型定义
@@ -152,6 +273,22 @@ interface InquiryResult {
   aiSessions?: string[]
   expertTickets?: string[]
   matchedManagers?: Array<{ city: string; name: string; phone: string; wechat: string }>
+  /** 后端按 opc_level 智能分配的专家（任务 3） */
+  assignedExpert?: {
+    name: string
+    specialty: string
+    avatar?: string
+    wechat?: string
+    fallback?: boolean
+  }
+}
+
+/** 4 大 OPC 类型的中文标签 + emoji（用于上下文横幅） */
+const OPC_LEVEL_DISPLAY: Record<'TRADER' | 'FLOW' | 'SYSTEM' | 'ASSET', { label: string; emoji: string }> = {
+  TRADER: { label: '交易先锋', emoji: '🏅' },
+  FLOW:   { label: '流量猎手', emoji: '🎯' },
+  SYSTEM: { label: '系统建造师', emoji: '⚙️' },
+  ASSET:  { label: '资产掌舵人', emoji: '💎' },
 }
 
 interface ProjectInquiryResult {
@@ -191,7 +328,43 @@ const INTENT_LABEL: Record<'executor' | 'partner' | 'manager', string> = {
 // 主入口：MarketContent（支持 defaultTab 切换初始 tab）
 // ════════════════════════════════════════════════════════════════
 
-export function MarketContent({ defaultTab = 'tools' as MarketTab }: { defaultTab?: MarketTab }) {
+export function MarketContent({
+  defaultTab = 'tools' as MarketTab,
+  standalone = true,
+  highlightCategory,
+  briefHighlight = null,
+  selfToolsRef,
+  recommendLevel,
+}: {
+  defaultTab?: MarketTab
+  /**
+   * true  → 渲染完整页面（顶部 header + 搜索 + 横幅 + Tabs + 内容）
+   *         用于 /market 旧兼容入口
+   * false → 仅渲染内容（chrome 由 /market/layout.tsx 提供）
+   *         用于 /market/tools 等独立子路由
+   */
+  standalone?: boolean
+  /**
+   * 高亮指定子分类下的第一张卡片（带 ring-2 + animate-pulse）
+   * 用于 /market/tools?type=trader|flow 落地后自动定位
+   */
+  highlightCategory?: ToolSlug
+  /**
+   * 短暂高亮某个子分类（用于场景胶囊筛选点击后 1.5s 闪烁）
+   */
+  briefHighlight?: ToolSlug | null
+  /**
+   * 自研工具区块的外部 ref（用于 ?tab=self_tools 自动滚动 + 3s 高亮）
+   * 绑定到外层 wrapper div（id="self-tools"）
+   */
+  selfToolsRef?: React.RefObject<HTMLDivElement>
+  /**
+   * 精准推荐模式（任务 2）：
+   *   来自 URL ?recommend=trader|flow|system|asset
+   *   → 命中 level 的项目卡片（recommend:true 或 level 匹配）展示 ring-2 高亮
+   */
+  recommendLevel?: 'trader' | 'flow' | 'system' | 'asset'
+}) {
   const router = useRouter()
   const pathname = usePathname()
   const [activeTab, setActiveTab] = useState<MarketTab>(defaultTab)
@@ -199,25 +372,97 @@ export function MarketContent({ defaultTab = 'tools' as MarketTab }: { defaultTa
   // 多选需求引擎状态
   const [selectedServices, setSelectedServices] = useState<string[]>([])
   const [inquiryOpen, setInquiryOpen] = useState(false)
-  // 项目库 · 对接匹配引擎状态
-  const [projectInquiry, setProjectInquiry] = useState<{
-    project: ProjectItem
-    intent: 'executor' | 'partner'
-  } | null>(null)
+  // 项目库 · 寻找资深 OPC 匹配弹窗状态（任务 3）
+  const [findOpcProject, setFindOpcProject] = useState<ProjectItem | null>(null)
   // 资源库 · 招商加盟对接状态
   const [partnerInquiry, setPartnerInquiry] = useState<{
     resource: ResourceItem
   } | null>(null)
   // 资源库 · 会员门锁状态（用于 unlock 类型）
   const [lockedResource, setLockedResource] = useState<ResourceItem | null>(null)
+  // 服务库 · 前置检测弹窗（未诊断用户首次提交时弹出）
+  const [preCheckOpen, setPreCheckOpen] = useState(false)
   // 会员等级（订阅 localStorage 变化，实时同步）
   const [membershipTier, setMembershipTier] = useState<MembershipTier>('none')
+  // 学习进度（用于资源库门锁判定：can_unlock_practice）
+  const userProgress: UserProgressSnapshot | null = useUserProgress()
+
+  // ════════ 资源库 · UGC 投稿弹窗状态（任务 2）══════
+  const [submissionOpen, setSubmissionOpen] = useState(false)
+  const [needLoginOpen, setNeedLoginOpen] = useState(false)
+
+  /**
+   * 读取当前 OPC 用户身份（演示版：从 localStorage 解析）
+   * 生产环境替换为：await getCurrentUser() 查 Supabase
+   */
+  const getAuthorInfo = (): {
+    deviceId: string
+    name: string
+    opcLevel: string | null
+    isRegistered: boolean
+  } => {
+    if (typeof window === 'undefined') {
+      return { deviceId: '', name: '访客', opcLevel: null, isRegistered: false }
+    }
+    const deviceId = window.localStorage.getItem('opc_device_id') || ''
+    const name = window.localStorage.getItem('opc_user_name') || 'OPC 成员'
+    const opcLevel = window.localStorage.getItem('opc_level')
+    // 已注册条件：deviceId 存在 + 至少有过诊断（opc_level 有值）
+    const isRegistered = !!deviceId && !!opcLevel
+    return { deviceId, name, opcLevel, isRegistered }
+  }
+
+  /**
+   * 资源库底部横幅按钮 · 点击处理
+   * - 未登录/未注册 → 弹出 NeedLoginToSubmitModal 拦截
+   * - 已注册 → 弹出 ResourceSubmissionModal 投稿表单
+   */
+  const handleSubmitClick = () => {
+    if (typeof window === 'undefined') return
+    const author = getAuthorInfo()
+    if (!author.isRegistered) {
+      setNeedLoginOpen(true)
+    } else {
+      setSubmissionOpen(true)
+    }
+  }
 
   const toggleService = (id: string) => {
     setSelectedServices((prev) =>
       prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
     )
   }
+
+  /**
+   * 服务提交 · 前置拦截（任务 1）
+   * - 已诊断用户：直接打开 ServiceInquiryModal
+   * - 未诊断用户：先弹 PreCheckModal 引导其完成诊断
+   */
+  const handleSubmitWithPreCheck = () => {
+    if (typeof window === 'undefined') return
+    const opcLevelRaw = window.localStorage.getItem('opc_level')
+    const isValid = opcLevelRaw && ['TRADER', 'FLOW', 'SYSTEM', 'ASSET'].includes(opcLevelRaw)
+    if (isValid) {
+      setInquiryOpen(true)
+    } else {
+      setPreCheckOpen(true)
+    }
+  }
+
+  // 透传给模态框的用户状态（避免每次渲染都读 localStorage）
+  const hasDiagnosis = (() => {
+    if (typeof window === 'undefined') return false
+    const v = window.localStorage.getItem('opc_level')
+    return !!(v && ['TRADER', 'FLOW', 'SYSTEM', 'ASSET'].includes(v))
+  })()
+  const opcLevel: 'TRADER' | 'FLOW' | 'SYSTEM' | 'ASSET' | null = (() => {
+    if (typeof window === 'undefined') return null
+    const v = window.localStorage.getItem('opc_level')
+    if (v && ['TRADER', 'FLOW', 'SYSTEM', 'ASSET'].includes(v)) {
+      return v as 'TRADER' | 'FLOW' | 'SYSTEM' | 'ASSET'
+    }
+    return null
+  })()
 
   // 同步读取 localStorage 中的会员等级（首次加载 + 监听 storage 事件）
   useEffect(() => {
@@ -230,6 +475,25 @@ export function MarketContent({ defaultTab = 'tools' as MarketTab }: { defaultTa
     window.addEventListener('storage', onStorage)
     return () => window.removeEventListener('storage', onStorage)
   }, [])
+
+  // 嵌入模式（layout 提供 chrome）：从 sessionStorage 同步搜索词
+  useEffect(() => {
+    if (standalone) return
+    if (typeof window === 'undefined') return
+    const sync = () => {
+      const saved = sessionStorage.getItem(MARKET_SEARCH_STORAGE_KEY) || ''
+      setSearchQuery((prev) => (prev === saved ? prev : saved))
+    }
+    sync()
+    // 监听 storage 事件 + 自定义事件，实时同步
+    const onCustom = () => sync()
+    window.addEventListener('storage', sync)
+    window.addEventListener(MARKET_SEARCH_EVENT, onCustom)
+    return () => {
+      window.removeEventListener('storage', sync)
+      window.removeEventListener(MARKET_SEARCH_EVENT, onCustom)
+    }
+  }, [standalone])
 
   // Tab 切换时，路由联动：/market 根路径点击 → /market/{tab}
   // 这样 URL 始终与当前 Tab 同步，可分享、可前进/后退
@@ -246,14 +510,15 @@ export function MarketContent({ defaultTab = 'tools' as MarketTab }: { defaultTa
 
   return (
     <div className="min-h-screen bg-slate-50">
-      {/* ════════ 顶部导航 ════════ */}
-      <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
-        <div className="flex items-center justify-between px-5 py-4">
-          <Link href="/" className="flex items-center gap-2 text-gray-600 hover:text-blue-600 transition-colors">
-            <span className="text-xl">🏢</span>
-            <span>良朋社OPC</span>
+      {/* ════════ 顶部导航（仅 standalone 模式渲染）══════ */}
+      {standalone && (
+        <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
+          <div className="flex items-center justify-between px-5 py-4">
+            <Link href="/" className="flex items-center gap-2 text-gray-600 hover:text-blue-600 transition-colors">
+              <span className="text-xl">🏢</span>
+              <span>良朋社OPC</span>
           </Link>
-          <span className="font-bold text-gray-900">AI 智富四库</span>
+          <span className="font-bold text-gray-900">AI四库全胜系统</span>
           <div className="w-24" />
         </div>
         <div className="px-5 pb-4">
@@ -268,11 +533,13 @@ export function MarketContent({ defaultTab = 'tools' as MarketTab }: { defaultTa
             />
           </div>
         </div>
-      </header>
+        </header>
+      )}
 
       <main className="px-5 py-6">
-        {/* ════════ 顶部 Banner（胶囊化 + 紧凑） ════════ */}
-        <div className="mb-5 flex items-center gap-3 bg-white/80 backdrop-blur-sm border border-slate-200 rounded-xl px-4 py-2.5">
+        {/* ════════ 顶部 Banner（仅 standalone 模式渲染）══════ */}
+        {standalone && (
+          <div className="mb-5 flex items-center gap-3 bg-white/80 backdrop-blur-sm border border-slate-200 rounded-xl px-4 py-2.5">
           <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white">
             <Sparkles size={16} />
           </div>
@@ -285,13 +552,15 @@ export function MarketContent({ defaultTab = 'tools' as MarketTab }: { defaultTa
             </div>
           </div>
         </div>
+        )}
 
-        {/* ════════ 4 库 Tabs（顺序：工具 → 服务 → 项目 → 资源） ════════ */}
+        {/* ════════ 4 库 Tabs（顺序：工具 → 服务 → 项目 → 资源）══════ */}
         <Tabs
           value={activeTab}
           onValueChange={handleTabChange}
           className="w-full"
         >
+          {standalone && (
           <TabsList className="w-full grid grid-cols-4 gap-1 bg-slate-100 p-1 rounded-xl">
             <TabsTrigger
               value="tools"
@@ -330,12 +599,34 @@ export function MarketContent({ defaultTab = 'tools' as MarketTab }: { defaultTa
               </span>
             </TabsTrigger>
           </TabsList>
+          )}
 
-          {/* ════════ AI智富工具库：双层循环渲染 4 个子分类 ════════ */}
+        {/* ════════ AI智富工具库：双层循环渲染 9 个子分类（自研工具置顶） ════════ */}
           <TabsContent value="tools" className="mt-5 space-y-6">
-            {toolCategories.map((category) => (
-              <ToolCategorySection key={category.title} category={category} />
-            ))}
+            {sortToolCategories(toolCategories).map((category) => {
+              const isSelfTools = category.title === '自研工具'
+              const section = (
+                <ToolCategorySection
+                  category={category}
+                  highlightCategory={highlightCategory}
+                  briefHighlight={briefHighlight ?? null}
+                />
+              )
+              // 自研工具：外层包一层 wrapper（id="self-tools"），用于 ?tab=self_tools 锚点 + 高亮
+              if (isSelfTools) {
+                return (
+                  <div
+                    key={category.title}
+                    id="self-tools"
+                    ref={selfToolsRef}
+                    className="rounded-2xl transition-all duration-300"
+                  >
+                    {section}
+                  </div>
+                )
+              }
+              return <div key={category.title}>{section}</div>
+            })}
           </TabsContent>
 
           {/* ════════ AI智富服务库：多选需求引擎（8 个板块） ════════ */}
@@ -368,16 +659,27 @@ export function MarketContent({ defaultTab = 'tools' as MarketTab }: { defaultTa
               <span className="text-[10px] text-slate-500">对接匹配 · 主理人 / 合作方</span>
             </div>
             <p className="text-[11px] text-slate-500 mb-4">
-              💡 选择感兴趣的项目方向，提交后我们将为您匹配 AI 启动清单 / 项目合作方 / 当地 OPC 主理人
+              💡 选择感兴趣的项目方向，提交后我们将为您匹配 AI 启动清单 / 资深 OPC 主理人
             </p>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {projectItems.map((proj) => (
-                <ProjectCard
-                  key={proj.id}
-                  project={proj}
-                  onAction={(intent) => setProjectInquiry({ project: proj, intent })}
-                />
-              ))}
+              {projectItems.map((proj) => {
+                // 精准推荐模式（任务 2）：recommend:true 或 level 匹配 → 高亮
+                const isHighlighted = !!recommendLevel && (
+                  proj.recommend === true || proj.level === recommendLevel
+                )
+                return (
+                  <ProjectCard
+                    key={proj.id}
+                    project={proj}
+                    highlighted={isHighlighted}
+                    onExecutor={() => {
+                      // 任务 5：跳转至独立 SOP 详情页（/projects/[slug]），完全脱离四库 layout
+                      window.location.href = `/projects/${proj.slug}`
+                    }}
+                    onFindOpc={() => setFindOpcProject(proj)}
+                  />
+                )
+              })}
             </div>
           </TabsContent>
 
@@ -397,11 +699,15 @@ export function MarketContent({ defaultTab = 'tools' as MarketTab }: { defaultTa
                   key={res.id}
                   resource={res}
                   membershipTier={membershipTier}
+                  userProgress={userProgress}
                   onPartner={(r) => setPartnerInquiry({ resource: r })}
                   onLocked={(r) => setLockedResource(r)}
                 />
               ))}
             </div>
+
+            {/* ════════ 任务 3：OPC 共创 UGC 投稿列表 ════════ */}
+            <UGCSubmissionSection />
           </TabsContent>
         </Tabs>
 
@@ -422,7 +728,7 @@ export function MarketContent({ defaultTab = 'tools' as MarketTab }: { defaultTa
               </div>
               <button
                 type="button"
-                onClick={() => setInquiryOpen(true)}
+                onClick={handleSubmitWithPreCheck}
                 className="flex-shrink-0 px-4 py-2.5 bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-600 text-white text-sm font-bold rounded-xl shadow-md hover:shadow-lg hover:scale-105 transition-all"
               >
                 立即提交需求 →
@@ -431,31 +737,62 @@ export function MarketContent({ defaultTab = 'tools' as MarketTab }: { defaultTa
           </div>
         )}
 
-        {/* ════════ 开发者招商横幅（保留） ════════ */}
-        <div className="mt-10 relative bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 rounded-3xl p-6 md:p-8 shadow-xl overflow-hidden">
-          <div className="absolute top-0 right-0 w-40 h-40 bg-white/10 rounded-full blur-3xl" />
-          <div className="relative flex flex-col md:flex-row items-center gap-5 text-white">
-            <div className="flex-1">
-              <div className="text-xs text-blue-100 mb-1.5">🤖 工具开发者招募</div>
-              <h3 className="text-lg md:text-xl font-bold mb-2">你是工具开发者？</h3>
-              <p className="text-sm text-blue-50/90">
-                点击这里上架你的工具，获得 OPC 生态免费推广
-              </p>
+        {/* ════════ OPC 共创 UGC 资源投稿横幅（仅资源库 tab 显示） ════════ */}
+        {activeTab === 'resources' && (
+          <div className="mt-10 relative bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 rounded-3xl p-6 md:p-8 shadow-xl overflow-hidden">
+            <div className="absolute top-0 right-0 w-40 h-40 bg-white/10 rounded-full blur-3xl" />
+            <div className="absolute -bottom-12 -left-12 w-32 h-32 bg-pink-400/20 rounded-full blur-2xl" />
+            <div className="relative flex flex-col md:flex-row items-center gap-5 text-white">
+              <div className="flex-1">
+                <div className="text-xs text-blue-100 mb-1.5">🌱 OPC 生态共创</div>
+                <h3 className="text-lg md:text-xl font-bold mb-2">
+                  你是 OPC 生态成员？点击这里分享你的资源
+                </h3>
+                <p className="text-sm text-blue-50/90 leading-relaxed">
+                  实物货源 / AI 软件 / 智能硬件 / 精品教程 ——
+                  投稿后 1-3 个工作日审核，通过即可在资源库展示并获得评分
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={handleSubmitClick}
+                className="flex-shrink-0 px-5 py-2.5 bg-white text-blue-600 text-sm font-semibold rounded-xl hover:scale-105 transition-transform shadow-lg flex items-center gap-1.5"
+              >
+                立即上架 →
+              </button>
             </div>
-            <Link
-              href="/tools/submit"
-              className="flex-shrink-0 px-5 py-2.5 bg-white text-blue-600 text-sm font-semibold rounded-xl hover:scale-105 transition-transform shadow-lg"
-            >
-              立即上架 →
-            </Link>
           </div>
-        </div>
+        )}
+
+        {/* ════════ 工具开发者招募横幅（仅工具库 tab 保留） ════════ */}
+        {activeTab === 'tools' && (
+          <div className="mt-10 relative bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 rounded-3xl p-6 md:p-8 shadow-xl overflow-hidden">
+            <div className="absolute top-0 right-0 w-40 h-40 bg-white/10 rounded-full blur-3xl" />
+            <div className="relative flex flex-col md:flex-row items-center gap-5 text-white">
+              <div className="flex-1">
+                <div className="text-xs text-blue-100 mb-1.5">🤖 工具开发者招募</div>
+                <h3 className="text-lg md:text-xl font-bold mb-2">你是工具开发者？</h3>
+                <p className="text-sm text-blue-50/90">
+                  点击这里上架你的工具，获得 OPC 生态免费推广
+                </p>
+              </div>
+              <Link
+                href="/tools/submit"
+                className="flex-shrink-0 px-5 py-2.5 bg-white text-blue-600 text-sm font-semibold rounded-xl hover:scale-105 transition-transform shadow-lg"
+              >
+                立即上架 →
+              </Link>
+            </div>
+          </div>
+        )}
       </main>
 
       {/* ════════ 需求收集弹窗（受控） ════════ */}
       {inquiryOpen && (
         <ServiceInquiryModal
           services={selectedServiceItems}
+          hasDiagnosis={hasDiagnosis}
+          opcLevel={opcLevel}
           onClose={() => setInquiryOpen(false)}
           onSuccess={() => {
             setSelectedServices([])
@@ -464,13 +801,22 @@ export function MarketContent({ defaultTab = 'tools' as MarketTab }: { defaultTa
         />
       )}
 
-      {/* ════════ 项目对接匹配弹窗（受控） ════════ */}
-      {projectInquiry && (
-        <ProjectInquiryModal
-          project={projectInquiry.project}
-          intent={projectInquiry.intent}
-          onClose={() => setProjectInquiry(null)}
-          onSuccess={() => setProjectInquiry(null)}
+      {/* ════════ 服务库 · 前置检测弹窗（任务 1） ════════ */}
+      {preCheckOpen && (
+        <PreCheckModal
+          onClose={() => setPreCheckOpen(false)}
+          onProceedAnyway={() => {
+            setPreCheckOpen(false)
+            setInquiryOpen(true)
+          }}
+        />
+      )}
+
+      {/* ════════ 项目库 · 寻找资深 OPC 弹窗（任务 3） ════════ */}
+      {findOpcProject && (
+        <FindSeniorOPCModal
+          project={findOpcProject}
+          onClose={() => setFindOpcProject(null)}
         />
       )}
 
@@ -483,10 +829,31 @@ export function MarketContent({ defaultTab = 'tools' as MarketTab }: { defaultTa
         />
       )}
 
-      {/* ════════ 资源库 · 会员门锁提示弹窗（受控） ════════ */}
+      {/* ════════ 资源库 UGC 弹窗 · 投稿模态框（任务 2） ════════ */}
+      {submissionOpen && (
+        <ResourceSubmissionModal
+          author={getAuthorInfo()}
+          onClose={() => setSubmissionOpen(false)}
+        />
+      )}
+
+      {/* ════════ 资源库 UGC 弹窗 · 未登录拦截（任务 2） ════════ */}
+      {needLoginOpen && (
+        <NeedLoginToSubmitModal
+          onClose={() => setNeedLoginOpen(false)}
+          onLogin={() => {
+            setNeedLoginOpen(false)
+            // 引导至 /diagnosis 作为"登录/注册 OPC"入口
+            window.location.href = '/diagnosis'
+          }}
+        />
+      )}
+
+      {/* ════════ 资源库 · 解锁拦截弹窗（受控） ════════ */}
       {lockedResource && (
-        <MemberLockedModal
+        <UnlockResourceModal
           resource={lockedResource}
+          opcLevel={opcLevel}
           currentTier={membershipTier}
           onClose={() => setLockedResource(null)}
         />
@@ -499,18 +866,42 @@ export function MarketContent({ defaultTab = 'tools' as MarketTab }: { defaultTa
 // 工具库子分类区块（双层循环的"外层"）
 // ════════════════════════════════════════════════════════════════
 
-function ToolCategorySection({ category }: { category: ToolCategory }) {
+function ToolCategorySection({
+  category,
+  highlightCategory,
+  briefHighlight,
+}: {
+  category: ToolCategory
+  highlightCategory?: ToolSlug
+  briefHighlight?: ToolSlug | null
+}) {
+  // 派生锚点 id：用于 /market/tools 顶部快捷分流滚动
+  // 显式映射到稳定英文 slug（避免中文字符在 URL 中的兼容问题）
+  const currentSlug = TOOL_SLUG_MAP[category.title]
+  const anchorId = `tools-category-${currentSlug}`
+  const isHighlighted = highlightCategory === currentSlug
+  const isBriefFlash = briefHighlight === currentSlug
   return (
-    <section>
+    <section
+      id={anchorId}
+      className={`rounded-2xl transition-all duration-500 ${
+        isBriefFlash ? 'ring-2 ring-blue-400/50 bg-blue-50/40 -m-1 p-1' : ''
+      }`}
+    >
       {/* 子分类标题 */}
       <div className="mb-3 flex items-center gap-2">
         <span className="text-2xl">{category.emoji}</span>
         <div className="min-w-0 flex-1">
-          <h3 className="text-sm md:text-base font-bold text-slate-900 flex items-center gap-1.5">
+          <h3 className="text-sm md:text-base font-bold text-slate-900 flex items-center gap-1.5 flex-wrap">
             {category.title}
             <span className="text-[10px] font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">
               {category.platforms.length}
             </span>
+            {isHighlighted && (
+              <span className="text-[10px] font-bold text-blue-600 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-full animate-pulse">
+                ✨ 为你定位
+              </span>
+            )}
           </h3>
           <p className="text-[11px] text-slate-500 mt-0.5">{category.subtitle}</p>
         </div>
@@ -518,8 +909,12 @@ function ToolCategorySection({ category }: { category: ToolCategory }) {
 
       {/* 卡片网格：移动端 1 列 / 桌面端 2-3 列 */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
-        {category.platforms.map((p) => (
-          <PlatformCard key={p.name} platform={p} />
+        {category.platforms.map((p, idx) => (
+          <PlatformCard
+            key={p.name}
+            platform={p}
+            highlight={isHighlighted && idx === 0}
+          />
         ))}
       </div>
     </section>
@@ -530,25 +925,44 @@ function ToolCategorySection({ category }: { category: ToolCategory }) {
 // 平台卡片：轻量化 CTA + 右侧箭头（Stripe / Linear 范式）
 // ════════════════════════════════════════════════════════════════
 
-function PlatformCard({ platform }: { platform: Platform }) {
+function PlatformCard({
+  platform,
+  highlight = false,
+}: {
+  platform: Platform
+  /** 高亮模式：带 ring + pulse（用于诊断后自动定位） */
+  highlight?: boolean
+}) {
   const action = platform.action || 'visit'
-  const isInternal = platform.url.startsWith('/')
+  const isInternal = platform.url.startsWith('/') && platform.url !== '#'
   const tagColor =
     platform.tag === '必装' ? 'bg-slate-100 text-slate-600' :
     platform.tag === '热门' ? 'bg-slate-100 text-slate-600' :
     platform.tag === '爆款' ? 'bg-slate-100 text-slate-600' :
     platform.tag === '推荐' ? 'bg-slate-100 text-slate-600' :
     platform.tag === '出海' ? 'bg-slate-100 text-slate-600' :
+    platform.tag === '开店注册' ? 'bg-orange-100 text-orange-700' :
     'bg-slate-100 text-slate-500'
+
+  // AI 内容生成场景徽章配置（任务 5）
+  const SCENE_BADGE: Record<NonNullable<Platform['scene']>, { className: string; label: string }> = {
+    writing: { className: 'bg-emerald-100 text-emerald-700', label: '✍️ 写文案' },
+    image: { className: 'bg-indigo-100 text-indigo-700', label: '🎨 做图片' },
+    video: { className: 'bg-rose-100 text-rose-700', label: '🎬 搞视频' },
+    coding: { className: 'bg-amber-100 text-amber-700', label: '💻 编代码' },
+  }
+  const sceneBadge = platform.scene ? SCENE_BADGE[platform.scene] : null
 
   const actionLabel =
     action === 'download' ? '立即下载' :
     action === 'enter' ? '立即进入' :
+    platform.url === '#' ? '暂无外链' :
     '前往官网'
 
   const ActionIcon =
     action === 'download' ? Download :
     action === 'enter' ? ArrowRight :
+    platform.url === '#' ? Lock :
     ExternalLink
 
   const cardInner = (
@@ -566,6 +980,11 @@ function PlatformCard({ platform }: { platform: Platform }) {
           {platform.tag && (
             <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full ${tagColor}`}>
               {platform.tag}
+            </span>
+          )}
+          {sceneBadge && (
+            <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full ${sceneBadge.className}`}>
+              {sceneBadge.label}
             </span>
           )}
         </div>
@@ -587,8 +1006,19 @@ function PlatformCard({ platform }: { platform: Platform }) {
     </div>
   )
 
-  const baseClass =
-    'group block bg-white rounded-2xl shadow-sm hover:shadow-md p-4 border border-slate-100 hover:border-slate-200 transition-all'
+  const baseClass = highlight
+    ? 'group block bg-white rounded-2xl shadow-md p-4 border-2 border-blue-500 ring-2 ring-blue-500/30 animate-pulse transition-all'
+    : 'group block bg-white rounded-2xl shadow-sm hover:shadow-md p-4 border border-slate-100 hover:border-slate-200 transition-all'
+
+  // 无外链（StableDiffusion 占位）：渲染为 <div>
+  if (platform.url === '#') {
+    return (
+      <div className={baseClass + ' cursor-default'}>
+        {cardInner}
+        {actionButton}
+      </div>
+    )
+  }
 
   // 内部路由走 Next.js Link，外部链接走 <a target="_blank">
   if (isInternal) {
@@ -708,17 +1138,42 @@ function ServiceSelectCard({
 // ════════════════════════════════════════════════════════════════
 // 项目库卡片 · 对接匹配引擎（Bento 网格 + 双按钮）
 // 主按钮保留引导色，次按钮降级为轻量 outline
+// 任务 2：highlighted=true → ring-2 ring-blue-500 + 推荐徽章
+// 任务 3：次按钮文案改为"寻找资深OPC"，点击触发 find-opc 弹窗
+// 任务 4：主按钮"我想做这个项目"跳详情页 /market/projects/[slug]
 // ════════════════════════════════════════════════════════════════
 
 function ProjectCard({
   project,
-  onAction,
+  highlighted = false,
+  onExecutor,
+  onFindOpc,
 }: {
   project: ProjectItem
-  onAction: (intent: 'executor' | 'partner') => void
+  /** 精准推荐模式高亮（任务 2） */
+  highlighted?: boolean
+  onExecutor: () => void
+  onFindOpc: () => void
 }) {
   return (
-    <div className="bg-white rounded-2xl shadow-sm hover:shadow-md transition-all p-5 flex flex-col gap-2 border border-slate-100 hover:border-slate-200">
+    <div
+      className={cn(
+        'relative bg-white rounded-2xl shadow-sm hover:shadow-md transition-all p-5 flex flex-col gap-2 border',
+        highlighted
+          ? 'border-blue-400 ring-2 ring-blue-500 shadow-blue-200/50 shadow-md'
+          : 'border-slate-100 hover:border-slate-200'
+      )}
+    >
+      {/* 精准推荐徽章（任务 2） */}
+      {highlighted && (
+        <div className="absolute -top-2 -right-2 z-10">
+          <div className="flex items-center gap-1 bg-gradient-to-r from-blue-500 to-indigo-600 text-white text-[10px] font-extrabold px-2.5 py-1 rounded-full shadow-md ring-2 ring-white">
+            <Sparkles size={10} />
+            优先推荐
+          </div>
+        </div>
+      )}
+
       {/* 顶部：分类标签（轻量化 Tag） */}
       <div className="flex items-center justify-between mb-1">
         <span
@@ -746,23 +1201,23 @@ function ProjectCard({
 
       {/* 双动作按钮：移动端 flex-col 铺满 / 桌面端 flex-row 并排 */}
       <div className="mt-3 flex flex-col md:flex-row gap-2">
-        {/* 主按钮：保留渐变色，引导主操作 */}
+        {/* 主按钮：保留渐变色，引导主操作（任务 4：跳详情页） */}
         <button
           type="button"
-          onClick={() => onAction('executor')}
+          onClick={onExecutor}
           className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 bg-gradient-to-r from-blue-500 to-indigo-600 text-white text-xs font-bold rounded-xl shadow-sm hover:shadow-md hover:scale-[1.02] transition-all min-h-[40px]"
         >
           <Bot size={14} />
           <span>我想做这个项目</span>
         </button>
-        {/* 次按钮：轻量化 outline 风格 */}
+        {/* 次按钮：任务 3 — 文案改为"寻找资深OPC" */}
         <button
           type="button"
-          onClick={() => onAction('partner')}
+          onClick={onFindOpc}
           className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 border border-slate-200 bg-transparent text-slate-600 hover:bg-slate-50 hover:border-slate-300 text-xs font-bold rounded-xl transition-colors min-h-[40px]"
         >
-          <Handshake size={14} />
-          <span>寻找合作方</span>
+          <Award size={14} />
+          <span>寻找资深OPC</span>
         </button>
       </div>
     </div>
@@ -778,37 +1233,41 @@ function ProjectCard({
 function ResourceCard({
   resource,
   membershipTier,
+  userProgress,
   onPartner,
   onLocked,
 }: {
   resource: ResourceItem
   membershipTier: MembershipTier
+  /** 用户学习进度（用于 practice-or-member 模式解锁判定） */
+  userProgress: UserProgressSnapshot | null
   onPartner: (r: ResourceItem) => void
   onLocked: (r: ResourceItem) => void
 }) {
-  const isUnlocked = resource.type === 'unlock' && canUnlockResource(membershipTier)
+  // ════════════════════════════════════════════════════════════════
+  // 解锁判定（双模式分支）
+  //   - member-only        → 仅看会员等级
+  //   - practice-or-member → 满足 (会员 OR 运营实操已解锁) 即可
+  //   - 默认（无 unlockMode）→ 兼容旧 unlock 资源（仅会员）
+  // ════════════════════════════════════════════════════════════════
+  const isUnlocked = (() => {
+    if (resource.type !== 'unlock') return false
+    const memberOk = canUnlockResource(membershipTier)
+    if (resource.unlockMode === 'practice-or-member') {
+      return memberOk || userProgress?.canUnlockPractice === true
+    }
+    // 默认 member-only 行为
+    return memberOk
+  })()
 
-  /** 渲染底部按钮（按 type 分支，统一轻量化风格） */
+  /**
+   * 渲染底部按钮（按 type 分支，统一轻量化风格）
+   */
   const renderAction = () => {
     const baseBtn =
       'mt-auto w-full flex items-center justify-between border bg-transparent text-slate-600 group-hover:bg-slate-50 transition-colors px-4 py-2 rounded-lg min-h-[40px]'
 
     switch (resource.type) {
-      case 'download':
-        return (
-          <a
-            href={resource.href || '#'}
-            target="_blank"
-            rel="noopener noreferrer"
-            className={cn(baseBtn, 'border-slate-200 group-hover:border-slate-300')}
-          >
-            <span className="flex items-center gap-1.5 text-xs font-semibold">
-              <Download size={12} className="text-slate-500" />
-              <span>前往下载</span>
-            </span>
-            <ArrowRight className="w-3 h-3 text-slate-400 group-hover:translate-x-0.5 transition-all" />
-          </a>
-        )
       case 'external':
         return (
           <a
@@ -838,26 +1297,56 @@ function ResourceCard({
           </Link>
         )
       case 'unlock':
-        return isUnlocked ? (
-          <Link
-            href="/market"
-            className={cn(baseBtn, 'border-slate-200 group-hover:border-slate-300')}
-          >
-            <span className="flex items-center gap-1.5 text-xs font-semibold">
-              <Crown size={12} className="text-slate-500" />
-              <span>已解锁 · 立即观看</span>
-            </span>
-            <ArrowRight className="w-3 h-3 text-slate-400 group-hover:translate-x-0.5 transition-all" />
-          </Link>
-        ) : (
+        if (isUnlocked) {
+          // 已解锁：优先用 externalHref（外链下载），否则走内部默认
+          if (resource.externalHref && /^https?:\/\//.test(resource.externalHref)) {
+            return (
+              <a
+                href={resource.externalHref}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={cn(
+                  baseBtn,
+                  'border-emerald-200 group-hover:bg-emerald-50 group-hover:border-emerald-300 text-emerald-700'
+                )}
+              >
+                <span className="flex items-center gap-1.5 text-xs font-semibold">
+                  <Download size={12} className="text-emerald-600" />
+                  <span>已解锁 · 前往下载</span>
+                </span>
+                <ArrowRight className="w-3 h-3 text-emerald-400 group-hover:translate-x-0.5 transition-all" />
+              </a>
+            )
+          }
+          return (
+            <Link
+              href={resource.externalHref || '/market'}
+              className={cn(
+                baseBtn,
+                'border-emerald-200 group-hover:bg-emerald-50 group-hover:border-emerald-300 text-emerald-700'
+              )}
+            >
+              <span className="flex items-center gap-1.5 text-xs font-semibold">
+                <Crown size={12} className="text-emerald-600" />
+                <span>已解锁 · 立即观看</span>
+              </span>
+              <ArrowRight className="w-3 h-3 text-emerald-400 group-hover:translate-x-0.5 transition-all" />
+            </Link>
+          )
+        }
+        // 未解锁：拦截 → 触发 UnlockResourceModal
+        return (
           <button
             type="button"
             onClick={() => onLocked(resource)}
-            className={cn(baseBtn, 'border-amber-200 group-hover:bg-amber-50 group-hover:border-amber-300')}
+            className={cn(
+              baseBtn,
+              'border-amber-200 group-hover:bg-amber-50 group-hover:border-amber-300'
+            )}
           >
             <span className="flex items-center gap-1.5 text-xs font-semibold text-amber-700">
               <Lock size={12} className="text-amber-500" />
-              <span>会员专享解锁</span>
+              <span>解锁资源 →</span>
             </span>
             <ArrowRight className="w-3 h-3 text-amber-400 group-hover:translate-x-0.5 transition-all" />
           </button>
@@ -879,6 +1368,43 @@ function ResourceCard({
       default:
         return null
     }
+  }
+
+  /**
+   * 渲染右上角标签（已解锁 / 需解锁 / 原始 tag）
+   *   - type === 'unlock' 时根据 isUnlocked 决定标签
+   *   - 其他 type 用 resource.tag
+   */
+  const renderTag = () => {
+    if (resource.type === 'unlock') {
+      if (isUnlocked) {
+        return (
+          <span className="flex-shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 inline-flex items-center gap-0.5">
+            <CheckCircle2 size={10} />
+            已解锁
+          </span>
+        )
+      }
+      // 未解锁：根据 unlockMode 显示不同标签文案
+      const isPracticeGate = resource.unlockMode === 'practice-or-member'
+      return (
+        <span className="flex-shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200 inline-flex items-center gap-0.5">
+          <Lock size={10} />
+          {isPracticeGate ? '🔒 需解锁' : '🔒 会员专享'}
+        </span>
+      )
+    }
+    if (!resource.tag) return null
+    return (
+      <span
+        className={cn(
+          'flex-shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-full',
+          resource.tagColor || 'bg-slate-100 text-slate-500'
+        )}
+      >
+        {resource.tag}
+      </span>
+    )
   }
 
   return (
@@ -903,15 +1429,7 @@ function ResourceCard({
             {resource.title}
           </h3>
         </div>
-        {resource.tag && (
-          <span
-            className={cn(
-              'flex-shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-500'
-            )}
-          >
-            {resource.tag}
-          </span>
-        )}
+        {renderTag()}
       </div>
 
       {/* 描述 */}
@@ -926,15 +1444,108 @@ function ResourceCard({
 }
 
 // ════════════════════════════════════════════════════════════════
+// 前置检测弹窗（任务 1：未诊断用户首次提交时弹出）
+// ════════════════════════════════════════════════════════════════
+
+function PreCheckModal({
+  onClose,
+  onProceedAnyway,
+}: {
+  onClose: () => void
+  onProceedAnyway: () => void
+}) {
+  const router = useRouter()
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-slate-900/50 backdrop-blur-sm p-0 md:p-4"
+      onClick={onClose}
+    >
+      <div
+        className="relative w-full md:max-w-md bg-white rounded-t-3xl md:rounded-2xl shadow-2xl overflow-hidden"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* 顶部暖色横幅 */}
+        <div className="relative bg-gradient-to-br from-amber-500 via-orange-500 to-pink-500 px-5 py-5 text-white">
+          <div className="absolute -top-6 -right-6 w-24 h-24 rounded-full bg-white/15 blur-2xl" />
+          <div className="relative flex items-start justify-between gap-3">
+            <div className="flex-1">
+              <div className="text-[10px] font-bold tracking-wider uppercase text-amber-100 mb-1">
+                ⚠️ 前置提醒
+              </div>
+              <h3 className="text-base md:text-lg font-extrabold leading-snug">
+                系统检测到您还未完成
+                <br />
+                《OPC 智富入局诊断》
+              </h3>
+            </div>
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label="关闭"
+              className="flex-shrink-0 w-8 h-8 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center text-white transition-colors"
+            >
+              <X size={18} />
+            </button>
+          </div>
+        </div>
+
+        {/* 内容 */}
+        <div className="p-5 space-y-4">
+          <div className="flex items-start gap-2 text-sm text-slate-700 leading-relaxed">
+            <Sparkles size={16} className="flex-shrink-0 mt-0.5 text-amber-500" />
+            <span>
+              为了让您的服务需求得到<strong className="text-amber-600">最精准的匹配</strong>，建议先完成诊断。
+            </span>
+          </div>
+
+          <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 text-[11px] text-slate-600 space-y-1.5">
+            <div className="font-bold text-slate-700 mb-1">📌 完成诊断后可解锁：</div>
+            <div>· 4 大 OPC 路径专属方案（交易/流量/系统/资产）</div>
+            <div>· 系统为您智能匹配对应的专属专家</div>
+            <div>· 个性化工具 / 项目 / 服务推荐</div>
+          </div>
+
+          <div className="flex flex-col sm:flex-row gap-2 pt-1">
+            <button
+              type="button"
+              onClick={() => {
+                onClose()
+                router.push('/diagnosis')
+              }}
+              className="flex-1 px-4 py-3 bg-gradient-to-r from-amber-500 to-orange-500 text-white text-sm font-bold rounded-xl shadow-md hover:shadow-lg hover:scale-[1.02] active:scale-95 transition-all"
+            >
+              🧭 先去诊断，再提交
+            </button>
+            <button
+              type="button"
+              onClick={onProceedAnyway}
+              className="flex-1 px-4 py-3 bg-white text-slate-700 border border-slate-300 text-sm font-medium rounded-xl hover:bg-slate-50 active:scale-95 transition-all"
+            >
+              我已了解，直接提交
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ════════════════════════════════════════════════════════════════
 // 需求收集弹窗（含 AI/专家分流反馈 + 主理人推荐）
 // ════════════════════════════════════════════════════════════════
 
 function ServiceInquiryModal({
   services,
+  hasDiagnosis,
+  opcLevel,
   onClose,
   onSuccess,
 }: {
   services: ServiceItem[]
+  /** 是否已完成诊断（任务 2 上下文感知） */
+  hasDiagnosis?: boolean
+  /** 诊断的 OPC 类型（仅 hasDiagnosis=true 时有效） */
+  opcLevel?: 'TRADER' | 'FLOW' | 'SYSTEM' | 'ASSET' | null
   onClose: () => void
   onSuccess: () => void
 }) {
@@ -960,7 +1571,11 @@ function ServiceInquiryModal({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           selectedServices: services.map((s) => s.id),
-          form,
+          form: {
+            ...form,
+            // 任务 3：把 opcLevel 透传给后端，用于智能路由
+            opcLevel: hasDiagnosis ? opcLevel ?? null : null,
+          },
         }),
       })
       const data: InquiryResult = await res.json()
@@ -1009,6 +1624,21 @@ function ServiceInquiryModal({
             <X size={18} />
           </button>
         </div>
+
+        {/* ═══ 上下文感知横幅（任务 2）═══ */}
+        {hasDiagnosis && opcLevel && OPC_LEVEL_DISPLAY[opcLevel] && (
+          <div className="mx-5 mt-4 bg-blue-50 border-l-4 border-blue-500 p-3 rounded-md text-sm text-blue-800 flex items-start gap-2">
+            <Sparkles size={16} className="flex-shrink-0 mt-0.5 text-blue-500" />
+            <div>
+              <div className="font-bold">
+                根据您的诊断结果（{OPC_LEVEL_DISPLAY[opcLevel].emoji} {OPC_LEVEL_DISPLAY[opcLevel].label}）
+              </div>
+              <div className="text-[11px] text-blue-700/80 mt-0.5">
+                系统将为您匹配最合适专家，提交后 24h 内主动联系您。
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* 表单 / 结果 */}
         {result ? (
@@ -1179,6 +1809,46 @@ function InquiryResultView({ result }: { result: InquiryResult }) {
                 </div>
               </div>
             ))}
+          </div>
+        </div>
+      )}
+
+      {/* ═══ 任务 3：专属专家智能分配结果 ═══ */}
+      {result.assignedExpert && (
+        <div
+          className={`p-3 rounded-xl border ${
+            result.assignedExpert.fallback
+              ? 'bg-slate-50 border-slate-200'
+              : 'bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200'
+          }`}
+        >
+          <div className="flex items-center gap-1.5 text-xs font-bold text-slate-700 mb-2">
+            <Crown size={14} className={result.assignedExpert.fallback ? 'text-slate-500' : 'text-amber-500'} />
+            {result.assignedExpert.fallback ? '🏢 总部专家池' : '🎯 专属专家已分配'}
+          </div>
+          <div className="flex items-center gap-3">
+            <div
+              className={`flex-shrink-0 w-10 h-10 rounded-full text-white flex items-center justify-center text-lg ${
+                result.assignedExpert.fallback
+                  ? 'bg-gradient-to-br from-slate-400 to-slate-600'
+                  : 'bg-gradient-to-br from-blue-500 to-indigo-600'
+              }`}
+            >
+              {result.assignedExpert.avatar || (result.assignedExpert.fallback ? '🏢' : '👤')}
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="text-sm font-bold text-slate-900">
+                {result.assignedExpert.name}
+              </div>
+              <div className="text-[11px] text-slate-500">
+                {result.assignedExpert.specialty}
+              </div>
+              {result.assignedExpert.wechat && (
+                <div className="text-[10px] text-slate-400 mt-0.5">
+                  微信 {result.assignedExpert.wechat}
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}

@@ -24,7 +24,15 @@ import {
   Building2,
   MessageSquare,
   Sparkles,
+  Package,
+  Cpu,
+  BookOpen,
+  NotebookPen,
+  Award,
+  ExternalLink,
+  Upload,
 } from 'lucide-react'
+import { CATEGORY_LABELS, type ResourceCategory } from '@/lib/resource-categories'
 
 interface ProjectSubmission {
   id: string
@@ -65,12 +73,24 @@ interface ServiceProvider {
   createdAt: string
 }
 
+interface ResourceSubmission {
+  id: string
+  title: string
+  description: string
+  category: string
+  fileUrl?: string | null
+  authorName?: string | null
+  authorLevel?: string | null
+  status: string
+  createdAt: string
+}
+
 interface ReviewItem {
   id: string
-  type: 'project' | 'tool' | 'service'
+  type: 'project' | 'tool' | 'service' | 'resource'
   title: string
   status: string
-  data: ProjectSubmission | ToolSubmission | ServiceProvider
+  data: ProjectSubmission | ToolSubmission | ServiceProvider | ResourceSubmission
 }
 
 const PRICING_LABELS: Record<string, string> = {
@@ -100,10 +120,11 @@ const PRICE_LABELS: Record<string, string> = {
 }
 
 export default function ReviewsPage() {
-  const [tab, setTab] = useState<'project' | 'tool' | 'service'>('project')
+  const [tab, setTab] = useState<'project' | 'tool' | 'service' | 'resource'>('project')
   const [projects, setProjects] = useState<ProjectSubmission[]>([])
   const [tools, setTools] = useState<ToolSubmission[]>([])
   const [services, setServices] = useState<ServiceProvider[]>([])
+  const [resources, setResources] = useState<ResourceSubmission[]>([])
   const [loading, setLoading] = useState(true)
   const [selected, setSelected] = useState<ReviewItem | null>(null)
   const [comment, setComment] = useState('')
@@ -117,15 +138,19 @@ export default function ReviewsPage() {
   const loadAll = async () => {
     setLoading(true)
     try {
-      const [projRes, toolRes, svcRes] = await Promise.all([
+      const [projRes, toolRes, svcRes, resRes] = await Promise.all([
         fetch('/api/console/projects?status=PENDING').then((r) => r.json()).catch(() => ({ data: [] })),
         fetch('/api/tools/submit').then((r) => r.json()).catch(() => ({ data: [] })),
         fetch('/api/services/join').then((r) => r.json()).catch(() => ({ data: [] })),
+        fetch('/api/resources/submit?status=PENDING').then((r) => r.json()).catch(() => ({ data: [] })),
       ])
       setProjects((projRes.data || []).filter((p: any) => p.status === 'PENDING' || p.status === 'PENDING_REVIEW'))
       setTools((toolRes.data || []).filter((t: any) => t.status === 'PENDING'))
       setServices(
         (svcRes.data || []).filter((s: any) => s.status === 'PENDING' || s.isVerified === false)
+      )
+      setResources(
+        (resRes.data || []).filter((r: any) => r.status === 'PENDING')
       )
     } catch (e) {
       console.error(e)
@@ -139,7 +164,7 @@ export default function ReviewsPage() {
     setTimeout(() => setToast(null), 2500)
   }
 
-  const reviewItem = async (type: 'project' | 'tool' | 'service', id: string, action: 'approve' | 'reject' | 'revise') => {
+  const reviewItem = async (type: 'project' | 'tool' | 'service' | 'resource', id: string, action: 'approve' | 'reject' | 'revise') => {
     setActing(`${type}-${id}`)
     try {
       if (type === 'project') {
@@ -154,6 +179,25 @@ export default function ReviewsPage() {
           setProjects((prev) => prev.filter((p) => p.id !== id))
           showToast(action === 'approve' ? '✅ 项目已通过' : action === 'reject' ? '❌ 项目已驳回' : '📝 已要求修改')
           setSelected(null)
+        } else {
+          showToast('操作失败：' + (data.error || ''))
+        }
+      } else if (type === 'resource') {
+        // 资源审核调用 resources/submissions/[id]/status
+        const res = await fetch(`/api/resources/submissions/${id}/status`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            status: action === 'approve' ? 'APPROVED' : 'REJECTED',
+            rejectReason: action === 'reject' ? comment || '内容不符合要求' : undefined,
+          }),
+        })
+        const data = await res.json()
+        if (data.success) {
+          setResources((prev) => prev.filter((r) => r.id !== id))
+          showToast(action === 'approve' ? '✅ 资源已通过' : '❌ 资源已驳回')
+          setSelected(null)
+          setComment('')
         } else {
           showToast('操作失败：' + (data.error || ''))
         }
@@ -188,6 +232,7 @@ export default function ReviewsPage() {
     project: projects.length,
     tool: tools.length,
     service: services.length,
+    resource: resources.length,
   }
 
   return (
@@ -220,6 +265,7 @@ export default function ReviewsPage() {
               { key: 'project', label: '项目审核', icon: FileText, count: counts.project, color: 'blue', activeCls: 'border-blue-600 text-blue-600', badgeCls: 'bg-blue-100 text-blue-700' },
               { key: 'tool', label: '工具审核', icon: Wrench, count: counts.tool, color: 'indigo', activeCls: 'border-indigo-600 text-indigo-600', badgeCls: 'bg-indigo-100 text-indigo-700' },
               { key: 'service', label: '服务商审核', icon: Briefcase, count: counts.service, color: 'purple', activeCls: 'border-purple-600 text-purple-600', badgeCls: 'bg-purple-100 text-purple-700' },
+              { key: 'resource', label: '资源审核', icon: Upload, count: counts.resource, color: 'emerald', activeCls: 'border-emerald-600 text-emerald-600', badgeCls: 'bg-emerald-100 text-emerald-700' },
             ].map((t) => {
               const active = tab === t.key
               const Icon = t.icon
@@ -309,6 +355,26 @@ export default function ReviewsPage() {
                 )}
               />
             )}
+            {tab === 'resource' && (
+              <List
+                items={resources}
+                emptyText="暂无待审核资源"
+                onSelect={(r) => setSelected({ id: r.id, type: 'resource', title: r.title, status: r.status, data: r })}
+                renderItem={(r) => (
+                  <Card
+                    title={r.title}
+                    subtitle={r.description.slice(0, 60) + (r.description.length > 60 ? '...' : '')}
+                    tags={[
+                      categoryLabel(r.category),
+                      r.authorName ? `作者: ${r.authorName}` : '匿名',
+                      r.authorLevel ? `${r.authorLevel} OPC` : '',
+                      `投稿于 ${formatDate(r.createdAt)}`,
+                    ].filter(Boolean)}
+                    accent="emerald"
+                  />
+                )}
+              />
+            )}
           </>
         )}
       </main>
@@ -392,9 +458,16 @@ function Card({
   title: string
   subtitle: string
   tags: string[]
-  accent?: 'blue' | 'indigo' | 'purple'
+  accent?: 'blue' | 'indigo' | 'purple' | 'emerald'
 }) {
-  const dot = accent === 'indigo' ? 'bg-indigo-500' : accent === 'purple' ? 'bg-purple-500' : 'bg-blue-500'
+  const dot =
+    accent === 'indigo'
+      ? 'bg-indigo-500'
+      : accent === 'purple'
+        ? 'bg-purple-500'
+        : accent === 'emerald'
+          ? 'bg-emerald-500'
+          : 'bg-blue-500'
   return (
     <div>
       <div className="flex items-start gap-2 mb-2">
@@ -451,7 +524,7 @@ function DetailModal({
         <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
           <div>
             <div className="text-xs text-gray-500 mb-1">
-              {isProject ? '项目审核' : isTool ? '工具审核' : '服务商审核'}
+              {isProject ? '项目审核' : isTool ? '工具审核' : isService ? '服务商审核' : '资源审核'}
             </div>
             <h2 className="text-lg font-bold text-gray-900">{item.title}</h2>
           </div>
@@ -560,6 +633,41 @@ function ServiceDetail({ s }: { s: ServiceProvider }) {
         <Field icon={Calendar} label="入驻时间" value={formatDate(s.createdAt)} />
         <Field icon={Sparkles} label="当前状态" value={s.isVerified ? '已认证' : '待认证'} />
       </div>
+    </>
+  )
+}
+
+function ResourceDetail({ r }: { r: ResourceSubmission }) {
+  const isValidCategory = ['physical-prod', 'ai-software', 'ai-hardware', 'ai-courses'].includes(r.category)
+  return (
+    <>
+      <Section title="资源简介" content={r.description} />
+      <div className="grid grid-cols-2 gap-3">
+        <Field
+          icon={r.category === 'physical-prod' ? Package : r.category === 'ai-hardware' ? Cpu : r.category === 'ai-courses' ? NotebookPen : BookOpen}
+          label="资源类别"
+          value={isValidCategory ? CATEGORY_LABELS[r.category as ResourceCategory] || r.category : r.category}
+        />
+        {r.authorName && <Field icon={UserIcon} label="作者" value={r.authorName} />}
+        {r.authorLevel && <Field icon={Award} label="OPC 等级" value={`${r.authorLevel} OPC`} />}
+        <Field icon={Calendar} label="投稿时间" value={formatDate(r.createdAt)} />
+      </div>
+      {r.fileUrl && (
+        <div>
+          <h3 className="text-xs font-semibold text-gray-600 mb-2 flex items-center gap-1">
+            <ExternalLink size={12} />
+            资源链接
+          </h3>
+          <a
+            href={r.fileUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="block px-4 py-3 bg-blue-50 border border-blue-200 rounded-2xl text-sm text-blue-600 hover:underline break-all"
+          >
+            {r.fileUrl}
+          </a>
+        </div>
+      )}
     </>
   )
 }

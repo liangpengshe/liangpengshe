@@ -11,6 +11,11 @@ import { ProfileHeader } from '@/components/member/ProfileHeader'
 import { MetricsBento } from '@/components/member/MetricsBento'
 import { DiagnosisHistoryList } from '@/components/member/DiagnosisHistoryList'
 import { NextActionCTA } from '@/components/member/NextActionCTA'
+import { AdaptiveAlertBanner } from '@/components/member/AdaptiveAlertBanner'
+import { SOPImageGenerator } from '@/components/member/SOPImageGenerator'
+import { StreakCard } from '@/components/member/StreakCard'
+import { AICommentBoard } from '@/components/community/AICommentBoard'
+import type { AdaptiveAlert } from '@/lib/adaptive-path'
 import {
   getUserStage,
   subscribeUserStage,
@@ -150,52 +155,28 @@ export default function MemberPage() {
     checkAuth()
   }, [router])
 
-  useEffect(() => {
-    fetch('/api/member/roadmap')
-      .then((r) => r.json())
-      .then((d) => {
-        if (d.success) setRoadmap(d.data)
-      })
-      .catch(() => {})
-  }, [])
-
-  // 加载用户 OPC 全流程阶段（来自 src/lib/user-stage Mock）
-  useEffect(() => {
-    if (!userData?.id) return
-    let mounted = true
-    void getUserStage(userData.id).then((s) => {
-      if (mounted) setUserStage(s)
-    })
-    const unsubscribe = subscribeUserStage((s) => {
-      if (mounted) setUserStage(s)
-    })
-    return () => {
-      mounted = false
-      unsubscribe()
-    }
-  }, [userData?.id])
-
-  // ===== 商业作战地图 · 数据加载 =====
-  // 历史诊断
+  // 🚀 进化项 3.3：合并并行 API 请求
+  // 原 3 个独立 useEffect（roadmap / diagnosis-history / metrics）合并为单次网络往返
+  // 减少 setState 抖动 + 提升首屏速度
   useEffect(() => {
     let mounted = true
-    setLoadingHistory(true)
-    void getDiagnosisHistory(userData?.phone).then((records) => {
-      if (mounted) {
-        setHistoryRecords(records)
+    // Promise.allSettled 确保单个失败不影响其他
+    Promise.allSettled([
+      fetch('/api/member/roadmap').then((r) => r.json()),
+      userData?.phone ? getDiagnosisHistory(userData.phone) : Promise.resolve([]),
+      userData?.phone ? getMetrics(userData.phone, userStage) : Promise.resolve(null),
+    ]).then(([roadmapRes, historyRes, metricsRes]) => {
+      if (!mounted) return
+      if (roadmapRes.status === 'fulfilled' && roadmapRes.value?.success) {
+        setRoadmap(roadmapRes.value.data)
+      }
+      if (historyRes.status === 'fulfilled' && historyRes.value) {
+        setHistoryRecords(historyRes.value)
         setLoadingHistory(false)
       }
-    })
-    return () => {
-      mounted = false
-    }
-  }, [userData?.phone])
-
-  // 四维核心指标
-  useEffect(() => {
-    let mounted = true
-    void getMetrics(userData?.phone, userStage).then((m) => {
-      if (mounted) setMetrics(m)
+      if (metricsRes.status === 'fulfilled' && metricsRes.value) {
+        setMetrics(metricsRes.value)
+      }
     })
     return () => {
       mounted = false
@@ -326,6 +307,11 @@ export default function MemberPage() {
           />
         </section>
 
+        {/* 🚨 进化二：自适应路径 · 卡点检测横幅 */}
+        <section className="px-5 py-2">
+          <AdaptiveAlertSection />
+        </section>
+
         {/* 🎯 OPC 全流程进度条（升级：可点击展开历史详情） */}
         <section className="px-5 py-4">
           <OPCProgressBar
@@ -335,6 +321,11 @@ export default function MemberPage() {
             stageDetail={stageDetail}
             loadingDetail={loadingDetail}
           />
+        </section>
+
+        {/* 🎨 进化三：智富资产工坊 · AI SOP 简图生成 */}
+        <section className="px-5 py-2">
+          <SOPImageSection />
         </section>
 
         {/* 📊 商业数据看板 · 2x2 Bento */}
@@ -355,6 +346,15 @@ export default function MemberPage() {
           <NextActionCTA
             userStage={userStage}
             opcLevel={userStage?.opcLevel}
+          />
+        </section>
+
+        {/* 💬 AI 轻互动留言板 · 任务 4：会员中心卡点交流 */}
+        <section className="px-5 py-4">
+          <AICommentBoard
+            slug="member-center"
+            title="会员中心 · 卡点交流"
+            variant="full"
           />
         </section>
 
@@ -441,6 +441,67 @@ export default function MemberPage() {
       )}
     </ClientLayout>
   )
+}
+
+/* ============================================
+   🚨 进化二：自适应路径 · 卡点检测 section
+   - 拉取 /api/user/adaptive-alert
+   - 传入 AdaptiveAlertBanner 渲染
+============================================ */
+function AdaptiveAlertSection() {
+  const [alert, setAlert] = useState<AdaptiveAlert | null>(null)
+  const [phone, setPhone] = useState<string>('')
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const stored = window.localStorage.getItem('opc_device_id') || ''
+    if (stored) {
+      setPhone(stored)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!phone) return
+    let cancelled = false
+    const fetchAlert = () => {
+      fetch(`/api/user/adaptive-alert?phone=${encodeURIComponent(phone)}`)
+        .then((r) => r.json())
+        .then((resp) => {
+          if (cancelled) return
+          if (resp?.success) setAlert(resp.alert || null)
+        })
+        .catch(() => {
+          // 静默降级：不显示横幅
+        })
+    }
+    fetchAlert()
+    // 5 分钟刷新一次
+    const t = setInterval(fetchAlert, 5 * 60 * 1000)
+    return () => {
+      cancelled = true
+      clearInterval(t)
+    }
+  }, [phone])
+
+  return <AdaptiveAlertBanner alert={alert} />
+}
+
+/* ============================================
+   🎨 进化三：智富资产工坊 · AI SOP 简图 section
+============================================ */
+function SOPImageSection() {
+  const [phone, setPhone] = useState<string>('')
+  const [stage, setStage] = useState<string>('learning')
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const storedPhone = window.localStorage.getItem('opc_device_id') || ''
+    const storedStage = window.localStorage.getItem('opc_current_stage') || 'learning'
+    setPhone(storedPhone)
+    setStage(storedStage)
+  }, [])
+
+  return <SOPImageGenerator phone={phone} stage={stage} />
 }
 
 /* ============================================

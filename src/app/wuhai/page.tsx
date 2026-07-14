@@ -1,4 +1,4 @@
-﻿'use client'
+'use client'
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
@@ -448,7 +448,7 @@ export default function WuhaiHomePage() {
                   <span className="text-2xl">🏆</span>
                   四库全胜系统
                 </h2>
-                <Link href="/more" className="text-sm text-blue-600 hover:text-blue-700">
+                <Link href="/market" className="text-sm text-blue-600 hover:text-blue-700">
                   查看全部 →
                 </Link>
               </div>

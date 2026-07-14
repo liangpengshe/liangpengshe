@@ -108,6 +108,8 @@ model ServiceProvider {
   name        String
   company     String?
   contact     String?
+  city        String?  // 所属城市（OPC 专家入驻）
+  userId      String?  // 关联 OPC 用户 ID
   specialty   String?  @db.Text // JSON 字符串数组: 内训/GEO/定制 (MySQL 不支持 String[], 改用 JSON 字符串)
   experience  String   @db.Text
   priceRange  String?
@@ -183,4 +185,74 @@ model DailyBrief {
   content     String   @db.Text // AI 生成的日报 Markdown 内容
   isRead      Boolean  @default(false)
   generatedAt DateTime @default(now())
+}
+
+// 新手启航学习进度（OPC 4 步闭环：诊断 → 学习 → 实操 → 放大）
+// 按手机号关联（与 AssetBalance / UserPreference 一致）
+model LearningProgress {
+  id                  String   @id @default(cuid())
+  phone               String   @unique // 关联用户手机号
+  opcLevel            String?  // 诊断的 OPC 类型: TRADER / FLOW / SYSTEM / ASSET
+  // 3 大新手任务打卡（true = 已完成）
+  task_browse         Boolean  @default(false) // 任务1: 浏览学习页面
+  task_register       Boolean  @default(false) // 任务2: 注册网店 / 自媒体账号
+  task_download       Boolean  @default(false) // 任务3: 下载配置首款 AI 工具
+  // 累计得分（任务1: +20, 任务2: +40, 任务3: +40, 满分 100）
+  learning_score      Int      @default(0)
+  // 阶段解锁标志：learning_score >= 80 自动解锁"运营实操"阶段
+  can_unlock_practice Boolean  @default(false)
+  // 4 步路径状态
+  step_diagnosis_done Boolean  @default(false) // STEP 01
+  step_learning_done  Boolean  @default(false) // STEP 02（达到 80 分后自动 true）
+  step_practice_done  Boolean  @default(false) // STEP 03
+  step_scaleup_done   Boolean  @default(false) // STEP 04
+  updatedAt           DateTime @updatedAt
+  createdAt           DateTime @default(now())
+}
+
+// ════════════════════════════════════════════════════════════════
+// 资源库 · OPC 共创 UGC 平台
+// （任务1：资源投稿 + 互动，2026-07-15 良朋社升级）
+// ════════════════════════════════════════════════════════════════
+
+// 资源通用投稿表
+// 允许投稿的分类：physical-prod / ai-software / ai-hardware / ai-courses
+// 禁止投稿的分类：digital-prod（数字产品库）/ franchise（主理人招募）
+model ResourceSubmission {
+  id          String   @id @default(cuid())
+  authorId    String   // 关联 User.id（必须是 OPC 注册用户）—— 演示版用 opc_device_id
+  authorName  String?  // 投稿人昵称（冗余存储，避免 join）
+  authorLevel String?  // 投稿时用户的 OPC 等级（TRADER/FLOW/SYSTEM/ASSET）
+  title       String
+  description String   @db.Text
+  category    String   // 枚举：physical-prod / ai-software / ai-hardware / ai-courses
+  fileUrl     String?  // 资源下载或跳转链接
+  status      String   @default("PENDING") // PENDING / APPROVED / REJECTED
+  rejectReason String? @db.Text // 驳回理由
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  interactions ResourceInteraction[]
+
+  @@index([category, status])
+  @@index([authorId])
+  @@index([createdAt])
+}
+
+// 资源互动表（评分、评论、实操笔记）
+model ResourceInteraction {
+  id         String   @id @default(cuid())
+  resourceId String   // 关联 ResourceSubmission.id
+  userId     String   // 互动者（演示版用 opc_device_id）
+  userName   String?  // 互动者昵称（冗余存储）
+  type       String   // 'COMMENT' / 'REVIEW' / 'NOTE'
+  content    String   @db.Text
+  rating     Int?     // 评分 1-5（仅 REVIEW 类型存在）
+  createdAt  DateTime @default(now())
+
+  resource ResourceSubmission @relation(fields: [resourceId], references: [id], onDelete: Cascade)
+
+  @@index([resourceId, type])
+  @@index([userId])
+  @@index([createdAt])
 }

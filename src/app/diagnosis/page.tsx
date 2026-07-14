@@ -1,6 +1,8 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
+import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Sparkles,
@@ -21,6 +23,17 @@ import {
   Gem,
 } from 'lucide-react'
 import { saveOPCRouteToStorage } from '@/lib/user-stage'
+
+/** localStorage 中标记"用户已接受时间线"，用于防止再次进入诊断时重复展示 */
+const DIAGNOSIS_ACCEPTED_KEY = 'diagnosis_accepted'
+
+/** OPCLevel → /guide/{level} 路径映射（与 user-stage 的 LEVEL_TO_GUIDE 保持一致） */
+const PATH_TO_GUIDE: Record<SelectedPath, string> = {
+  TRADER: '/guide/trader',
+  FLOW: '/guide/flow',
+  SYSTEM: '/guide/system',
+  ASSET: '/guide/asset',
+}
 
 // ════════════════════════════════════════════════════════════════
 // 1. 4 问对话脚本（单选版，覆盖 OPC 四层）
@@ -486,6 +499,7 @@ type Stage = 'select' | 'chat' | 'report' | 'expert'
 type Mode = 'chat' | 'form'
 
 export default function DiagnosisPage() {
+  const router = useRouter()
   const [stage, setStage] = useState<Stage>('select')
   const [mode, setMode] = useState<Mode>('chat')
   const [currentQIdx, setCurrentQIdx] = useState(0) // 0..3
@@ -535,6 +549,50 @@ export default function DiagnosisPage() {
     setSelectedPath(null)
     setSelection({})
     setCurrentQIdx(0)
+  }
+
+  /**
+   * 红色按钮"太慢了，看看另一条路"完整版：
+   *   1. 清空已接受的标记，让用户重新进入能看到选择卡
+   *   2. 重置所有状态（路径 / 答案 / 资金 / 时间）
+   *   3. 通过 router 强制刷新路由回到 /diagnosis 入口阶段
+   */
+  const handleSwitchPath = () => {
+    try {
+      window.localStorage.removeItem(DIAGNOSIS_ACCEPTED_KEY)
+      window.localStorage.removeItem('opc_level')
+    } catch {
+      // 忽略 localStorage 异常
+    }
+    goBackToPathSelect()
+    setBudget(0)
+    setDailyHours(0)
+    // 软跳转：回到 /diagnosis 入口阶段，保留 SPA 体验
+    router.push('/diagnosis')
+  }
+
+  /**
+   * 绿色按钮"我接受这个时间线"：
+   *   1. 写入 opc_level 到 localStorage（关键！供 /guide/* 页和后续模块读取）
+   *   2. 设置 diagnosis_accepted 标记，避免下次进入重复展示
+   *   3. router.push 跳转至对应 /guide/{trader|flow|system|asset} 学习页
+   */
+  const handleAcceptTimeline = () => {
+    if (!selectedPath) {
+      // 兜底：如果路径意外丢失，至少把用户带回路径选择卡
+      handleSwitchPath()
+      return
+    }
+    const target = PATH_TO_GUIDE[selectedPath]
+    try {
+      window.localStorage.setItem('opc_level', selectedPath)
+      window.localStorage.setItem(DIAGNOSIS_ACCEPTED_KEY, 'true')
+      // 同步 stageStore（双写：localStorage + 内存）
+      saveOPCRouteToStorage(selectedPath)
+    } catch {
+      // 即便 localStorage 失败，也允许用户继续跳转（降级体验）
+    }
+    router.push(target)
   }
 
   const startForm = () => {
@@ -950,10 +1008,8 @@ export default function DiagnosisPage() {
                         <div className="grid grid-cols-2 gap-2 pt-2 border-t border-white/10">
                           <button
                             onClick={() => {
-                              // 接受时间线 → 继续推进（聚焦当前问题）
-                              if (currentQIdx < questions.length) {
-                                // 不做任何操作，用户继续回答问题
-                              }
+                              // 接受时间线 → 保存 OPC 等级 + 标记已接受 + 跳转到对应指南页
+                              handleAcceptTimeline()
                             }}
                             disabled={budget === 0 || dailyHours === 0}
                             className="h-10 rounded-lg bg-gradient-to-r from-emerald-500/20 to-green-500/20 border border-emerald-400/40 text-emerald-200 text-xs font-bold hover:from-emerald-500/30 hover:to-green-500/30 transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-1.5"
@@ -962,7 +1018,7 @@ export default function DiagnosisPage() {
                             我接受这个时间线
                           </button>
                           <button
-                            onClick={goBackToPathSelect}
+                            onClick={handleSwitchPath}
                             className="h-10 rounded-lg bg-rose-500/10 border border-rose-400/30 text-rose-200 text-xs font-bold hover:bg-rose-500/20 transition-all flex items-center justify-center gap-1.5"
                           >
                             ⚠️ 太慢了，看看另一条路
@@ -1264,6 +1320,52 @@ export default function DiagnosisPage() {
                   )}
                 </AnimatePresence>
               </div>
+
+              {/* ═══ 5. 专属行动指令（基于 selectedPath） ═══ */}
+              {(selectedPath === 'TRADER' || selectedPath === 'FLOW') && (
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.4 }}
+                  className="mt-6 relative overflow-hidden rounded-2xl"
+                >
+                  {/* 渐变光晕背景 */}
+                  <div
+                    className={`absolute inset-0 bg-gradient-to-r ${
+                      selectedPath === 'TRADER'
+                        ? 'from-blue-500 via-indigo-500 to-purple-500'
+                        : 'from-pink-500 via-rose-500 to-orange-500'
+                    } opacity-90`}
+                  />
+                  <div className="absolute -top-10 -right-10 w-40 h-40 rounded-full bg-white/20 blur-3xl" />
+                  <div className="absolute -bottom-10 -left-10 w-32 h-32 rounded-full bg-white/10 blur-2xl" />
+
+                  <div className="relative p-5 md:p-6 text-white">
+                    <div className="text-[10px] font-bold tracking-widest uppercase text-white/80 mb-2 flex items-center gap-1.5">
+                      <Zap size={12} />
+                      专属行动指令
+                    </div>
+                    <h3 className="text-xl md:text-2xl font-extrabold leading-tight mb-4">
+                      {selectedPath === 'TRADER' ? (
+                        <>你的第一步：开启你的<strong className="text-amber-200">第一家网店</strong>！</>
+                      ) : (
+                        <>你的第一步：开启你的<strong className="text-amber-200">第一个自媒体账号</strong>！</>
+                      )}
+                    </h3>
+                    <Link
+                      href={
+                        selectedPath === 'TRADER'
+                          ? '/market/tools?type=trader'
+                          : '/market/tools?type=flow'
+                      }
+                      className="inline-flex items-center gap-2 px-5 py-3 bg-white text-slate-900 text-sm md:text-base font-extrabold rounded-xl hover:scale-105 active:scale-95 transition-transform shadow-lg"
+                    >
+                      {selectedPath === 'TRADER' ? '🚀 立即去注册网店' : '🎬 立即去注册自媒体'}
+                      <ArrowRight size={16} />
+                    </Link>
+                  </div>
+                </motion.div>
+              )}
             </div>
           </motion.section>
         )}

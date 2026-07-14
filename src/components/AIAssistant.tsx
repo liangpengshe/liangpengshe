@@ -1,10 +1,48 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
-import { usePathname } from 'next/navigation'
+/**
+ * 良朋社 AI 助手 · 主动型 Copilot
+ * ------------------------------------------------------------
+ * 进化一：被动问答 → 主动感知
+ *   1. 路由感知（usePathname + useSearchParams）
+ *   2. 停留时长（useDwellTime，15s/30s/60s 三档深化）
+ *   3. 点赞/点踩反馈（localStorage 训练优先级）
+ *   4. OPC 类型个性化（读 localStorage['opc_level'] 注入文案）
+ * ------------------------------------------------------------
+ */
+
+import { useState, useEffect, useMemo, useRef } from 'react'
+import { usePathname, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
-import { MessageCircle, X, Send, Sparkles, ArrowRight, Lightbulb, Wrench, FileText, Volume2 } from 'lucide-react'
+import {
+  MessageCircle,
+  X,
+  Send,
+  Sparkles,
+  ArrowRight,
+  Lightbulb,
+  Wrench,
+  FileText,
+  Volume2,
+  ThumbsUp,
+  ThumbsDown,
+  FolderKanban,
+  BookOpen,
+  Briefcase,
+  Compass,
+  Target,
+} from 'lucide-react'
 import { useAudio } from '@/hooks/useAudio'
+import { useDwellTime } from '@/hooks/useDwellTime'
+import {
+  buildCopilotContext,
+  pickBubbleByDwell,
+  type CopilotContext,
+} from '@/lib/ai-copilot-context'
+import {
+  recordFeedback,
+  shouldSuppressBubble,
+} from '@/lib/ai-copilot-feedback'
 
 interface Message {
   id: string
@@ -13,103 +51,219 @@ interface Message {
   timestamp: Date
 }
 
-// 路由 → 上下文规则
-function buildContext(pathname: string) {
-  // /tools → 询问是否匹配项目库案例
-  if (pathname === '/tools' || pathname?.startsWith('/tools?')) {
-    return {
-      kind: 'tools' as const,
-      bubble: '您正在寻找工具，需要我为您匹配最适合这个工具的【项目库案例】吗？',
-      sideHint: null,
-      cta: { label: '查看项目库', href: '/projects' },
-      systemHint:
-        '用户当前停留在 /tools 页面（工具库）。请主动询问用户是否需要根据所浏览的工具，推荐 OPC 项目库中的实战案例（SOP/案例文章）。',
-    }
-  }
+const ICON_MAP: Record<string, any> = {
+  Wrench,
+  FolderKanban,
+  BookOpen,
+  Briefcase,
+  Compass,
+  Sparkles,
+  Target,
+}
 
-  // /projects/[id] 详情页 → 显示底层依赖的工具
-  if (pathname?.startsWith('/projects/') && pathname !== '/projects') {
-    const projectId = pathname.split('/projects/')[1]?.split('/')[0]
-    return {
-      kind: 'project-detail' as const,
-      bubble: null,
-      sideHint: {
-        title: '底层依赖工具识别',
-        desc: '这个项目底层依赖的是 [AI 数字人口播 + 自动剪辑工具]，点击跳转工具库查看。',
-        toolName: 'AI 数字人口播 + 自动剪辑工具',
-        projectId,
-      },
-      cta: { label: '跳转工具库', href: '/tools' },
-      systemHint: `用户当前正在浏览 /projects/${projectId || '?'} 这篇项目 SOP 详情。请在回答时主动告知：该项目底层的"工具依赖栈"是 AI 数字人口播 + 自动剪辑工具，并引导用户跳转 /tools 查看完整工具链。`,
-    }
-  }
-
-  // /projects → 介绍项目库价值
-  if (pathname === '/projects' || pathname?.startsWith('/projects?')) {
-    return {
-      kind: 'projects' as const,
-      bubble: '您正在浏览项目库，需要我帮您找出 3 个最匹配您生意的 SOP 案例吗？',
-      sideHint: null,
-      cta: null,
-      systemHint:
-        '用户当前停留在 /projects 页面（项目库/SOP 案例）。请主动询问用户想做哪类业务（内容创作 / 本地服务 / 私域 / 教育等），并基于此推荐 3 个最匹配的 SOP 案例。',
-    }
-  }
-
-  // 默认
-  return {
-    kind: 'default' as const,
-    bubble: null,
-    sideHint: null,
-    cta: null,
-    systemHint: `用户当前路径：${pathname}。无特殊上下文。`,
-  }
+const STYLE_MAP: Record<
+  string,
+  { bg: string; border: string; text: string; iconBg: string }
+> = {
+  blue: {
+    bg: 'bg-gradient-to-br from-blue-50 to-indigo-50',
+    border: 'border-blue-200/60',
+    text: 'text-blue-900',
+    iconBg: 'bg-blue-500',
+  },
+  purple: {
+    bg: 'bg-gradient-to-br from-violet-50 to-purple-50',
+    border: 'border-violet-200/60',
+    text: 'text-violet-900',
+    iconBg: 'bg-violet-500',
+  },
+  amber: {
+    bg: 'bg-gradient-to-br from-amber-50 to-orange-50',
+    border: 'border-amber-200/60',
+    text: 'text-amber-900',
+    iconBg: 'bg-amber-500',
+  },
+  rose: {
+    bg: 'bg-gradient-to-br from-rose-50 to-pink-50',
+    border: 'border-rose-200/60',
+    text: 'text-rose-900',
+    iconBg: 'bg-rose-500',
+  },
+  emerald: {
+    bg: 'bg-gradient-to-br from-emerald-50 to-teal-50',
+    border: 'border-emerald-200/60',
+    text: 'text-emerald-900',
+    iconBg: 'bg-emerald-500',
+  },
+  slate: {
+    bg: 'bg-white/95',
+    border: 'border-slate-200',
+    text: 'text-slate-700',
+    iconBg: 'bg-slate-500',
+  },
 }
 
 export default function AIAssistant() {
   const pathname = usePathname()
+  const searchParams = useSearchParams()
+  const dwellSec = useDwellTime()
   const [isOpen, setIsOpen] = useState(false)
   const [showBubble, setShowBubble] = useState(false)
   const [dismissedHint, setDismissedHint] = useState<string>('')
+  const [bubbleVersion, setBubbleVersion] = useState(0) // 切换提示档位时自增
   const [messages, setMessages] = useState<Message[]>([])
   const [inputValue, setInputValue] = useState('')
   const [loading, setLoading] = useState(false)
   const [hasGreeted, setHasGreeted] = useState(false)
   const { playTTS } = useAudio()
   const [conversationId, setConversationId] = useState<string>()
+  const lastDwellTierRef = useRef<number>(0) // 0=未触发 1=15s 2=30s 3=60s
+  // 任务 1：场景化提示（覆盖通用气泡）
+  const [sceneHint, setSceneHint] = useState<{
+    text: string
+    sessionKey: string
+  } | null>(null)
 
-  const ctx = useMemo(() => buildContext(pathname || ''), [pathname])
-
+  // ════════ 任务 1：场景化感知 useEffect（监听 pathname + searchParams）══════
+  // 触发条件：
+  //   1. /market/projects?recommend=trader
+  //   2. /projects/ai-digital-shop 且进度 = 0
+  //   3. /scale-up 且停留 > 10s
+  // sessionStorage 记录"用户已在本会话手动关闭"，避免反复打扰
   useEffect(() => {
-    // 2.5 秒后自动弹出气泡（仅默认欢迎气泡）
-    const bubbleTimer = setTimeout(() => {
-      if (!isOpen) setShowBubble(true)
-    }, 2500)
-    return () => clearTimeout(bubbleTimer)
-  }, [isOpen])
+    if (typeof window === 'undefined') return
+    const p = pathname || ''
+    const sp = searchParams?.toString() || ''
 
+    // 条件 1：交易型推荐项目页
+    if (p === '/market/projects' && /recommend=trader/.test(sp)) {
+      const key = 'scene:market-projects-recommend-trader'
+      const dismissed = window.sessionStorage.getItem(key)
+      if (!dismissed) {
+        setSceneHint({
+          text: '你正在查看交易型推荐项目，需要我帮你列出【开店申请】的快速准备清单吗？',
+          sessionKey: key,
+        })
+        return
+      }
+    }
+
+    // 条件 2：AI 数字网店项目 SOP 详情页 + 进度为 0
+    if (p === '/projects/ai-digital-shop') {
+      try {
+        const progress = window.localStorage.getItem('opc_sop_progress::ai-digital-shop')
+        const step = progress ? parseInt(progress, 10) : 0
+        if (!step || step === 0) {
+          const key = 'scene:projects-ai-digital-shop-step0'
+          const dismissed = window.sessionStorage.getItem(key)
+          if (!dismissed) {
+            setSceneHint({
+              text: '第一步是开店申请。你可以点击卡片上的按钮直接跳转淘宝，回来后点"完成此步骤"即可。',
+              sessionKey: key,
+            })
+            return
+          }
+        }
+      } catch {
+        // 静默
+      }
+    }
+
+    // 条件 3：/scale-up 页面停留 > 10s（用 useDwellTime 单独计时）
+    if (p === '/scale-up' && dwellSec > 10) {
+      const key = 'scene:scale-up-dwell-10s'
+      const dismissed = window.sessionStorage.getItem(key)
+      if (!dismissed) {
+        setSceneHint({
+          text: '矩阵放大阶段，需要我帮你对比【系统型】和【资产型】路线的优劣势吗？',
+          sessionKey: key,
+        })
+        return
+      }
+    }
+
+    // 其它场景：清空 sceneHint，回退到通用气泡
+    setSceneHint(null)
+  }, [pathname, searchParams, dwellSec])
+
+  // 路由变化时重置"已显示过的档位"标记
   useEffect(() => {
-    // 路由变化时：自动弹出对应上下文气泡（仅在未关闭过的情况下）
+    lastDwellTierRef.current = 0
+    setBubbleVersion((v) => v + 1)
+  }, [pathname])
+
+  const ctx: CopilotContext = useMemo(
+    () => buildCopilotContext(pathname || ''),
+    [pathname]
+  )
+
+  // 当前应该显示的提示语（场景化优先 → 按停留时长选档位）
+  const activeBubble = useMemo(() => {
+    if (sceneHint) return sceneHint.text
+    if (dwellSec < 8) return ctx.bubble
+    return pickBubbleByDwell(ctx, dwellSec)
+  }, [ctx, dwellSec, sceneHint])
+
+  // 是否被抑制（点踩次数过多）
+  const suppressed = useMemo(
+    () => (typeof window === 'undefined' ? false : shouldSuppressBubble(ctx.kind)),
+    [ctx.kind]
+  )
+
+  // 首次进入（>0.5s）后弹气泡
+  useEffect(() => {
+    if (isOpen || suppressed) return
+    if (!activeBubble) return
+    // 场景化提示：跳过 dismissHint 检查（用 sessionKey 控制）
+    if (sceneHint) {
+      const t = setTimeout(() => setShowBubble(true), 800)
+      return () => clearTimeout(t)
+    }
     if (dismissedHint === ctx.kind) return
-    if (!ctx.bubble) return
     const t = setTimeout(() => {
       setShowBubble(true)
-    }, 1500)
+    }, 1200)
     return () => clearTimeout(t)
-  }, [ctx.kind, ctx.bubble, dismissedHint])
+  }, [ctx.kind, activeBubble, isOpen, dismissedHint, suppressed, sceneHint])
 
+  // 停留时长档位跃迁：15s / 30s / 60s 重新弹气泡（强化提示）
+  useEffect(() => {
+    if (isOpen || suppressed) return
+    if (sceneHint) return // 场景化提示期间不抢占
+    if (dismissedHint === ctx.kind) return
+    let tier = 0
+    if (dwellSec >= 60) tier = 3
+    else if (dwellSec >= 30) tier = 2
+    else if (dwellSec >= 15) tier = 1
+    if (tier > lastDwellTierRef.current && tier > 0) {
+      lastDwellTierRef.current = tier
+      setShowBubble(true)
+      setBubbleVersion((v) => v + 1)
+    }
+  }, [dwellSec, ctx.kind, isOpen, dismissedHint, suppressed, sceneHint])
+
+  // 首次打开 AI 面板：附上下文欢迎语
   useEffect(() => {
     if (isOpen && messages.length === 0) {
       setTimeout(() => {
-        // 首次欢迎语附带上下文
         const welcome =
-          ctx.kind === 'tools'
-            ? '您正在浏览工具库，我可以根据您想解决的问题（如降本 / 引流 / 客户运营），推荐 3 个最匹配的 OPC 实战项目案例。需要我展示吗？'
-            : ctx.kind === 'projects'
-              ? '您正在浏览项目库，告诉我您做的生意类型（餐饮 / 美业 / 知识付费 / 私域 等），我帮您找出 3 个最匹配的 SOP 案例。'
-              : ctx.kind === 'project-detail'
-                ? '您正在查看这篇 SOP 案例，我可以告诉您它底层依赖的"工具链"，并推荐同类替代工具。需要吗？'
-                : '你好，老板！我是良朋社AI助手，你想了解降本工具，还是线下沙龙？'
+          ctx.kind === 'market-projects'
+            ? '你正在看项目库，告诉我你的预算和擅长领域，我帮你筛出 3 个最匹配的 SOP 案例。'
+            : ctx.kind === 'market-tools'
+              ? '你正在看工具库，告诉我你现在的痛点（降本/引流/客户运营），我帮你匹配最合适的 3 个工具。'
+              : ctx.kind === 'market-resources'
+                ? '你正在看资源库，要我帮你找出"👍 实用指数"最高的 3 个资源吗？'
+                : ctx.kind === 'market-services'
+                  ? '你正在看服务库，告诉我你需要什么类型的服务（智能体定制 / GEO / 企业内训），我帮你精准匹配。'
+                  : ctx.kind === 'project-detail'
+                    ? '你正在看这个项目的 SOP，我可以告诉你它底层依赖的工具栈、投入产出比、7 天拆解。需要哪个？'
+                    : ctx.kind.startsWith('guide-')
+                      ? '你正在学习 OPC 路径，告诉我你卡在哪一步，我帮你突破。'
+                      : ctx.kind === 'member'
+                        ? '你正在个人中心，要不要我帮你梳理今天最该做的 3 件事？'
+                        : ctx.kind === 'workspace'
+                          ? '你正在工作台，告诉我你卡在哪项任务，我帮你拆解。'
+                          : '你好，老板！我是良朋社AI助手，你想了解降本工具、还是线下沙龙？'
         const welcomeMessage: Message = {
           id: Date.now().toString(),
           content: welcome,
@@ -123,38 +277,30 @@ export default function AIAssistant() {
 
   const handleSendMessage = async () => {
     if (!inputValue.trim() || loading) return
-
     const userMessage: Message = {
       id: Date.now().toString(),
       content: inputValue,
       isUser: true,
       timestamp: new Date(),
     }
-
-    setMessages(prev => [...prev, userMessage])
+    setMessages((prev) => [...prev, userMessage])
     setInputValue('')
     setLoading(true)
-
     try {
       const response = await fetch('/api/ai/chat', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           message: inputValue,
           city: '深圳',
           role: 'MEMBER',
           conversationId,
-          // 上下文感知：把当前路由 + 系统提示注入 Dify
-          currentRoute: pathname,
+          currentRoute: pathname + (searchParams?.toString() ? `?${searchParams.toString()}` : ''),
           contextKind: ctx.kind,
           systemHint: ctx.systemHint,
         }),
       })
-
       const data = await response.json()
-
       if (data.success) {
         const aiMessage: Message = {
           id: (Date.now() + 1).toString(),
@@ -162,19 +308,19 @@ export default function AIAssistant() {
           isUser: false,
           timestamp: new Date(),
         }
-        setMessages(prev => [...prev, aiMessage])
+        setMessages((prev) => [...prev, aiMessage])
         setConversationId(data.data.conversationId)
       } else {
         throw new Error(data.error || 'AI 响应失败')
       }
-    } catch (error) {
+    } catch {
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
         content: '抱歉，AI 助手暂时无法响应，请稍后重试。',
         isUser: false,
         timestamp: new Date(),
       }
-      setMessages(prev => [...prev, errorMessage])
+      setMessages((prev) => [...prev, errorMessage])
     } finally {
       setLoading(false)
     }
@@ -187,86 +333,99 @@ export default function AIAssistant() {
     }
   }
 
+  // 反馈按钮处理
+  const handleFeedback = (type: 'up' | 'down') => {
+    if (!sceneHint) {
+      recordFeedback(ctx.kind, type)
+    }
+    setShowBubble(false)
+    if (type === 'down' || sceneHint) {
+      // 场景化提示：关闭即写 sessionStorage
+      if (sceneHint && typeof window !== 'undefined') {
+        try {
+          window.sessionStorage.setItem(sceneHint.sessionKey, '1')
+        } catch {
+          // 静默
+        }
+      }
+      if (type === 'down') {
+        setDismissedHint(ctx.kind)
+      }
+    }
+  }
+
+  const style = STYLE_MAP[ctx.style] || STYLE_MAP.slate
+  const Icon = ICON_MAP[ctx.icon] || Sparkles
+
   return (
     <>
-      {/* 📌 侧边上下文提示（/projects/[id] 时显示） */}
-      {!isOpen && ctx.sideHint && dismissedHint !== ctx.kind && (
-        <div className="fixed bottom-40 right-24 z-40 max-w-[260px] hidden md:block animate-fade-in">
-          <div className="relative bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 border border-blue-200/60 rounded-2xl p-3.5 shadow-xl">
-            <button
-              onClick={() => setDismissedHint(ctx.kind)}
-              className="absolute -top-1 -right-1 w-5 h-5 bg-white border border-gray-200 hover:bg-gray-100 rounded-full flex items-center justify-center text-gray-500 shadow"
-            >
-              <X size={10} />
-            </button>
-            <div className="flex items-start gap-2.5">
-              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center flex-shrink-0">
-                <Wrench size={16} className="text-white" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="text-[10px] font-bold text-blue-600 mb-0.5">{ctx.sideHint.title}</div>
-                <div className="text-xs text-gray-700 leading-relaxed">
-                  这个项目底层依赖的是{' '}
-                  <span className="font-semibold text-purple-700">【{ctx.sideHint.toolName}】</span>
-                  ，点击跳转工具库。
-                </div>
-                <Link
-                  href="/tools"
-                  className="mt-2 inline-flex items-center gap-1 text-[11px] font-semibold text-blue-600 hover:text-blue-700"
-                >
-                  跳转工具库
-                  <ArrowRight size={10} />
-                </Link>
-              </div>
-            </div>
-            <div className="absolute -bottom-2 right-8 w-3 h-3 bg-gradient-to-br from-blue-50 to-purple-50 border-r border-b border-blue-200/60 rotate-45" />
-          </div>
-        </div>
-      )}
-
-      {/* 提示气泡（默认 / 路由上下文） */}
-      {!isOpen && showBubble && (
-        <div className="fixed bottom-40 right-6 z-40 max-w-[220px] animate-fade-in">
+      {/* ════════ 主动气泡（路由感知 + 停留时长深化 + 反馈按钮）══════ */}
+      {!isOpen && showBubble && activeBubble && (
+        <div
+          key={`${ctx.kind}-${bubbleVersion}`}
+          className="fixed bottom-40 right-6 z-40 max-w-[280px] animate-fade-in"
+        >
           <div
-            className={`relative backdrop-blur-md border shadow-xl rounded-2xl px-3 py-2.5 text-xs leading-relaxed ${
-              ctx.kind === 'tools'
-                ? 'bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200/60 text-blue-900'
-                : ctx.kind === 'projects'
-                  ? 'bg-gradient-to-br from-purple-50 to-pink-50 border-purple-200/60 text-purple-900'
-                  : 'bg-white/90 border-white/40 text-gray-700'
-            }`}
+            className={`relative backdrop-blur-md border shadow-xl rounded-2xl px-3.5 py-3 text-xs leading-relaxed ${style.bg} ${style.border} ${style.text}`}
           >
             <button
               onClick={() => {
                 setShowBubble(false)
-                if (ctx.kind !== 'default') setDismissedHint(ctx.kind)
+                // 场景化提示：写入 sessionStorage，本会话不再弹
+                if (sceneHint && typeof window !== 'undefined') {
+                  try {
+                    window.sessionStorage.setItem(sceneHint.sessionKey, '1')
+                  } catch {
+                    // 静默
+                  }
+                } else {
+                  setDismissedHint(ctx.kind)
+                }
               }}
               className="absolute -top-1 -right-1 w-4 h-4 bg-gray-200 hover:bg-gray-300 rounded-full flex items-center justify-center text-gray-500"
             >
               <X size={10} />
             </button>
             <div className="flex items-start gap-1.5">
-              {ctx.kind === 'tools' && <Wrench size={12} className="mt-0.5 text-blue-600 flex-shrink-0" />}
-              {ctx.kind === 'projects' && <FileText size={12} className="mt-0.5 text-purple-600 flex-shrink-0" />}
-              {ctx.kind === 'default' && <Sparkles size={12} className="mt-0.5 text-purple-500 flex-shrink-0" />}
-              <span>{ctx.bubble || '✨ 我正在学习深圳本地的 AI 案例，需要我帮你找找吗？'}</span>
+              <Icon size={12} className="mt-0.5 flex-shrink-0" />
+              <span className="flex-1">{activeBubble}</span>
             </div>
             {ctx.cta && (
               <Link
                 href={ctx.cta.href}
                 onClick={() => setShowBubble(false)}
-                className="mt-1.5 inline-flex items-center gap-1 text-[11px] font-semibold text-blue-600 hover:text-blue-700"
+                className="mt-2 inline-flex items-center gap-1 text-[11px] font-semibold opacity-90 hover:opacity-100"
               >
                 {ctx.cta.label}
                 <ArrowRight size={10} />
               </Link>
             )}
-            <div className="absolute -bottom-2 right-6 w-3 h-3 bg-white/90 border-r border-b border-white/40 rotate-45" />
+            {/* 反馈按钮区 */}
+            <div className="mt-2 pt-2 border-t border-current/10 flex items-center justify-between">
+              <span className="text-[9px] opacity-60">这个提示有用吗？</span>
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => handleFeedback('up')}
+                  className="w-5 h-5 rounded-md hover:bg-emerald-100 text-emerald-600 flex items-center justify-center transition-colors"
+                  aria-label="有帮助"
+                >
+                  <ThumbsUp size={10} />
+                </button>
+                <button
+                  onClick={() => handleFeedback('down')}
+                  className="w-5 h-5 rounded-md hover:bg-rose-100 text-rose-500 flex items-center justify-center transition-colors"
+                  aria-label="没帮助"
+                >
+                  <ThumbsDown size={10} />
+                </button>
+              </div>
+            </div>
+            <div className="absolute -bottom-2 right-6 w-3 h-3 bg-inherit border-r border-b border-inherit rotate-45" />
           </div>
         </div>
       )}
 
-      {/* 呼吸光晕 3D 悬浮球 */}
+      {/* ════════ 呼吸光晕 3D 悬浮球 ═══════ */}
       <div className="fixed bottom-24 right-4 z-50">
         <div className="absolute inset-0 -m-2 rounded-full bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 opacity-60 blur-xl animate-pulse" />
         <div className="absolute inset-0 -m-1 rounded-full bg-gradient-to-br from-blue-400 to-purple-500 opacity-40 animate-ping" />
@@ -275,16 +434,18 @@ export default function AIAssistant() {
             const next = !isOpen
             setIsOpen(next)
             setShowBubble(false)
-            // 首次打开时播放语音问候
             if (next && !hasGreeted) {
               setHasGreeted(true)
               const greetText =
-                ctx.kind === 'tools'
-                  ? '你好老板，你正在浏览工具库，告诉我你的痛点，我帮你匹配最合适的项目案例。'
-                  : ctx.kind === 'projects'
-                  ? '老板你好，这里是项目库，要不要我推荐一个最适合你当前阶段的 SOP 案例？'
-                  : '你好，我是良朋社的良良，欢迎来到智富生态系统，需要我帮你诊断一下工具需求吗？'
-              // 稍微延后播放，避免动画与浏览器 audio 抢占
+                ctx.kind === 'market-tools'
+                  ? '你正在浏览工具库，告诉我你的痛点，我帮你匹配最合适的项目案例。'
+                  : ctx.kind === 'market-projects'
+                    ? '老板你好，这里是项目库，要不要我推荐一个最适合你当前阶段的 SOP 案例？'
+                    : ctx.kind === 'market-resources'
+                      ? '你正在看资源库，要我帮你找出"👍 实用指数"最高的 3 个资源吗？'
+                      : ctx.kind === 'market-services'
+                        ? '你正在看服务库，告诉我你需要什么类型的服务，我帮你精准匹配。'
+                        : '你好，我是良朋社的良良，欢迎来到智富生态系统，需要我帮你诊断一下工具需求吗？'
               setTimeout(() => {
                 playTTS(greetText).catch(() => null)
               }, 350)
@@ -300,6 +461,7 @@ export default function AIAssistant() {
         </button>
       </div>
 
+      {/* ════════ 聊天面板 ═══════ */}
       {isOpen && (
         <div className="fixed bottom-40 right-4 z-50 w-[calc(100vw-2rem)] max-w-sm bg-white rounded-2xl shadow-2xl overflow-hidden animate-slide-up">
           <div className="bg-gradient-to-r from-liangpeng-primary to-liangpeng-accent px-4 py-3">
@@ -309,7 +471,10 @@ export default function AIAssistant() {
               </div>
               <div>
                 <h3 className="text-white font-semibold text-sm">良朋社AI助手</h3>
-                <p className="text-white/80 text-xs">在线</p>
+                <p className="text-white/80 text-xs flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-300" />
+                  {ctx.kind === 'default' ? '在线' : `当前场景：${ctx.kind.replace(/-/g, ' · ')}`}
+                </p>
               </div>
             </div>
           </div>
@@ -338,6 +503,18 @@ export default function AIAssistant() {
                 </div>
               </div>
             ))}
+            {loading && (
+              <div className="flex justify-start">
+                <div className="bg-white text-gray-500 rounded-2xl rounded-bl-sm px-4 py-2 shadow-sm flex items-center gap-2">
+                  <span className="flex gap-1">
+                    <span className="w-1.5 h-1.5 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                    <span className="w-1.5 h-1.5 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                    <span className="w-1.5 h-1.5 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                  </span>
+                  <span className="text-xs">正在思考…</span>
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="p-4 bg-white border-t border-gray-100">

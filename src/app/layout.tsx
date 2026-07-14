@@ -1,4 +1,7 @@
 import type { Metadata } from 'next'
+import { Suspense } from 'react'
+import GlobalLoading from './loading'
+import { ToastProvider } from '@/components/Toast'
 import './globals.css'
 
 export const metadata: Metadata = {
@@ -18,7 +21,9 @@ export default function RootLayout({
   return (
     <html lang="zh-CN" suppressHydrationWarning>
       <body className="min-h-screen bg-slate-50 font-sans antialiased" suppressHydrationWarning>
-        {children}
+        <ToastProvider>
+          <Suspense fallback={<GlobalLoading />}>{children}</Suspense>
+        </ToastProvider>
       </body>
     </html>
   )

@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { Users, Calendar, FileText, Settings, LogOut, TrendingUp, ChevronRight, Inbox, Wallet } from 'lucide-react'
+import { Users, Calendar, FileText, Settings, LogOut, TrendingUp, ChevronRight, Inbox, Wallet, Sparkles } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 
 export default function ConsoleDashboard() {
@@ -65,6 +65,7 @@ export default function ConsoleDashboard() {
     { icon: TrendingUp, label: 'AI 诊断请求', href: '/console/diagnoses' },
     { icon: Inbox, label: '专家评审（项目/工具/服务商）', href: '/console/reviews' },
     { icon: Wallet, label: '收益分润仪表盘', href: '/console/revenue' },
+    { icon: Sparkles, label: '🌟 城市主理人 · AI 日报中心', href: '/console/city-daily' },
     { icon: Settings, label: '设置', href: '/console/settings' },
   ]
 

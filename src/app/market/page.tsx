@@ -1,19 +1,16 @@
-import { MarketContent } from '@/components/market/MarketContent'
+import { redirect } from 'next/navigation'
 
 /**
- * AI 智富四库 - 默认入口（AI智富工具库）
+ * /market 根路径 → 直接重定向到 /market/tools
  *
- * 访问路径：
- *   - /market              → 默认进入 AI智富工具库（Tab 内部切换）
- *   - /market/tools        → 工具库（直链，独立路由）
- *   - /market/services     → 服务库（直链，独立路由）
- *   - /market/projects     → 项目库（直链，独立路由）
- *   - /market/resources    → 资源库（直链，独立路由）
+ * 历史上 /market 是 Tabs 聚合入口，现在已经拆分为 4 个独立子路由：
+ *   - /market/tools
+ *   - /market/services
+ *   - /market/projects
+ *   - /market/resources
  *
- * 4 个独立子路由都已实现，分别渲染 <MarketContent defaultTab="xxx" />。
- * 在根路径下点击 Tab 仍是 SPA 模式切换（不刷新页面），
- * 在子路由下点击 Tab 会 router.push 跳到对应子路由。
+ * 为了避免用户访问 /market 时看到重复或不一致的内容，统一 301 到工具库。
  */
 export default function MarketPage() {
-  return <MarketContent defaultTab="tools" />
+  redirect('/market/tools')
 }

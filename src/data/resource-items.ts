@@ -9,11 +9,23 @@
  *   - 'download'  → 资源下载（外链）
  *   - 'external'  → 外部链接（产品/硬件详情）
  *   - 'internal'  → 内部路由（跳工具库试用）
- *   - 'unlock'    → 会员专享解锁（判断会员等级）
+ *   - 'unlock'    → 会员 / 学习进度解锁（见 unlockMode）
  *   - 'partner'   → 招商加盟（触发主理人对接弹窗）
+ *
+ * unlockMode（仅 type === 'unlock' 生效）：
+ *   - 'practice-or-member' → 满足 (运营实操解锁 OR 199/1980 会员) 即可
+ *   - 'member-only'        → 满足 (199/1980 会员) 即可
+ *
+ * externalHref（仅 type === 'unlock' 已解锁后生效）：
+ *   - 已解锁时点击跳到外链（用于数字产品库下载等场景）
+ *   - 不设置则走内部默认链接 /market
  *
  * 卡片顶部色条（borderTopColor）用于四库统一视觉对比
  */
+
+/** 资源解锁模式（仅 unlock 类型） */
+export type UnlockMode = 'practice-or-member' | 'member-only'
+
 export type ResourceType = 'download' | 'external' | 'internal' | 'unlock' | 'partner'
 
 export interface ResourceItem {
@@ -31,6 +43,10 @@ export interface ResourceItem {
   /** 标签文案（如 热门 / 限免 / 会员专享） */
   tag?: string
   tagColor?: string
+  /** 解锁模式（仅 type === 'unlock' 生效） */
+  unlockMode?: UnlockMode
+  /** 已解锁时跳转的外链（仅 type === 'unlock' 生效，覆盖 href） */
+  externalHref?: string
 }
 
 export const resourceItems: ResourceItem[] = [
@@ -38,7 +54,9 @@ export const resourceItems: ResourceItem[] = [
     id: 'digital-prod',
     title: '数字产品库',
     desc: 'AI 提示词包、各类设计模板、PDF 教程、文档资源下载。',
-    type: 'download',
+    type: 'unlock',
+    unlockMode: 'practice-or-member', // ★ 任务：需解锁运营实操 或 199/1980 会员
+    externalHref: 'https://pan.quark.cn/', // 已解锁后点击直接跳转下载
     icon: '📁',
     borderTopColor: 'border-t-blue-500',
     iconBgColor: 'bg-blue-50',
@@ -66,7 +84,7 @@ export const resourceItems: ResourceItem[] = [
     icon: '🧰',
     borderTopColor: 'border-t-purple-500',
     iconBgColor: 'bg-purple-50',
-    href: '/market',
+    href: '/market/tools?tab=self_tools',
     tag: 'OPC 独家',
     tagColor: 'bg-purple-50 text-purple-600',
   },
@@ -87,6 +105,8 @@ export const resourceItems: ResourceItem[] = [
     title: 'AI 精品教程库',
     desc: '从入门到精通的视频课、实操 SOP 文档、系统化商业课程。',
     type: 'unlock',
+    unlockMode: 'member-only', // ★ 任务：仅 199/1980 会员可看
+    externalHref: '/market', // 已解锁后默认进入四库总览
     icon: '📚',
     borderTopColor: 'border-t-rose-500',
     iconBgColor: 'bg-rose-50',

@@ -356,12 +356,12 @@ export function getStageRoute(stage: UserStageKey): string {
 /** localStorage 中 opc_level 的键名（与诊断页写入保持一致） */
 export const OPC_LEVEL_STORAGE_KEY = 'opc_level'
 
-/** OPCLevel → /market/guide/{level} URL 映射 */
+/** OPCLevel → /guide/{level} URL 映射（已从 /market/guide 升级为 app 级独立路由） */
 const LEVEL_TO_GUIDE: Record<OPCLevel, string> = {
-  TRADER: '/market/guide/trader',
-  FLOW: '/market/guide/flow',
-  SYSTEM: '/market/guide/system',
-  ASSET: '/market/guide/asset',
+  TRADER: '/guide/trader',
+  FLOW: '/guide/flow',
+  SYSTEM: '/guide/system',
+  ASSET: '/guide/asset',
 }
 
 /**

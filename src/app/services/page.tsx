@@ -32,6 +32,7 @@ import {
   Crown,
 } from 'lucide-react'
 import AIDiagnosisForm from '@/components/AIDiagnosisForm'
+import { toast } from '@/components/Toast'
 
 // ─── AI 智富服务中台：四大引擎 ───
 const serviceEngines = [
@@ -332,7 +333,7 @@ export default function ServicesPage() {
                 <div className="text-[11px] text-gray-400">一次性 · 含 1V1 解读</div>
                 <button
                   onClick={() => {
-                    alert('请填写您的姓名与电话，助理将在 1 小时内联系您完成预约。\n（演示用：正式环境会跳转到 /booking 预约表单）')
+                    toast.info('请填写您的姓名与电话，助理将在 1 小时内联系您完成预约。（演示用：正式环境会跳转到 /booking 预约表单）')
                   }}
                   className="mt-2 inline-flex items-center gap-1.5 px-5 py-2.5 bg-gradient-to-r from-amber-500 to-orange-500 text-white text-sm font-bold rounded-xl shadow-md hover:shadow-xl hover:scale-[1.03] active:scale-95 transition-all"
                 >
