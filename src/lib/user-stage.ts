@@ -48,6 +48,59 @@ const OPC_LEVEL_META: Record<OPCLevel, { label: string; emoji: string; color: st
   ASSET: { label: '资产型 OPC', emoji: '💎', color: 'violet' },
 }
 
+/**
+ * 角色徽章（个人中心头像上方展示）
+ *
+ * 与 OPC_LEVEL_META 的区别：
+ *   - OPC_LEVEL_META 是"路径"语义（交易型/流量型 OPC）
+ *   - OPC_ROLE_BADGE 是"游戏化身份"语义（交易先锋/流量猎手）
+ */
+const OPC_ROLE_BADGE: Record<
+  OPCLevel | 'none',
+  { emoji: string; label: string; bg: string; text: string; border: string; shadow: string }
+> = {
+  TRADER: {
+    emoji: '🏅',
+    label: '交易先锋',
+    bg: 'bg-gradient-to-r from-amber-100 to-orange-100',
+    text: 'text-amber-700',
+    border: 'border-amber-300',
+    shadow: 'shadow-amber-200/50',
+  },
+  FLOW: {
+    emoji: '🎯',
+    label: '流量猎手',
+    bg: 'bg-gradient-to-r from-rose-100 to-pink-100',
+    text: 'text-rose-700',
+    border: 'border-rose-300',
+    shadow: 'shadow-rose-200/50',
+  },
+  SYSTEM: {
+    emoji: '⚙️',
+    label: '系统建造师',
+    bg: 'bg-gradient-to-r from-blue-100 to-cyan-100',
+    text: 'text-blue-700',
+    border: 'border-blue-300',
+    shadow: 'shadow-blue-200/50',
+  },
+  ASSET: {
+    emoji: '💎',
+    label: '资产掌舵人',
+    bg: 'bg-gradient-to-r from-violet-100 to-purple-100',
+    text: 'text-violet-700',
+    border: 'border-violet-300',
+    shadow: 'shadow-violet-200/50',
+  },
+  none: {
+    emoji: '🧭',
+    label: '新手启航',
+    bg: 'bg-gradient-to-r from-slate-100 to-gray-100',
+    text: 'text-slate-600',
+    border: 'border-slate-300',
+    shadow: 'shadow-slate-200/50',
+  },
+}
+
 const VIP_TIER_META: Record<VIPTier, { label: string; color: string; bg: string; ring: string }> = {
   trial: {
     label: '体验卡',
@@ -243,6 +296,24 @@ export function getOPCLevelMeta(level: OPCLevel | null | undefined): {
     return { label: '未选择路径', emoji: '🎯', color: 'slate' }
   }
   return OPC_LEVEL_META[level]
+}
+
+/**
+ * 获取用户角色徽章（个人中心头像上方用）
+ *
+ * - level 为 TRADER / FLOW / SYSTEM / ASSET → 返回对应英雄称号
+ * - level 为 null / undefined / 其他 → 返回"新手启航"
+ */
+export function getOPCRoleBadge(level: OPCLevel | null | undefined): {
+  emoji: string
+  label: string
+  bg: string
+  text: string
+  border: string
+  shadow: string
+} {
+  if (!level) return OPC_ROLE_BADGE.none
+  return OPC_ROLE_BADGE[level] ?? OPC_ROLE_BADGE.none
 }
 
 /** 获取会员等级元数据 */

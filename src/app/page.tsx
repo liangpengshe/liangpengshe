@@ -460,6 +460,46 @@ function LearningPath() {
   )
 }
 
+/** ① 新手任务引导条（半透明 · 引导未诊断用户前往 /market 学习中心） */
+function NewbieTaskBanner() {
+  return (
+    <section className="px-5 pt-4 pb-0">
+      <div className="max-w-lg mx-auto md:max-w-6xl md:mx-auto">
+        <div className="group relative overflow-hidden rounded-2xl bg-white/60 backdrop-blur-sm border border-blue-200/60 p-4 md:p-5 shadow-sm hover:shadow-md hover:border-blue-300/80 transition-all">
+          {/* 装饰光斑 */}
+          <div className="absolute -top-10 -right-10 w-32 h-32 bg-blue-200/30 rounded-full blur-2xl" />
+          <div className="absolute -bottom-8 -left-8 w-24 h-24 bg-indigo-200/20 rounded-full blur-2xl" />
+
+          <div className="relative flex flex-col md:flex-row md:items-center gap-3 md:gap-4">
+            {/* 左侧：图标 + 文案 */}
+            <div className="flex items-start gap-2.5 flex-1 min-w-0">
+              <span className="flex-shrink-0 w-8 h-8 md:w-9 md:h-9 rounded-xl bg-gradient-to-br from-blue-100 to-indigo-100 flex items-center justify-center text-lg md:text-xl border border-blue-200/60">
+                🎯
+              </span>
+              <p className="text-xs md:text-sm text-slate-700 leading-relaxed pt-0.5">
+                <span className="font-bold text-slate-900">你的新手启航任务：</span>
+                根据诊断结果，前往
+                <span className="font-semibold text-blue-700">【学习中心】</span>
+                配置你的第一个 AI 工具。
+              </p>
+            </div>
+
+            {/* 右侧：CTA 按钮 */}
+            <Link
+              href="/market"
+              className="flex-shrink-0 inline-flex items-center gap-1.5 px-4 h-9 md:h-10 rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 text-white text-xs md:text-sm font-bold shadow-md shadow-blue-500/20 hover:shadow-lg hover:shadow-blue-500/30 hover:gap-2.5 hover:from-blue-600 hover:to-indigo-700 transition-all whitespace-nowrap"
+            >
+              <Sparkles size={12} className="md:w-3.5 md:h-3.5" />
+              <span>去学习中心</span>
+              <ArrowRight size={13} className="md:w-3.5 md:h-3.5 group-hover:translate-x-0.5 transition-transform" />
+            </Link>
+          </div>
+        </div>
+      </div>
+    </section>
+  )
+}
+
 /** ② OPC 四层智富阶梯（标准 2x2 网格 · 4 色渐变） */
 function EntrepreneurLadder() {
   return (
@@ -1056,6 +1096,9 @@ export default function HomePage() {
 
         {/* ═══ 5. OPC 学习实操路径（水平进度条）═══ */}
         <LearningPath />
+
+        {/* ═══ 5.5 新手任务引导条（半透明 · 引导前往学习中心）═══ */}
+        <NewbieTaskBanner />
 
         {/* ═══ 6. OPC 四层创业阶梯（非对称 Bento）═══ */}
         <EntrepreneurLadder />

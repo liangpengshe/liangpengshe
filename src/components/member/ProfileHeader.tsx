@@ -6,6 +6,7 @@ import {
   type UserStage,
   type VIPTier,
   getOPCLevelMeta,
+  getOPCRoleBadge,
   getVIPTierMeta,
   getStageLabel,
 } from '@/lib/user-stage'
@@ -47,6 +48,7 @@ export function ProfileHeader({
   className,
 }: ProfileHeaderProps) {
   const opcMeta = getOPCLevelMeta(userStage?.opcLevel)
+  const roleBadge = getOPCRoleBadge(userStage?.opcLevel)
   const vipMeta = getVIPTierMeta(userStage?.vipTier)
   const currentStageKey = userStage?.current || 'diagnosis'
   const stageTone = STAGE_TONE[currentStageKey] || STAGE_TONE.diagnosis
@@ -69,15 +71,31 @@ export function ProfileHeader({
         <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
           {/* 左侧：头像 / 昵称 / 等级徽章 */}
           <div className="flex items-start gap-3 md:gap-4">
-            <div
-              className={cn(
-                'flex-shrink-0 w-14 h-14 md:w-16 md:h-16 rounded-2xl',
-                'bg-white/15 backdrop-blur-sm border border-white/20',
-                'flex items-center justify-center text-3xl md:text-4xl',
-                'shadow-lg shadow-black/10'
-              )}
-            >
-              {userAvatar || '👤'}
+            <div className="flex flex-col items-center gap-1.5 flex-shrink-0">
+              {/* 🎖️ 角色徽章（头像上方 · 游戏化身份） */}
+              <span
+                className={cn(
+                  'inline-flex items-center gap-1 px-2.5 h-6 rounded-full border text-[10px] md:text-[11px] font-extrabold whitespace-nowrap shadow-sm',
+                  roleBadge.bg,
+                  roleBadge.text,
+                  roleBadge.border,
+                  roleBadge.shadow
+                )}
+                title="你的 OPC 身份称号"
+              >
+                <span className="leading-none">{roleBadge.emoji}</span>
+                <span className="leading-none">{roleBadge.label}</span>
+              </span>
+              <div
+                className={cn(
+                  'w-14 h-14 md:w-16 md:h-16 rounded-2xl',
+                  'bg-white/15 backdrop-blur-sm border border-white/20',
+                  'flex items-center justify-center text-3xl md:text-4xl',
+                  'shadow-lg shadow-black/10'
+                )}
+              >
+                {userAvatar || '👤'}
+              </div>
             </div>
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2 mb-1">
