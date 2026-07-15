@@ -71,7 +71,7 @@ function fallbackBrief(activities: Activity[]): string {
   } else if (has('plan') && !has('tool')) {
     rec = '规划已就位，**立刻用工具放大产能**：到 [/tools/leopard](file:///tools/leopard) 体验豹纹工坊一键仿改爆款'
   } else if (has('tool') && !has('salon')) {
-    rec = '工具已上手，**线下沙龙才是加速器**：报名 [/salon](file:///salon) 智富沙龙 +50 良朋币'
+    rec = '工具已上手，**线下沙龙才是加速器**：报名 [/salon](file:///salon) 智富沙龙 +50 智富积分'
   } else {
     rec = '四库进度齐全，**现在可申请城市合伙人**：[/partner](file:///partner)'
   }

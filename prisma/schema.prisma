@@ -3,6 +3,8 @@ generator client {
 }
 
 datasource db {
+  // Vercel 部署 = postgresql（Supabase）
+  // 本地开发需要本地起一个 postgresql/mysql，DATABASE_URL 与此 provider 匹配即可
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
@@ -12,8 +14,27 @@ model User {
   email     String   @unique
   name      String?
   avatar    String?
+  phone     String?  @unique
   role      String   @default("MEMBER")
   cityId    String?
+
+  // ═══════ 智富积分资产（与 AssetBalance 联动，冗余字段方便快速查询） ═══════
+  assetBalance Int @default(0) // 智富积分余额（冗余字段，与 AssetBalance.points 同步）
+
+  // ═══════ 订阅模型（任务 1：阶梯式订阅 + 轻量级付费） ═══════
+  // subscription_type 枚举：MONTHLY_69 / LIGHT_598 / DEEP_1980 / CITY_5980 / null（未订阅）
+  subscription_type String? // 'MONTHLY_69', 'LIGHT_598', 'DEEP_1980', 'CITY_5980'
+  // subscription_status 枚举：ACTIVE / TRIAL / CANCELED / EXPIRED
+  subscription_status String  @default("INACTIVE")
+  // OPC 诊断标记：付费 19.9 后置为 true
+  opc_level           String?
+  subscription_start  DateTime?
+  subscription_end    DateTime?
+  // 自动续费标记（仅 MONTHLY_69 适用）
+  auto_renew          Boolean  @default(false)
+  // 取消时间（用于记录用户主动取消时刻）
+  canceled_at         DateTime?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
@@ -149,14 +170,31 @@ model CommissionRecord {
   updatedAt      DateTime @updatedAt
 }
 
-// 良朋币资产账户（按手机号关联）
+// 智富积分资产账户（按手机号关联）
 model AssetBalance {
   id          String   @id @default(cuid())
   phone       String   @unique // 关联用户手机号
-  coins       Int      @default(0) // 当前良朋币余额
+  points      Int      @default(0) // 当前智富积分余额
   totalEarned Int      @default(0) // 历史累计赚取
   updatedAt   DateTime @default(now())
   createdAt   DateTime @default(now())
+}
+
+// 智富积分流水（增/减 + 行为来源 · 防止作弊 & 查询历史）
+model PointsLog {
+  id        String   @id @default(cuid())
+  userId    String   // 关联 User.id 或 opc_device_id（演示版）
+  type      String   // 'SIGN_IN', 'TASK_COMPLETE', 'PURCHASE_BONUS', 'EXCHANGE_DISCOUNT', 'RENEWAL_BONUS', 'REFERRAL', 'SHARE', 'ADMIN_ADJUST'
+  amount    Int      // 变动积分（正=收入 负=支出）
+  balance   Int      // 变动后余额
+  remark    String?  // 备注（如："完成AI数字网店第3步"）
+  // 关联资源（可选）
+  relatedId String?  // 关联业务单号（订单ID/任务ID/签到日期）
+  createdAt DateTime @default(now())
+
+  @@index([userId, type])
+  @@index([userId, createdAt])
+  @@index([createdAt])
 }
 
 // 良朋币流水（增/减 + 行为来源）

@@ -190,7 +190,7 @@ export function UGCSubmissionSection({ onlyCategory, limit = 4 }: UGCSectionProp
                       暂无 {CATEGORY_LABELS[cat]} 投稿
                     </p>
                     <p className="text-[10px] text-slate-400 mt-1">
-                      点击底部"立即上架"分享您的资源
+                      点击底部「立即上架」分享您的资源
                     </p>
                   </div>
                 </div>
@@ -221,7 +221,7 @@ export function UGCSubmissionSection({ onlyCategory, limit = 4 }: UGCSectionProp
               <div className="text-4xl mb-2">🌱</div>
               <p className="text-sm font-bold text-slate-700 mb-1">还没有投稿，成为第一个吧！</p>
               <p className="text-[11px] text-slate-500">
-                点击底部"立即上架"按钮，分享您的资源
+                点击底部「立即上架」按钮，分享您的资源
               </p>
             </div>
           )}

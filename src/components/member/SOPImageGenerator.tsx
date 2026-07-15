@@ -28,7 +28,7 @@ interface Props {
   phone?: string
   stage?: string
   onClose?: () => void
-  onSuccess?: (result: { blob: Blob; filename: string; coinsAwarded: number }) => void
+  onSuccess?: (result: { blob: Blob; filename: string; pointsAwarded: number }) => void
 }
 
 const LEVEL_META: Record<OPCLevel, { emoji: string; label: string; gradient: string }> = {
@@ -189,7 +189,7 @@ export function SOPImageGenerator({ phone, stage = 'learning', onClose, onSucces
     }
   }
 
-  // 下载并发放良朋币
+  // 下载并发放智富积分
   const handleDownload = async () => {
     if (!previewRef) return
     setDownloading(true)
@@ -215,25 +215,28 @@ export function SOPImageGenerator({ phone, stage = 'learning', onClose, onSucces
       a.click()
       URL.revokeObjectURL(url)
 
-      // 发放良朋币
+      // 发放智富积分
       if (phone) {
-        const coinRes = await fetch('/api/coins', {
+        const pointsRes = await fetch('/api/points', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            phone,
-            action: 'share',
+            action: 'task-reward',
+            userId: phone,
+            taskType: 'SOP_IMAGE_DOWNLOAD',
             amount: 10,
-            note: 'AI SOP 简图下载奖励',
+            remark: 'AI SOP 简图下载奖励',
           }),
         })
-        const coinData = await coinRes.json()
-        if (coinData?.success) {
-          setCoinsAwarded(10)
-          onSuccess?.({ blob, filename, coinsAwarded: 10 })
+        const pointsData = await pointsRes.json()
+        if (pointsData?.success) {
+          setCoinsAwarded(pointsData?.data?.balance ?? 10)
+          onSuccess?.({ blob, filename, pointsAwarded: pointsData?.data?.balance ?? 10 })
+        } else {
+          onSuccess?.({ blob, filename, pointsAwarded: 0 })
         }
       } else {
-        onSuccess?.({ blob, filename, coinsAwarded: 0 })
+        onSuccess?.({ blob, filename, pointsAwarded: 0 })
       }
     } catch (e) {
       setError((e as Error).message || '下载失败，请重试')
@@ -274,7 +277,7 @@ export function SOPImageGenerator({ phone, stage = 'learning', onClose, onSucces
       <p className="text-[11px] text-slate-600 leading-relaxed mb-3">
         📍 基于你当前的 <strong>{opcLevel ? LEVEL_META[opcLevel].label : 'OPC 路径'}</strong> 和阶段
         <strong className="text-violet-600">「{STAGE_TASKS[stage]?.title || STAGE_TASKS.learning.title}」</strong>，
-        生成朋友圈长图。下载后自动奖励 <strong className="text-amber-600">10 良朋币</strong>。
+        生成朋友圈长图。下载后自动奖励 <strong className="text-amber-600">10 智富积分</strong>。
       </p>
 
       {!html && !generating && (
@@ -334,13 +337,13 @@ export function SOPImageGenerator({ phone, stage = 'learning', onClose, onSucces
                 ) : (
                   <>
                     <Download size={14} />
-                    下载图片 · +10 良朋币
+                    下载图片 · +10 智富积分
                   </>
                 )}
               </button>
             </div>
 
-            {/* 良朋币到账提示 */}
+            {/* 智富积分到账提示 */}
             {coinsAwarded !== null && (
               <motion.div
                 initial={{ opacity: 0, scale: 0.95 }}
@@ -350,7 +353,7 @@ export function SOPImageGenerator({ phone, stage = 'learning', onClose, onSucces
                 <Coins size={16} className="text-amber-500" />
                 <span className="text-xs text-amber-800 font-bold flex-1">
                   <CheckCircle2 size={12} className="inline-block mr-1 text-emerald-500" />
-                  奖励已到账！+{coinsAwarded} 良朋币
+                  奖励已到账！+{coinsAwarded} 智富积分
                 </span>
               </motion.div>
             )}

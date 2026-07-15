@@ -46,8 +46,8 @@ import {
   Building,
   Trophy,
   Award,
-  type LucideIcon,
 } from 'lucide-react'
+import type { LucideIcon } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { getProjectBySlug, type ProjectItem } from '@/data/project-items'
 import { cn } from '@/lib/utils'

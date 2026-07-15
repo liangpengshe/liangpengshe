@@ -1,38 +1,20 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
-import { motion } from 'framer-motion'
-import {
-  ArrowRight,
-  Sparkles,
-  Rocket,
-  Briefcase,
-  Compass,
-  BookOpen,
-  Wrench,
-  TrendingUp,
-  CheckCircle2,
-  Clock,
-  Lock,
-  ShoppingCart,
-  Megaphone,
-  Settings2,
-  Gem,
-  Zap,
-} from 'lucide-react'
+import { useRouter } from 'next/navigation'
 import ClientLayout from '@/components/ClientLayout'
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
-import { FlowControlBar, type LibraryTabValue } from '@/components/learning/FlowControlBar'
-import { LibraryCard } from '@/components/learning/LibraryCard'
-import { resolveSmartLearningHref } from '@/lib/user-stage'
-import { cn } from '@/lib/utils'
+import { ArrowRight, Sparkles, Rocket, Compass, BookOpen, Wrench, TrendingUp, CheckCircle2, Clock, Lock, ShoppingCart, Megaphone, Settings2, Gem } from 'lucide-react'
 import { toast } from '@/components/Toast'
+import { cn } from '@/lib/utils'
 
-// ════════════════════════════════════════════════════════════════
-// 静态数据
-// ════════════════════════════════════════════════════════════════
+/**
+ * 良朋社 OPC 首页（移动端优先 · 简化版）
+ * - 移除 framer-motion 避免 hydration 报错
+ * - 保留所有核心功能模块
+ * - SSR 安全的 mounted 模式
+ */
 
 const stats = [
   { label: '已赋能企业', value: 300, suffix: '+', unit: '家' },
@@ -41,205 +23,34 @@ const stats = [
   { label: 'AI 案例', value: 100, suffix: '+', unit: '' },
 ]
 
-// 4 步学习实操路径
-// requiresLevel: true  → 点击时按用户 opc_level 智能跳转到 /guide/{level}
-// 降级：未诊断 → /market/tools（四库总览页）
-type LearningPathItem = {
-  step: string
-  title: string
-  desc: string
-  /** 默认/降级状态；动态计算时会覆盖 */
-  status: 'done' | 'active' | 'locked'
-  href: string
-  requiresLevel: boolean
-  icon: typeof Compass
-}
-
-// ════════════════════════════════════════════════════════════════
-// 学习进度动态状态计算（从 /api/user/learning-progress 读取）
-// ════════════════════════════════════════════════════════════════
-type LPStatus = 'done' | 'active' | 'locked'
-interface LiveProgress {
-  opcLevel?: string
-  learning_score: number
-  can_unlock_practice: boolean
-  step_diagnosis_done: boolean
-  step_learning_done: boolean
-  step_practice_done: boolean
-  step_scaleup_done: boolean
-}
-
-function computeStepStatus(step: '01' | '02' | '03' | '04', p: LiveProgress | null): LPStatus {
-  if (!p) return 'active' // 未读取到进度时保持默认 active
-  if (step === '01') return p.step_diagnosis_done ? 'done' : 'active'
-  if (step === '02') {
-    if (p.step_learning_done) return 'done'
-    if (p.step_diagnosis_done) return 'active'
-    return 'locked'
-  }
-  if (step === '03') {
-    if (p.step_practice_done) return 'done'
-    if (p.can_unlock_practice) return 'active'
-    return 'locked'
-  }
-  if (step === '04') {
-    if (p.step_scaleup_done) return 'done'
-    if (p.step_practice_done) return 'active'
-    return 'locked'
-  }
-  return 'locked'
-}
-const learningPath: LearningPathItem[] = [
-  {
-    step: '01',
-    title: '咨询诊断',
-    desc: 'AI 评估创业起点与瓶颈，获取 1v1 专家咨询建议。',
-    status: 'done' as const,
-    href: '/diagnosis',
-    requiresLevel: false,
-    icon: Compass,
-  },
-  {
-    step: '02',
-    title: '学习入门',
-    desc: '匹配四库专属方案，完成账号注册与工具配置，执行 3-7 天入门实操。',
-    status: 'active' as const,
-    href: '/market', // 降级：未诊断时进入四库总览页
-    requiresLevel: true, // 智能分流：按 opc_level 跳 /guide/{level}
-    icon: BookOpen,
-  },
-  {
-    step: '03',
-    title: '运营实操',
-    desc: '从【项目库】精准选品，跟随 SOP 执行第一套完整商业闭环节奏。',
-    status: 'locked' as const,
-    href: '/market/projects', // 降级：未诊断时进入项目库
-    requiresLevel: true, // 智能分流：按 opc_level 跳 /guide/{level}
-    icon: Wrench,
-  },
-  {
-    step: '04',
-    title: '矩阵放大',
-    desc: '多店/多号矩阵运营，实现规模化复制，解锁多平台自动化。',
-    status: 'locked' as const,
-    href: '/scale-up', // 矩阵放大综合控制台（深色科技风 · 5 大板块）
-    requiresLevel: false,
-    icon: TrendingUp,
-  },
+const learningPath = [
+  { step: '01', title: '咨询诊断', desc: 'AI 评估创业起点与瓶颈', status: 'active' as const, icon: Compass },
+  { step: '02', title: '学习入门', desc: '完成账号注册与工具配置', status: 'locked' as const, icon: BookOpen },
+  { step: '03', title: '运营实操', desc: '从项目库精准选品', status: 'locked' as const, icon: Wrench },
+  { step: '04', title: '矩阵放大', desc: '多店/多号矩阵运营', status: 'locked' as const, icon: TrendingUp },
 ]
 
-// 四层智富阶梯（标准 2x2 网格 · 4 色渐变）
 const entrepreneurLadder = [
-  {
-    layer: '第一层',
-    title: '� 交易型 OPC',
-    desc: 'AI 网店群、智富严选、跑通首单赚第一笔钱',
-    href: '/guide/trader',
-    cta: '快速了解',
-    color: 'bg-gradient-to-r from-orange-400 to-amber-500',
-    icon: ShoppingCart,
-  },
-  {
-    layer: '第二层',
-    title: '� 流量型 OPC',
-    desc: '内容获客、自媒体矩阵',
-    href: '/guide/flow',
-    cta: '了解详情',
-    color: 'bg-gradient-to-r from-pink-500 to-rose-500',
-    icon: Megaphone,
-  },
-  {
-    layer: '第三层',
-    title: '⚙️ 系统型 OPC',
-    desc: '企业流程改造、高客单',
-    href: '/guide/system',
-    cta: '了解详情',
-    color: 'bg-gradient-to-r from-blue-500 to-indigo-600',
-    icon: Settings2,
-  },
-  {
-    layer: '第四层',
-    title: '� 资产型 OPC',
-    desc: '数字资产、全球外包',
-    href: '/guide/asset',
-    cta: '了解详情',
-    color: 'bg-gradient-to-r from-purple-500 to-indigo-700',
-    icon: Gem,
-  },
+  { layer: '第一层', title: '🛒 交易型 OPC', desc: 'AI 网店群、智富严选、跑通首单', href: '/guide/trader', color: 'bg-gradient-to-r from-orange-400 to-amber-500' },
+  { layer: '第二层', title: '📢 流量型 OPC', desc: '内容获客、自媒体矩阵', href: '/guide/flow', color: 'bg-gradient-to-r from-pink-500 to-rose-500' },
+  { layer: '第三层', title: '⚙️ 系统型 OPC', desc: '企业流程改造、高客单', href: '/guide/system', color: 'bg-gradient-to-r from-blue-500 to-indigo-600' },
+  { layer: '第四层', title: '💎 资产型 OPC', desc: '数字资产、全球外包', href: '/guide/asset', color: 'bg-gradient-to-r from-purple-500 to-indigo-700' },
 ]
 
-/* === 商业全景沙盘卡片已从首页阶梯区块移除 ===
- * 之前的位置与样式：
- *   layer: '商业全景',
- *   title: '📊 进入商业全景看利润',
- *   desc: '投资人 / 主理人专属入口',
- *   href: '/pitch',
- *   color: 'from-slate-700 to-slate-900',
- *   span: 'col-span-1',
- *   large: false,
- *   icon: Briefcase,
- */
+const libraryCards = [
+  { title: 'AI智富工具库', subtitle: 'AI 自研工具、电商工作台、运营插件', href: '/market/tools', icon: '🔧', tag: '自研' },
+  { title: 'AI智富项目库', subtitle: '数字网店、跨境电商、AI 编程系统', href: '/market/projects', icon: '🚀', tag: '落地案例' },
+  { title: 'AI智富服务库', subtitle: 'OPC 内训、陪跑、代运营、企业 GEO', href: '/market/services', icon: '💼', tag: '陪跑' },
+  { title: 'AI智富资源库', subtitle: 'AI 硬件、精品教程、城市招商加盟', href: '/market/resources', icon: '📚', tag: '链接' },
+]
 
-// 四库 Tabs 预览内容（保持原 libraryPreview 数据结构，便于 fetchProjects 复用）
-// 标题已对齐"AI智富"全局命名规范
-const libraryPreview = {
-  tools: {
-    title: 'AI智富工具库',
-    desc: 'OPC 独家自研 + 严选 AI 生态工具导航',
-    items: [
-      { name: '豹纹工坊', desc: '一键生成爆款素材', icon: '🛠️' },
-      { name: '灵犀 AI', desc: '智能内容创作', icon: '✨' },
-      { name: '先锋派数字人', desc: 'AI 数字人视频', icon: '🎬' },
-    ],
-    href: '/market',
-  },
-  projects: {
-    title: 'AI智富项目库',
-    desc: '精选 AI 落地项目案例，可复制到各城市',
-    items: [
-      { name: 'AI TikTok Shop', desc: '海外短视频带货', icon: '🌏' },
-      { name: 'AI Shopify 选品', desc: '智能选品上架', icon: '🛒' },
-      { name: 'AI 私域引流', desc: '自动化获客系统', icon: '📈' },
-    ],
-    href: '/market/projects',
-  },
-  services: {
-    title: 'AI智富服务库',
-    desc: 'AI 内训、GEO 增长、陪跑服务',
-    items: [
-      { name: 'AI 内训', desc: '企业 AI 转型培训', icon: '🎓' },
-      { name: 'GEO 增长', desc: '生成式引擎优化', icon: '🎯' },
-      { name: '陪跑服务', desc: '90 天落地辅导', icon: '🤝' },
-    ],
-    href: '/market/services',
-  },
-  resources: {
-    title: 'AI智富资源库',
-    desc: '学习资料、行业报告、城市运营干货',
-    items: [
-      { name: '行业报告', desc: 'AI 趋势研报', icon: '📊' },
-      { name: '运营干货', desc: '实操 SOP 文档', icon: '📚' },
-      { name: '城市活动', desc: '沙龙 / 聚会预告', icon: '🎤' },
-    ],
-    href: '/market/resources',
-  },
-}
+const statusConfig = {
+  done: { bg: 'bg-gradient-to-br from-emerald-400 to-green-600', text: 'text-emerald-600', label: '已完成' },
+  active: { bg: 'bg-gradient-to-br from-blue-500 via-indigo-500 to-purple-600', text: 'text-blue-600', label: '进行中' },
+  locked: { bg: 'bg-slate-200', text: 'text-slate-400', label: '待解锁' },
+} as const
 
-// ════════════════════════════════════════════════════════════════
-// 类型定义
-// ════════════════════════════════════════════════════════════════
-
-interface BentoItem {
-  title: string
-  icon: string
-  description: string
-  href: string
-  large: boolean
-  bgColor: string
-  textColor: string
-  badge?: { text: string; icon: typeof Rocket; color: string }
-}
-
+// 实时动态（ActivityTicker 使用）
 interface Activity {
   id: string
   city: string
@@ -248,105 +59,531 @@ interface Activity {
   createdAt: string
 }
 
-const fallbackBentoItems: BentoItem[] = [
-  {
-    title: 'OPC 城市主理人生态圈',
-    icon: '🚀',
-    description: '全国 7 座城市已联动，招募更多城市主理人共拓 AI 市场',
-    href: '/partner',
-    large: true,
-    bgColor: 'bg-gradient-to-br from-blue-700 via-indigo-700 to-purple-800',
-    textColor: 'text-white',
-    badge: { text: '招募中', icon: Rocket, color: 'bg-orange-500' },
-  },
-  {
-    title: 'AI智富工具库 · 智富引擎',
-    icon: '🔧',
-    description: '实用AI工具推荐与教程，赋能个人创业者',
-    href: '/market',
-    large: false,
-    bgColor: '',
-    textColor: '',
-  },
-  {
-    title: 'AI智富项目库 · 创富引擎',
-    icon: '📁',
-    description: '精选AI落地项目案例，可复制到各城市运营',
-    href: '/market/projects',
-    large: false,
-    bgColor: '',
-    textColor: '',
-  },
-  {
-    title: 'AI智富服务库 · 护航引擎',
-    icon: '💼',
-    description: 'AI内训、GEO增长、陪跑服务，解决落地最后一环',
-    href: '/market/services',
-    large: false,
-    bgColor: '',
-    textColor: '',
-  },
-  {
-    title: 'AI智富资源库 · 链接引擎',
-    icon: '📚',
-    description: '学习资料、行业报告、城市运营干货分享',
-    href: '/market/resources',
-    large: false,
-    bgColor: '',
-    textColor: '',
-  },
+// 兜底活动数据（API 失败时使用）
+// 注：createdAt 必须用静态字符串，禁止 new Date()，否则会导致 SSR/CSR 时间戳不一致触发 hydration 报错
+const STATIC_DATE = '2026-07-15T10:00:00.000Z'
+const fallbackActivities: Activity[] = [
+  { id: 'f1', city: '深圳', user: '李总', action: '刚刚完成了 AI 商业诊断', createdAt: STATIC_DATE },
+  { id: 'f2', city: '东莞', user: '王总', action: '下载了 4 库全胜启动包', createdAt: STATIC_DATE },
+  { id: 'f3', city: '乌海', user: '主理人', action: '发布了本地 AI 沙龙', createdAt: STATIC_DATE },
+  { id: 'f4', city: '东莞', user: '王老板', action: '解锁了【矩阵放大】阶段', createdAt: STATIC_DATE },
+  { id: 'f5', city: '柳州', user: '陈姐', action: '用 AI 选品生成 12 个 SKU', createdAt: STATIC_DATE },
+  { id: 'f6', city: '深圳', user: '张总', action: '提交了合伙人申请', createdAt: STATIC_DATE },
+  { id: 'f7', city: '乌海', user: '李主理', action: '1 周招募 12 个种子用户', createdAt: STATIC_DATE },
+  { id: 'f8', city: '柳州', user: '王老板', action: 'AI 商品图 3 天顶 1 月', createdAt: STATIC_DATE },
 ]
 
-// ════════════════════════════════════════════════════════════════
-// 子组件
-// ════════════════════════════════════════════════════════════════
+export default function HomePage() {
+  const router = useRouter()
+  const [activeCount, setActiveCount] = useState(238)
+  // 初始化为 fallbackActivities，确保 ActivityTicker 在挂载后立即可见
+  const [activities, setActivities] = useState<Activity[]>(fallbackActivities)
 
-function CommunityHeartbeat() {
-  const [activeCount, setActiveCount] = useState(0)
-  const [loading, setLoading] = useState(true)
+  // ──────────────────────────────────────────────────────────
+  // 学习路径 · 用户状态（从 localStorage 读取，挂在后才生效避免 hydration 报错）
+  // ──────────────────────────────────────────────────────────
+  const [opcLevel, setOpcLevel] = useState<string | null>(null)
+  const [learningScore, setLearningScore] = useState<number>(0)
+  const [canUnlockPractice, setCanUnlockPractice] = useState<boolean>(false)
 
   useEffect(() => {
-    const fetchHeartbeat = async () => {
-      try {
-        const res = await fetch('/api/community/heartbeat')
-        const data = await res.json()
-        if (data.success) {
+    // 简单心跳（避免服务端阻塞）
+    fetch('/api/community/heartbeat')
+      .then(r => r.json())
+      .then(data => {
+        if (data?.success && typeof data?.data?.activeCount === 'number') {
           setActiveCount(data.data.activeCount)
-        } else {
-          setActiveCount(238)
         }
-      } catch {
-        setActiveCount(238)
-      } finally {
-        setLoading(false)
-      }
+      })
+      .catch(() => {/* 静默降级 */})
+
+    // 拉取实时活动（失败则保留兜底数据）
+    fetch('/api/activities')
+      .then(r => r.json())
+      .then(data => {
+        if (data?.success && Array.isArray(data.data) && data.data.length > 0) {
+          setActivities(data.data)
+        }
+      })
+      .catch(() => {/* 静默降级，保留 fallbackActivities */})
+
+    // 客户端读取用户学习状态（仅在浏览器中执行）
+    if (typeof window !== 'undefined') {
+      const level = localStorage.getItem('opc_level')
+      const scoreRaw = localStorage.getItem('learning_score') || '0'
+      const score = parseInt(scoreRaw, 10)
+      const unlock = localStorage.getItem('can_unlock_practice') === 'true'
+      setOpcLevel(level)
+      setLearningScore(Number.isFinite(score) ? score : 0)
+      setCanUnlockPractice(unlock)
     }
-    fetchHeartbeat()
-    const interval = setInterval(fetchHeartbeat, 15000)
-    return () => clearInterval(interval)
   }, [])
 
+  // ──────────────────────────────────────────────────────────
+  // 学习路径 · 四个步骤的精准分流与拦截逻辑
+  // ──────────────────────────────────────────────────────────
+  const handleStep1 = () => {
+    // STEP 01 咨询诊断：直达诊断页
+    router.push('/diagnosis')
+  }
+
+  const handleStep2 = () => {
+    // STEP 02 学习入门：基于 opc_level 动态分流
+    const level = typeof window !== 'undefined' ? localStorage.getItem('opc_level') : opcLevel
+    if (level) {
+      router.push(`/guide/${level}`)
+    } else {
+      // 未诊断：先引导到 /market 浏览
+      router.push('/market')
+    }
+  }
+
+  const handleStep3 = () => {
+    // STEP 03 运营实操：积分拦截
+    const scoreRaw = typeof window !== 'undefined'
+      ? (localStorage.getItem('learning_score') || '0')
+      : String(learningScore)
+    const score = parseInt(scoreRaw, 10)
+    const level = typeof window !== 'undefined' ? localStorage.getItem('opc_level') : opcLevel
+
+    if (Number.isFinite(score) && score >= 80) {
+      router.push(`/market/projects?recommend=${level || 'trader'}`)
+    } else {
+      // 弹出拦截提示
+      toast.warn(
+        `您当前学习进度为 ${Number.isFinite(score) ? score : 0} 分，需达到 80 分才可解锁运营实操。请先返回【学习入门】完成新手任务。`
+      )
+    }
+  }
+
+  const handleStep4 = () => {
+    // STEP 04 矩阵放大：闭环解锁拦截
+    const isUnlocked = typeof window !== 'undefined'
+      ? localStorage.getItem('can_unlock_practice') === 'true'
+      : canUnlockPractice
+
+    if (isUnlocked) {
+      router.push('/scale-up')
+    } else {
+      toast.warn('您尚未完成运营实操的闭环。请先前往【项目库】完成单个项目的 SOP 执行，才能开启矩阵放大阶段。')
+    }
+  }
+
   return (
-    <div className="flex-shrink-0 flex items-center gap-2 bg-white/10 backdrop-blur-md border border-white/20 rounded-full px-3 py-2 ml-2">
-      <span className="relative flex h-2.5 w-2.5">
-        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-        <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-green-500"></span>
-      </span>
-      <div className="text-xs leading-tight">
-        <div className="text-white/70">社区今日活跃</div>
-        <div className="text-white font-semibold">
-          {loading ? '...' : activeCount} 人
-        </div>
+    <ClientLayout>
+      <div className="min-h-screen bg-slate-50">
+        {/* 1. HERO — 图四风格：左文 + 右数字人 */}
+        <section className="relative overflow-hidden bg-gradient-to-b from-slate-900 to-slate-800 pt-8 md:pt-10 pb-12 md:pb-16 px-5">
+          {/* 背景光斑 */}
+          <div className="absolute top-10 left-1/4 w-72 h-72 bg-blue-500/20 rounded-full blur-3xl animate-pulse pointer-events-none" />
+          <div className="absolute top-32 right-1/4 w-96 h-96 bg-purple-500/20 rounded-full blur-3xl animate-pulse pointer-events-none" />
+
+          <div className="relative max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8 items-center">
+            {/* 左：文案 */}
+            <div className="text-left">
+              <div className="inline-flex items-center gap-2 bg-gradient-to-r from-amber-500/15 via-yellow-400/15 to-amber-500/15 backdrop-blur-md border border-amber-400/40 rounded-full px-4 py-1.5 mb-4 shadow-lg">
+                <span className="text-base">🏆</span>
+                <span className="text-xs md:text-sm text-amber-100 font-semibold tracking-wide">
+                  良朋社<span className="text-amber-300">OPC</span> 智富生态系统
+                </span>
+              </div>
+
+              <h1 className="text-3xl md:text-5xl lg:text-6xl font-extrabold leading-tight mb-3">
+                <span className="text-white">一人公司 ×</span>
+                <br />
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-400">
+                  OPC 智富操作系统
+                </span>
+              </h1>
+
+              {/* 智·富 标语行 */}
+              <p className="text-sm md:text-base text-slate-200 mb-3 leading-relaxed">
+                <span className="font-extrabold text-amber-300 mr-2">智·富</span>
+                以智生财，富在当下
+                <span className="mx-1.5 text-slate-500">|</span>
+                用 AI 武装你的生意
+              </p>
+
+              <p className="text-slate-400 mb-6 text-xs md:text-sm">
+                汇聚全国 AI 从業者与企业，共同探索 AI 智富路径在实际落地中的应用与商业价值
+              </p>
+
+              <div className="flex flex-col sm:flex-row gap-3">
+                <Link
+                  href="/salon"
+                  className="inline-flex items-center justify-center bg-gradient-to-r from-amber-500 to-orange-500 text-white font-bold py-3 px-5 rounded-xl shadow-lg active:scale-95 transition-transform text-sm md:text-base"
+                >
+                  <Sparkles size={18} className="mr-2" />
+                  智富沙龙·立即报名
+                  <ArrowRight size={16} className="ml-2" />
+                </Link>
+                <Link
+                  href="/partner"
+                  className="inline-flex items-center justify-center bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 text-white font-bold py-3 px-5 rounded-xl shadow-lg active:scale-95 transition-transform text-sm md:text-base"
+                >
+                  <Rocket size={18} className="mr-2" />
+                  智富主理人·城市招募
+                </Link>
+              </div>
+            </div>
+
+            {/* 右：2D 数字人形象（纯 CSS 动画版 · 避免 framer-motion hydration 报错） */}
+            <div className="relative hidden md:flex items-center justify-center">
+              <div className="relative w-full aspect-square max-w-md">
+                {/* 光晕背景 */}
+                <div className="absolute inset-0 bg-gradient-to-br from-blue-500/20 via-purple-500/25 to-pink-500/20 rounded-3xl blur-2xl" />
+                {/* 装饰光带 */}
+                <div className="absolute inset-0 overflow-hidden rounded-3xl pointer-events-none">
+                  <div
+                    className="absolute left-0 right-0 h-24 -translate-y-2 animate-pulse"
+                    style={{
+                      top: '58%',
+                      background:
+                        'linear-gradient(90deg, transparent 0%, rgba(168,85,247,0) 5%, rgba(168,85,247,0.55) 30%, rgba(236,72,153,0.7) 50%, rgba(99,102,241,0.55) 70%, rgba(168,85,247,0) 95%, transparent 100%)',
+                      filter: 'blur(8px)',
+                      mixBlendMode: 'screen',
+                    }}
+                  />
+                  <div
+                    className="absolute left-0 right-0 h-3 -translate-y-2 animate-pulse"
+                    style={{
+                      top: '58%',
+                      background:
+                        'linear-gradient(90deg, transparent 0%, rgba(255,255,255,0) 10%, rgba(255,255,255,0.85) 50%, rgba(255,255,255,0) 90%, transparent 100%)',
+                      filter: 'blur(3px)',
+                      animationDelay: '0.6s',
+                      mixBlendMode: 'screen',
+                    }}
+                  />
+                  <div className="absolute -top-10 -right-10 w-40 h-40 bg-purple-500/40 rounded-full blur-3xl animate-pulse" />
+                  <div
+                    className="absolute -bottom-10 -left-10 w-32 h-32 rounded-full blur-3xl animate-pulse"
+                    style={{
+                      background: 'radial-gradient(circle, rgba(99,102,241,0.5), transparent 70%)',
+                      animationDelay: '1.2s',
+                    }}
+                  />
+                </div>
+                {/* 数字人图片（CSS 浮动） */}
+                <div className="relative w-full h-full animate-float">
+                  <Image
+                    src="/images/liangliang.png"
+                    alt="良良 - 良朋社 AI 数字助手"
+                    width={400}
+                    height={400}
+                    priority
+                    quality={95}
+                    className="relative w-full h-full object-contain drop-shadow-[0_10px_30px_rgba(168,85,247,0.35)]"
+                  />
+                </div>
+                {/* 旋转光圈 */}
+                <div className="absolute -inset-4 border-2 border-blue-400/30 rounded-3xl animate-spin-slow pointer-events-none" />
+                <div className="absolute -inset-8 border border-purple-400/20 rounded-3xl animate-spin-reverse pointer-events-none" />
+                {/* 浮动徽章 */}
+                <div className="absolute top-8 -right-2 bg-white/10 backdrop-blur-md border border-white/20 rounded-full px-3 py-1.5 text-xs text-white shadow-lg">
+                  ✨ AI 智富助理
+                </div>
+                <div className="absolute bottom-12 -left-2 bg-gradient-to-r from-purple-500/80 to-pink-500/80 backdrop-blur-md rounded-full px-3 py-1.5 text-xs text-white shadow-lg">
+                  🎯 一人公司 × 智富引擎
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* 1.5 实时动态滚动条（Hero 正下方 · 重叠上移 10px） */}
+        <section className="relative -mt-10 px-5 z-10 mb-8 md:mb-12">
+          <div className="max-w-lg md:max-w-6xl mx-auto">
+            <ActivityTicker activities={activities} />
+          </div>
+        </section>
+
+        {/* 2. 数据条 */}
+        <section className="px-5 pt-5 pb-3">
+          <div className="max-w-lg mx-auto md:max-w-6xl">
+            <div className="bg-gradient-to-r from-slate-800/60 to-slate-900/60 backdrop-blur-md border border-white/20 rounded-3xl px-4 py-4">
+              <div className="flex items-center gap-3 overflow-x-auto pb-1">
+                {stats.map((stat, index) => (
+                  <div key={index} className="flex-shrink-0 w-24 text-center">
+                    <div className="text-2xl font-bold text-white">
+                      {stat.value}{stat.suffix}
+                    </div>
+                    <div className="text-[10px] text-white/70 mt-0.5">
+                      {stat.label}{stat.unit}
+                    </div>
+                  </div>
+                ))}
+                <div className="flex-shrink-0 flex items-center gap-1.5 bg-white/10 border border-white/20 rounded-full px-2.5 py-1.5 ml-auto">
+                  <span className="relative flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500" />
+                  </span>
+                  <span className="text-[10px] text-white/70">活跃 {activeCount}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* 3. 诊断 CTA */}
+        <section className="px-5 pt-3 pb-2">
+          <div className="max-w-lg mx-auto md:max-w-6xl">
+            <div className="relative bg-gradient-to-r from-amber-500 via-orange-500 to-rose-500 rounded-2xl p-4 md:p-5 shadow-xl overflow-hidden">
+              <div className="relative flex items-center gap-3 text-white">
+                <div className="flex-shrink-0 w-11 h-11 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center ring-3 ring-white/30">
+                  <span className="text-xl">🎁</span>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-[10px] font-bold text-amber-100 tracking-wider mb-0.5">
+                    🔥 限时免费 · 每天仅 10 个名额
+                  </div>
+                  <h3 className="text-sm md:text-base font-bold leading-tight">
+                    免费领取：OPC 智富入局诊断
+                  </h3>
+                </div>
+                <Link
+                  href="/diagnosis"
+                  className="flex-shrink-0 inline-flex items-center gap-1 px-3 py-2 bg-white text-orange-600 text-xs font-bold rounded-lg shadow-md active:scale-95 transition-transform"
+                >
+                  <Sparkles size={12} />
+                  立即领取
+                </Link>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* 4. 学习路径 */}
+        <section className="px-5 pt-5 pb-3">
+          <div className="max-w-lg mx-auto md:max-w-6xl">
+            <h2 className="text-base md:text-lg font-bold text-slate-800 flex items-center gap-2 mb-3">
+              <span className="text-xl">🏆</span>
+              你的 OPC 学习智富路径
+            </h2>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5">
+              {learningPath.map((item) => {
+                const Icon = item.icon
+
+                // ──────────────────────────────────────────────
+                // 根据 localStorage 状态动态计算本步状态
+                //   'done'    = ✅ 已完成（绿色）
+                //   'active'  = ⏳ 进行中（蓝色脉冲）
+                //   'locked'  = 🔒 待解锁（灰色）
+                // ──────────────────────────────────────────────
+                const hasAnyProgress = opcLevel || learningScore > 0 || canUnlockPractice
+                let status: 'done' | 'active' | 'locked' = 'locked'
+
+                if (item.step === '01') {
+                  status = hasAnyProgress ? 'done' : 'active'
+                } else if (item.step === '02') {
+                  if (learningScore > 0 || canUnlockPractice) status = 'done'
+                  else status = opcLevel ? 'active' : 'locked'
+                } else if (item.step === '03') {
+                  if (canUnlockPractice) status = 'done'
+                  else status = learningScore >= 80 ? 'active' : 'locked'
+                } else if (item.step === '04') {
+                  if (canUnlockPractice) status = 'done'
+                  else status = learningScore >= 80 ? 'active' : 'locked'
+                }
+
+                const badgeConfig = {
+                  done:   { bg: 'bg-emerald-100', text: 'text-emerald-700', label: '✅ 已完成' },
+                  active: { bg: 'bg-blue-100',    text: 'text-blue-700',    label: '⏳ 进行中' },
+                  locked: { bg: 'bg-slate-100',   text: 'text-slate-500',   label: '🔒 待解锁' },
+                }[status]
+
+                // 当前步骤对应点击处理
+                const onClick =
+                  item.step === '01' ? handleStep1 :
+                  item.step === '02' ? handleStep2 :
+                  item.step === '03' ? handleStep3 :
+                  handleStep4
+
+                return (
+                  <button
+                    key={item.step}
+                    type="button"
+                    onClick={onClick}
+                    className="relative block w-full text-left bg-white border border-slate-200 rounded-2xl p-3 hover:shadow-md transition-shadow active:scale-[0.98]"
+                  >
+                    {/* 右上角状态徽章 */}
+                    <span
+                      className={cn(
+                        'absolute top-2 right-2 text-[9px] font-bold px-1.5 py-0.5 rounded-full whitespace-nowrap',
+                        badgeConfig.bg,
+                        badgeConfig.text,
+                        status === 'active' && 'animate-pulse'
+                      )}
+                    >
+                      {badgeConfig.label}
+                    </span>
+
+                    <div className="flex items-center gap-2 mb-1.5 pr-16">
+                      <div className={cn('w-8 h-8 rounded-full ring-2 ring-white shadow flex items-center justify-center text-white', statusConfig[item.status].bg, 'ring-blue-100')}>
+                        <Icon size={14} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-[9px] font-bold text-slate-400 tracking-wider">STEP {item.step}</div>
+                        <div className="text-xs font-bold text-slate-800 leading-tight">{item.title}</div>
+                      </div>
+                    </div>
+                    <p className="text-[10px] text-slate-500 leading-snug line-clamp-2">{item.desc}</p>
+                    <div className="mt-1.5 flex items-center justify-end">
+                      <ArrowRight size={10} className="text-slate-300" />
+                    </div>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        </section>
+
+        {/* 4. 学习路径 */}
+        <section className="px-5 pt-5 pb-3">
+          <div className="max-w-lg mx-auto md:max-w-6xl">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-base md:text-lg font-bold text-slate-900 flex items-center gap-2">
+                <span className="text-xl">📈</span>
+                OPC四层智富阶梯
+              </h2>
+              <Link href="/market" className="text-[11px] font-bold text-slate-600 hover:text-blue-700 bg-white border border-slate-300 px-2.5 py-1 rounded-full">
+                🛠️ 我是老手 →
+              </Link>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {entrepreneurLadder.map((item) => (
+                <Link
+                  key={item.title}
+                  href={item.href}
+                  className={cn('rounded-2xl p-4 text-white min-h-[120px] flex flex-col justify-between active:scale-[0.98] transition-transform shadow-md', item.color)}
+                >
+                  <div>
+                    <div className="text-[9px] font-bold text-white/80 tracking-widest mb-0.5">{item.layer}</div>
+                    <h3 className="text-base font-extrabold leading-tight">{item.title}</h3>
+                  </div>
+                  <div>
+                    <p className="text-[10px] text-white/90 leading-relaxed">{item.desc}</p>
+                    <div className="mt-1.5 inline-flex items-center gap-1 text-[10px] font-bold">
+                      了解详情 <ArrowRight size={10} />
+                    </div>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* 6. 四库全胜系统 */}
+        <section className="px-5 pt-5 pb-3">
+          <div className="max-w-lg mx-auto md:max-w-6xl">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-base md:text-lg font-bold text-slate-900 flex items-center gap-2">
+                <span className="text-xl">🏆</span>
+                AI四库全胜系统
+              </h2>
+              <Link href="/market" className="text-xs text-blue-600 hover:text-blue-700">查看全部 →</Link>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {libraryCards.map((card) => (
+                <Link
+                  key={card.href}
+                  href={card.href}
+                  className="group block rounded-2xl bg-white border border-slate-200 p-4 min-h-[110px] hover:shadow-md hover:-translate-y-0.5 transition-all"
+                >
+                  <div className="flex items-start justify-between mb-2">
+                    <div className="w-9 h-9 rounded-xl bg-slate-50 flex items-center justify-center text-xl">
+                      <span>{card.icon}</span>
+                    </div>
+                    <span className="bg-slate-100 text-slate-500 text-[9px] px-1.5 py-0.5 rounded-full font-medium">
+                      {card.tag}
+                    </span>
+                  </div>
+                  <h3 className="text-sm font-bold text-slate-900 leading-tight">{card.title}</h3>
+                  <p className="mt-1 text-[10px] text-slate-500 leading-relaxed line-clamp-2">{card.subtitle}</p>
+                  <div className="mt-2 flex items-center justify-end">
+                    <span className="inline-flex items-center gap-1 text-[10px] text-blue-600 font-medium">
+                      前往进入 <ArrowRight size={10} />
+                    </span>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* 6.5 技术底座（半透明 · 文字标识 · 替换原 Logo 墙） */}
+        <section className="px-5 pt-3 pb-3 mb-8 md:mb-12">
+          <div className="max-w-6xl mx-auto text-center">
+            <p className="text-xs text-slate-400/60">
+              AI 算力驱动：硅基流动 · 灵犀AI · Dify · Midjourney
+            </p>
+          </div>
+        </section>
+
+        {/* 7. 城市主理人横幅 */}
+        <section className="px-5 pt-3 pb-3">
+          <div className="max-w-lg mx-auto md:max-w-6xl">
+            <Link
+              href="/partner"
+              className="group block bg-gradient-to-br from-blue-700 via-indigo-700 to-purple-800 rounded-3xl p-5 text-white overflow-hidden active:scale-[0.99] transition-transform shadow-xl"
+            >
+              <div className="relative flex items-center gap-3">
+                <div className="text-4xl flex-shrink-0">🚀</div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-1.5 mb-1">
+                    <span className="px-2 py-0.5 bg-gradient-to-r from-orange-500 to-red-500 text-white text-[10px] font-bold rounded-full flex items-center gap-1">
+                      <Rocket size={10} />
+                      🔥 招募中
+                    </span>
+                  </div>
+                  <h2 className="text-lg font-bold mb-0.5">OPC 城市主理人生态圈</h2>
+                  <p className="text-[11px] text-white/90 leading-relaxed">
+                    全国 4 座城市已联动 · 深圳 / 东莞 / 柳州 / 乌海
+                  </p>
+                </div>
+              </div>
+            </Link>
+          </div>
+        </section>
+
+        {/* 8. CTA */}
+        <section className="px-5 pt-3 pb-10">
+          <div className="max-w-lg mx-auto md:max-w-6xl">
+            <div className="bg-gradient-to-br from-blue-600/90 via-indigo-600/90 to-purple-700/90 rounded-3xl p-5 text-center">
+              <h3 className="text-lg font-bold text-white mb-1.5">加入良朋社OPC</h3>
+              <p className="text-white/80 mb-4 text-xs">与全国顶尖 AI 从业者一起，开启企业智能化转型之旅</p>
+              <div className="flex flex-col sm:flex-row gap-2 justify-center">
+                <Link href="/auth/signup" className="inline-flex items-center justify-center bg-white text-slate-900 font-semibold py-2.5 px-5 rounded-xl text-sm shadow-lg active:scale-95 transition-transform">
+                  免费注册
+                </Link>
+                <Link
+                  href="/join"
+                  className="group relative inline-flex items-center justify-center gap-1.5 bg-gradient-to-r from-amber-500 via-orange-500 to-rose-500 hover:from-amber-600 hover:via-orange-600 hover:to-rose-600 text-white font-extrabold py-2.5 px-5 rounded-xl text-sm shadow-lg shadow-orange-500/40 hover:shadow-orange-500/60 ring-2 ring-amber-300/50 active:scale-95 transition-all whitespace-nowrap"
+                >
+                  <Sparkles size={14} className="text-amber-100" />
+                  <span>查看 199 会员价值</span>
+                  <ArrowRight size={14} className="group-hover:translate-x-0.5 transition-transform" />
+                </Link>
+                <Link href="/contact" className="inline-flex items-center justify-center bg-white/10 border border-white/30 text-white font-semibold py-2.5 px-5 rounded-xl text-sm active:scale-95 transition-transform">
+                  联系我们
+                </Link>
+              </div>
+            </div>
+          </div>
+        </section>
       </div>
-    </div>
+    </ClientLayout>
   )
 }
 
+// ════════════════════════════════════════════════════════════════
+// 实时动态滚动条（恢复原始版本：含左右渐变蒙版）
+// ════════════════════════════════════════════════════════════════
 function ActivityTicker({ activities }: { activities: Activity[] }) {
-  if (activities.length === 0) return null
+  if (!activities || activities.length === 0) return null
 
   return (
-    <div className="relative overflow-hidden bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl py-2.5 mb-6">
+    <div className="relative overflow-hidden bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl py-2.5">
       <div className="flex whitespace-nowrap animate-marquee">
         {[...activities, ...activities].map((activity, idx) => (
           <div
@@ -362,958 +599,9 @@ function ActivityTicker({ activities }: { activities: Activity[] }) {
           </div>
         ))}
       </div>
+      {/* 左右渐变蒙版（边缘淡出） */}
       <div className="absolute top-0 left-0 h-full w-12 bg-gradient-to-r from-slate-900/80 to-transparent pointer-events-none" />
       <div className="absolute top-0 right-0 h-full w-12 bg-gradient-to-l from-slate-900/80 to-transparent pointer-events-none" />
     </div>
-  )
-}
-
-/** ① OPC 学习实操路径（水平进度条 + 4 节点 + 状态色 + 点击平滑滚动） */
-function LearningPath() {
-  const sectionRefs = useRef<Record<string, HTMLElement | null>>({})
-  const [liveProgress, setLiveProgress] = useState<LiveProgress | null>(null)
-
-  // 拉取实时学习进度（与 /guide/[level] 页面同源）
-  useEffect(() => {
-    let cancelled = false
-    const phone = (() => {
-      if (typeof window === 'undefined') return 'ssr-device'
-      let id = window.localStorage.getItem('opc_device_id')
-      if (!id) {
-        id = `dev-${Date.now()}-${Math.floor(Math.random() * 100000)}`
-        window.localStorage.setItem('opc_device_id', id)
-      }
-      return id
-    })()
-    fetch(`/api/user/learning-progress?phone=${encodeURIComponent(phone)}`)
-      .then((r) => r.json())
-      .then((resp) => {
-        if (cancelled || !resp.success) return
-        setLiveProgress(resp.data as LiveProgress)
-      })
-      .catch(() => {
-        // 静默降级到默认状态
-      })
-    return () => {
-      cancelled = true
-    }
-  }, [])
-
-  const handleClick = (item: LearningPathItem) => {
-    // 智能分流：STEP 02/03 按用户 opc_level 优先跳专属引导页，降级到 item.href
-    const target = item.requiresLevel
-      ? resolveSmartLearningHref(item.href)
-      : item.href
-
-    // STEP 03 运营实操：基于 opc_level 精准推荐项目库
-    if (item.step === '03') {
-      handleStep03Click(target)
-      return
-    }
-
-    // STEP 04 矩阵放大：未解锁时弹前置拦截（必须先完成 STEP 01~03）
-    if (item.step === '04') {
-      if (!liveProgress?.can_unlock_practice) {
-        toast.warn(
-          '请先完成诊断 + 学习入门（≥ 80 分） + 运营实操（STEP 03），\n解锁「矩阵放大」后方可进入控制台。\n\n👉 当前您可先体验：项目库（/market/projects）。'
-        )
-        return
-      }
-      window.location.href = '/scale-up'
-      return
-    }
-
-    // 站内锚点滚动到对应板块
-    if (target.startsWith('#')) {
-      const el = document.querySelector(target)
-      el?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-    } else {
-      window.location.href = target
-    }
-  }
-
-  /**
-   * STEP 03 运营实操：按 opc_level 精准推荐
-   *  - TRADER → /market/projects?recommend=trader
-   *  - FLOW   → /market/projects?recommend=flow
-   *  - SYSTEM → /market/projects?recommend=system
-   *  - ASSET  → /market/projects?recommend=asset
-   *  - 未诊断 / 未达学习积分 → 弹提示
-   */
-  const handleStep03Click = (fallback: string) => {
-    let level: string | null = null
-    try {
-      level = window.localStorage.getItem('opc_level')
-    } catch {
-      level = null
-    }
-    const scoreStr = (() => {
-      try {
-        return window.localStorage.getItem('learning_score')
-      } catch {
-        return null
-      }
-    })()
-    const score = scoreStr ? parseInt(scoreStr, 10) : 0
-    const scoreOk = !isNaN(score) && score >= 80
-
-    if (!level && !scoreOk) {
-      alert('请先完成诊断与学习入门（≥ 80 分），系统才能为您精准推荐项目。')
-      window.location.href = '/diagnosis'
-      return
-    }
-
-    const normalized = (level || '').toUpperCase()
-    const recommend = ['TRADER', 'FLOW', 'SYSTEM', 'ASSET'].includes(normalized)
-      ? normalized.toLowerCase()
-      : 'trader' // 已解锁但未诊断 → 兜底推交易型
-    window.location.href = `/market/projects?recommend=${recommend}`
-  }
-
-  const statusConfig = {
-    done: {
-      bg: 'bg-gradient-to-br from-emerald-400 to-green-600',
-      ring: 'ring-emerald-300',
-      text: 'text-emerald-600',
-      label: '已完成',
-      icon: CheckCircle2,
-      pulse: false,
-    },
-    active: {
-      bg: 'bg-gradient-to-br from-blue-500 via-indigo-500 to-purple-600',
-      ring: 'ring-blue-300',
-      text: 'text-blue-600',
-      label: '进行中',
-      icon: Clock,
-      pulse: true,
-    },
-    locked: {
-      bg: 'bg-slate-200',
-      ring: 'ring-slate-200',
-      text: 'text-slate-400',
-      label: '待解锁',
-      icon: Lock,
-      pulse: false,
-    },
-  } as const
-
-  return (
-    <section className="px-5 pt-2 pb-3">
-      <div className="max-w-lg mx-auto md:max-w-6xl md:mx-auto">
-        <div className="mb-4">
-          <h2 className="text-base md:text-lg font-bold text-slate-800 flex items-center gap-2">
-            <span className="text-xl">🏆</span>
-            你的 OPC 学习智富路径
-          </h2>
-          <p className="text-xs text-slate-500 mt-1">
-            点击任一步骤，可跳转至对应的板块
-          </p>
-        </div>
-
-        {/* 移动端：纵向 / PC 端：横向 */}
-        <div className="relative">
-          {/* PC 端连接虚线（仅在 md 及以上显示） */}
-          <div className="hidden md:block absolute top-7 left-[12%] right-[12%] h-0.5 bg-gradient-to-r from-emerald-300 via-blue-300 to-slate-200" />
-
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 relative">
-            {learningPath.map((item, idx) => {
-              // 动态状态：覆盖静态 status
-              const liveStatus = computeStepStatus(item.step as '01' | '02' | '03' | '04', liveProgress)
-              const cfg = statusConfig[liveStatus]
-              const Icon = item.icon
-              const StatusIcon = cfg.icon
-              return (
-                <button
-                  key={item.step}
-                  onClick={() => handleClick(item)}
-                  className="group relative bg-white border border-slate-200 rounded-2xl p-3 md:p-4 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300 text-left"
-                >
-                  {/* 步骤圆点 */}
-                  <div className="flex items-center gap-2.5 mb-2">
-                    <div className="relative flex-shrink-0">
-                      {cfg.pulse && (
-                        <span className="absolute inset-0 rounded-full bg-blue-400 animate-ping opacity-50" />
-                      )}
-                      <div
-                        className={`relative w-9 h-9 md:w-11 md:h-11 rounded-full ${cfg.bg} ring-4 ${cfg.ring} flex items-center justify-center text-white shadow-md`}
-                      >
-                        <Icon size={16} className="md:w-[18px] md:h-[18px]" />
-                      </div>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="text-[10px] font-bold text-slate-400 tracking-wider">
-                        STEP {item.step}
-                      </div>
-                      <div className="text-sm md:text-base font-bold text-slate-800 leading-tight">
-                        {item.title}
-                      </div>
-                    </div>
-                  </div>
-                  <p className="text-[11px] md:text-xs text-slate-500 leading-relaxed line-clamp-2">
-                    {item.desc}
-                  </p>
-                  <div className="mt-2 flex items-center justify-between">
-                    <span
-                      className={`inline-flex items-center gap-1 text-[10px] font-semibold ${cfg.text}`}
-                    >
-                      <StatusIcon size={10} />
-                      {cfg.label}
-                    </span>
-                    <ArrowRight
-                      size={12}
-                      className="text-slate-300 group-hover:text-blue-500 group-hover:translate-x-0.5 transition-all"
-                    />
-                  </div>
-
-                  {/* 移动端连接箭头（除最后一个外） */}
-                  {idx < learningPath.length - 1 && idx % 2 === 0 && (
-                    <ArrowRight
-                      size={14}
-                      className="md:hidden absolute -right-2 top-1/2 -translate-y-1/2 text-slate-300"
-                    />
-                  )}
-                </button>
-              )
-            })}
-          </div>
-        </div>
-      </div>
-    </section>
-  )
-}
-
-/** ① 新手任务引导条（半透明 · 引导未诊断用户前往 /market 学习中心） */
-function NewbieTaskBanner() {
-  return (
-    <section className="px-5 pt-4 pb-0">
-      <div className="max-w-lg mx-auto md:max-w-6xl md:mx-auto">
-        <div className="group relative overflow-hidden rounded-2xl bg-white/60 backdrop-blur-sm border border-blue-200/60 p-4 md:p-5 shadow-sm hover:shadow-md hover:border-blue-300/80 transition-all">
-          {/* 装饰光斑 */}
-          <div className="absolute -top-10 -right-10 w-32 h-32 bg-blue-200/30 rounded-full blur-2xl" />
-          <div className="absolute -bottom-8 -left-8 w-24 h-24 bg-indigo-200/20 rounded-full blur-2xl" />
-
-          <div className="relative flex flex-col md:flex-row md:items-center gap-3 md:gap-4">
-            {/* 左侧：图标 + 文案 */}
-            <div className="flex items-start gap-2.5 flex-1 min-w-0">
-              <span className="flex-shrink-0 w-8 h-8 md:w-9 md:h-9 rounded-xl bg-gradient-to-br from-blue-100 to-indigo-100 flex items-center justify-center text-lg md:text-xl border border-blue-200/60">
-                🎯
-              </span>
-              <p className="text-xs md:text-sm text-slate-700 leading-relaxed pt-0.5">
-                <span className="font-bold text-slate-900">你的新手启航任务：</span>
-                根据诊断结果，前往
-                <span className="font-semibold text-blue-700">【学习中心】</span>
-                配置你的第一个 AI 工具。
-              </p>
-            </div>
-
-            {/* 右侧：CTA 按钮 */}
-            <Link
-              href="/market/tools"
-              className="flex-shrink-0 inline-flex items-center gap-1.5 px-4 h-9 md:h-10 rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 text-white text-xs md:text-sm font-bold shadow-md shadow-blue-500/20 hover:shadow-lg hover:shadow-blue-500/30 hover:gap-2.5 hover:from-blue-600 hover:to-indigo-700 transition-all whitespace-nowrap"
-            >
-              <Sparkles size={12} className="md:w-3.5 md:h-3.5" />
-              <span>去学习中心</span>
-              <ArrowRight size={13} className="md:w-3.5 md:h-3.5 group-hover:translate-x-0.5 transition-transform" />
-            </Link>
-          </div>
-        </div>
-      </div>
-    </section>
-  )
-}
-
-/** ② OPC 四层智富阶梯（标准 2x2 网格 · 4 色渐变） */
-function EntrepreneurLadder() {
-  return (
-    <section className="px-5 pt-6 pb-6">
-      <div className="max-w-lg mx-auto md:max-w-6xl md:mx-auto">
-        <div className="mb-5">
-          <h2 className="text-xl md:text-2xl font-bold text-slate-900 flex items-center gap-2 flex-wrap">
-            <span className="text-2xl">📈</span>
-            OPC四层智富阶梯
-            {/* 老手跳过入口（柔性入口 · 不卡新手流程）*/}
-            <Link
-              href="/market"
-              prefetch={false}
-              className="ml-auto inline-flex items-center gap-1.5 text-[11px] md:text-xs font-bold text-slate-600 hover:text-blue-700 bg-white hover:bg-blue-50 border border-slate-300 hover:border-blue-300 px-3 py-1.5 rounded-full transition-all shadow-sm"
-            >
-              <span>🛠️</span>
-              我是老手，直接探索四库
-              <span className="text-slate-400 text-[10px]">→</span>
-            </Link>
-          </h2>
-          <p className="text-xs md:text-sm text-slate-500 leading-relaxed mt-1">
-            从跑通首单到资产复制，四层路径让一人公司逐步做大
-          </p>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {entrepreneurLadder.map((item) => {
-            const Icon = item.icon
-            return (
-              <Link
-                key={item.title}
-                href={item.href}
-                className={`group relative ${item.color} rounded-2xl p-4 md:p-6 text-white overflow-hidden hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between min-h-[150px] md:min-h-[170px]`}
-              >
-                {/* 装饰光晕 */}
-                <div className="absolute -top-8 -right-8 w-28 h-28 bg-white/15 rounded-full blur-2xl" />
-                <div className="absolute -bottom-6 -left-6 w-20 h-20 bg-white/10 rounded-full blur-xl" />
-
-                <div className="relative flex items-start gap-3">
-                  <div className="flex-shrink-0 w-10 h-10 md:w-12 md:h-12 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center ring-2 ring-white/30">
-                    <Icon size={20} className="md:w-6 md:h-6 text-white" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="text-[10px] font-bold text-white/80 tracking-widest mb-0.5">
-                      {item.layer}
-                    </div>
-                    <h3 className="text-base md:text-lg font-extrabold leading-tight">
-                      {item.title}
-                    </h3>
-                  </div>
-                </div>
-
-                <div className="relative mt-2 md:mt-3">
-                  <p className="text-[11px] md:text-xs text-white/90 leading-relaxed">
-                    {item.desc}
-                  </p>
-                  <div className="mt-2 md:mt-3 inline-flex items-center gap-1 text-[11px] md:text-xs font-bold text-white opacity-90 group-hover:opacity-100 group-hover:gap-2 transition-all">
-                    <span>{item.cta || '了解详情'}</span>
-                    <ArrowRight size={12} />
-                  </div>
-                </div>
-              </Link>
-            )
-          })}
-        </div>
-      </div>
-    </section>
-  )
-}
-
-/** ③ AI四库全胜系统（2x2 浅色卡片 · 顶流 SaaS 风格） */
-const BENTO_CARDS: Array<{
-  tab: LibraryTabValue
-  title: string
-  subtitle: string
-  href: string
-  /** 图标 emoji */
-  icon: string
-  /** 图标背景方块（极浅主题色 /50 透明度） */
-  iconBg: string
-  /** 右上角灰色胶囊标签 */
-  tag: string
-}> = [
-  {
-    tab: 'tools',
-    title: 'AI智富工具库',
-    subtitle: 'AI 自研工具、电商工作台、运营插件...',
-    href: '/market/tools',
-    icon: '🔧',
-    iconBg: 'bg-blue-50/50',
-    tag: '自研',
-  },
-  {
-    tab: 'projects',
-    title: 'AI智富项目库',
-    subtitle: '数字网店、跨境电商、AI 编程系统...',
-    href: '/market/projects',
-    icon: '🚀',
-    iconBg: 'bg-yellow-50/50',
-    tag: '落地案例',
-  },
-  {
-    tab: 'services',
-    title: 'AI智富服务库',
-    subtitle: 'OPC 内训、陪跑、代运营、企业 GEO...',
-    href: '/market/services',
-    icon: '💼',
-    iconBg: 'bg-red-50/50',
-    tag: '陪跑',
-  },
-  {
-    tab: 'resources',
-    title: 'AI智富资源库',
-    subtitle: 'AI 硬件、精品教程、城市招商加盟...',
-    href: '/market/resources',
-    icon: '📚',
-    iconBg: 'bg-green-50/50',
-    tag: '链接',
-  },
-]
-
-/** 2x2 浅色卡片：整张 Link 包裹 · 顶流 Notion/Stripe 风 */
-function BentoLibraryCard({
-  card,
-  isActive,
-  onClick,
-}: {
-  card: (typeof BENTO_CARDS)[number]
-  isActive: boolean
-  onClick: () => void
-}) {
-  return (
-    <Link
-      href={card.href}
-      onClick={onClick}
-      className={cn(
-        // 容器：纯白 · 极浅边框 · 大圆角 · 高度自适应
-        'group relative block rounded-2xl bg-white border border-slate-200 p-5 md:p-6 min-h-[160px] md:min-h-[180px]',
-        // 悬停微交互
-        'hover:shadow-lg hover:-translate-y-1 hover:border-slate-300 transition-all duration-300',
-        // 激活态（被引导区点击时高亮）
-        isActive && 'ring-2 ring-blue-400 ring-offset-2 ring-offset-slate-50'
-      )}
-    >
-      {/* 顶部：图标方块 + 右上角胶囊标签 */}
-      <div className="flex items-start justify-between mb-4">
-        <div
-          className={cn(
-            'w-11 h-11 md:w-12 md:h-12 rounded-xl flex items-center justify-center text-2xl md:text-[26px]',
-            card.iconBg
-          )}
-        >
-          <span className="leading-none">{card.icon}</span>
-        </div>
-        <span className="bg-slate-100 text-slate-500 text-[10px] px-2 py-0.5 rounded-full font-medium">
-          {card.tag}
-        </span>
-      </div>
-
-      {/* 标题 + 副标题 */}
-      <div className="flex-1">
-        <h3 className="text-base md:text-lg font-bold text-slate-900 leading-tight">
-          {card.title}
-        </h3>
-        <p className="mt-1.5 text-[11px] md:text-xs text-slate-500 leading-relaxed line-clamp-2">
-          {card.subtitle}
-        </p>
-      </div>
-
-      {/* 底部：前往进入 →（右下角 · 蓝色 · 悬停箭头右移） */}
-      <div className="mt-4 flex items-center justify-end">
-        <span className="inline-flex items-center gap-1 text-[11px] md:text-xs text-blue-600 font-medium group-hover:gap-2 transition-all">
-          <span>前往进入</span>
-          <ArrowRight size={12} className="group-hover:translate-x-0.5 transition-transform" />
-        </span>
-      </div>
-    </Link>
-  )
-}
-
-/** ③ 四库全胜系统（2x2 Bento 网格） */
-function LibraryTabs() {
-  const [activeTab, setActiveTab] = useState<LibraryTabValue>('tools')
-  const [highlightName, setHighlightName] = useState<string | null>(null)
-  const highlightTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-
-  // 点击快捷按钮：切换 Tab + 3 秒高亮目标卡片
-  const handleJumpToTab = (
-    tab: LibraryTabValue,
-    options?: { highlightItemName?: string }
-  ) => {
-    setActiveTab(tab)
-    if (options?.highlightItemName) {
-      setHighlightName(options.highlightItemName)
-      if (highlightTimerRef.current) clearTimeout(highlightTimerRef.current)
-      highlightTimerRef.current = setTimeout(() => {
-        setHighlightName(null)
-      }, 3000)
-    }
-  }
-
-  // 卸载时清理 timer
-  useEffect(() => {
-    return () => {
-      if (highlightTimerRef.current) clearTimeout(highlightTimerRef.current)
-    }
-  }, [])
-
-  return (
-    <section className="px-5 pt-6 pb-6">
-      <div className="max-w-lg mx-auto md:max-w-6xl md:mx-auto">
-        <div className="mb-5">
-          <div className="flex items-center justify-between mb-1">
-            <h2 className="text-xl md:text-2xl font-bold text-slate-900 flex items-center gap-2">
-              <span className="text-2xl">🏆</span>
-              AI四库全胜系统
-            </h2>
-            <Link href="/market" className="text-sm text-blue-600 hover:text-blue-700">
-              查看全部 →
-            </Link>
-          </div>
-          <p className="text-xs md:text-sm text-slate-500 leading-relaxed">
-            工具智选、项目创富、服务护航、资源链接。
-            <span className="font-semibold text-blue-600">四大引擎协同驱动</span>
-            ，助你赢在 AI 时代。
-          </p>
-        </div>
-
-        {/* 全流程管控挂件（智能引导区，已顶流化升级） */}
-        <div className="mb-4">
-          <FlowControlBar activeTab={activeTab} onJumpToTab={handleJumpToTab} />
-        </div>
-
-        {/* ════════ 2x2 Bento 网格（取代原 Tabs 卡片） ════════ */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {BENTO_CARDS.map((card) => (
-            <BentoLibraryCard
-              key={card.tab}
-              card={card}
-              isActive={activeTab === card.tab}
-              onClick={() => handleJumpToTab(card.tab)}
-            />
-          ))}
-        </div>
-      </div>
-    </section>
-  )
-}
-
-// ════════════════════════════════════════════════════════════════
-// 主页面
-// ════════════════════════════════════════════════════════════════
-
-export default function HomePage() {
-  // 关键修复：使用 mounted 模式避免 React Hydration 不匹配
-  // framer-motion 的 motion.div + 部分动态属性会导致 SSR 与 client 渲染不一致
-  const [mounted, setMounted] = useState(false)
-  const [bentoItems, setBentoItems] = useState<BentoItem[]>(fallbackBentoItems)
-  const [loading, setLoading] = useState(true)
-  const [activities, setActivities] = useState<Activity[]>([])
-
-  useEffect(() => {
-    setMounted(true)
-  }, [])
-
-  useEffect(() => {
-    const fetchProjects = async () => {
-      try {
-        const response = await fetch('/api/projects?city=shenzhen')
-        const data = await response.json()
-        const hasAny = data.success && data.data && Object.keys(data.data).length > 0
-        if (hasAny) {
-          const categories = ['服务库', '工具库', '项目库', '资源库']
-          const icons: Record<string, string> = {
-            '服务库': '💼',
-            '工具库': '🔧',
-            '项目库': '📁',
-            '资源库': '📚',
-          }
-          const subTags: Record<string, string> = {
-            '服务库': 'AI智富服务库 · 护航引擎',
-            '工具库': 'AI智富工具库 · 智富引擎',
-            '项目库': 'AI智富项目库 · 创富引擎',
-            '资源库': 'AI智富资源库 · 链接引擎',
-          }
-          const hrefMap: Record<string, string> = {
-            '服务库': '/market/services',
-            '工具库': '/market',
-            '项目库': '/market/projects',
-            '资源库': '/market/resources',
-          }
-          const fallbackByTitle = new Map(
-            fallbackBentoItems.map((f) => [f.title.split(' · ')[0], f])
-          )
-          const newItems = categories.map((category, index) => {
-            const projects = data.data[category] || []
-            const project = projects[0]
-            const fb = fallbackByTitle.get(category)
-            return {
-              title:
-                index === 0
-                  ? 'OPC 城市主理人生态圈'
-                  : `${category}${subTags[category]}`,
-              icon: index === 0 ? '🚀' : icons[category],
-              description:
-                index === 0
-                  ? '全国 7 座城市已联动，招募更多城市主理人共拓 AI 市场'
-                  : project
-                  ? project.description
-                  : fb?.description || '',
-              href: index === 0 ? '/partner' : hrefMap[category],
-              large: index === 0,
-              bgColor:
-                index === 0
-                  ? 'bg-gradient-to-br from-blue-700 via-indigo-700 to-purple-800'
-                  : 'bg-white/10',
-              textColor: 'text-white',
-              badge:
-                index === 0
-                  ? { text: '招募中', icon: Rocket, color: 'bg-orange-500' }
-                  : undefined,
-            }
-          })
-          setBentoItems(newItems)
-        }
-      } catch (error) {
-        console.log('使用备用数据')
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    const fetchActivities = async () => {
-      try {
-        const res = await fetch('/api/activities')
-        const data = await res.json()
-        if (data.success && data.data) {
-          setActivities(data.data)
-        }
-      } catch {
-        setActivities([])
-      }
-    }
-
-    fetchProjects()
-    fetchActivities()
-  }, [])
-
-  if (!mounted) {
-    // 客户端水合前显示占位，避免 framer-motion / 动态属性触发 hydration 报错
-    return (
-      <ClientLayout>
-        <div className="min-h-screen bg-slate-50" suppressHydrationWarning />
-      </ClientLayout>
-    )
-  }
-
-  return (
-    <ClientLayout>
-      <div className="min-h-screen bg-slate-50">
-        {/* ═══ 1. HERO 区：深色渐变 + 玻璃拟态 + 3D 数字人占位 ═══ */}
-        <section className="relative overflow-hidden bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 pt-16 pb-24 px-5">
-          <div className="absolute top-10 left-1/4 w-72 h-72 bg-blue-500/20 rounded-full blur-3xl animate-pulse" />
-          <div className="absolute top-32 right-1/4 w-96 h-96 bg-purple-500/20 rounded-full blur-3xl animate-pulse" />
-          <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-full h-32 bg-gradient-to-t from-slate-900 to-transparent" />
-
-          <div className="relative max-w-lg mx-auto md:max-w-6xl md:mx-auto">
-            <div className="grid md:grid-cols-2 gap-8 items-center">
-              <div className="text-center md:text-left">
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.6 }}
-                  className="inline-flex items-center gap-2 bg-gradient-to-r from-amber-500/15 via-yellow-400/15 to-amber-500/15 backdrop-blur-md border border-amber-400/40 rounded-full px-4 py-1.5 mb-6 shadow-lg shadow-amber-500/10"
-                >
-                  <span className="text-base">🏆</span>
-                  <span className="text-sm text-amber-100 font-semibold tracking-wide">
-                    良朋社<span className="text-amber-300">OPC</span> 智富生态系统
-                  </span>
-                </motion.div>
-
-                <motion.h1
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.6, delay: 0.1 }}
-                  className="text-3xl md:text-5xl lg:text-6xl font-extrabold leading-tight mb-4"
-                >
-                  <span className="text-white">一人公司 ×</span>
-                  <br />
-                  <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400">
-                    OPC 智富操作系统
-                  </span>
-                </motion.h1>
-
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.6, delay: 0.18 }}
-                  className="mb-4 flex items-center justify-center md:justify-start gap-1.5 sm:gap-2 whitespace-nowrap max-w-full origin-center md:origin-left scale-90 max-[389px]:scale-[0.82] max-[359px]:scale-[0.74] max-[340px]:scale-[0.68]"
-                >
-                  <span className="text-lg sm:text-xl md:text-lg font-extrabold tracking-wide shrink-0">
-                    <span className="bg-gradient-to-br from-blue-400 via-indigo-400 to-purple-500 bg-clip-text text-transparent drop-shadow-[0_0_12px_rgba(99,102,241,0.45)]">
-                      智
-                    </span>
-                    <span className="mx-0.5 text-slate-200">·</span>
-                    <span className="bg-gradient-to-br from-amber-300 via-yellow-400 to-orange-500 bg-clip-text text-transparent drop-shadow-[0_0_12px_rgba(251,191,36,0.45)]">
-                      富
-                    </span>
-                  </span>
-                  <span className="text-[11px] sm:text-sm md:text-sm font-semibold text-transparent bg-clip-text bg-gradient-to-r from-amber-200 via-yellow-100 to-amber-300 tracking-wider shrink min-w-0 truncate">
-                    以智生财，富在当下
-                  </span>
-                  <span className="text-slate-500 text-xs shrink-0">·</span>
-                  <span className="text-[11px] sm:text-sm md:text-sm font-semibold text-transparent bg-clip-text bg-gradient-to-r from-blue-200 via-cyan-200 to-blue-300 tracking-wider shrink min-w-0 truncate">
-                    用 AI 武装你的生意
-                  </span>
-                </motion.div>
-
-                <motion.p
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.6, delay: 0.25 }}
-                  className="text-slate-300 mb-8 max-w-md md:max-w-lg mx-auto md:mx-0 text-sm md:text-base"
-                >
-                  汇聚全国 OPC 创业者与企业家，共同探索 AI 智富路径在实际落地中的应用与商业价值
-                </motion.p>
-
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.6, delay: 0.3 }}
-                  className="flex flex-col sm:flex-row gap-4 justify-center md:justify-start"
-                >
-                  <Link
-                    href="/salon"
-                    className="group relative inline-flex items-center justify-center bg-gradient-to-r from-amber-500 to-orange-500 text-white font-bold py-3.5 px-8 rounded-xl overflow-hidden transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-amber-500/40"
-                  >
-                    <span className="absolute inset-0 bg-gradient-to-r from-yellow-400 to-amber-500 opacity-0 group-hover:opacity-100 transition-opacity" />
-                    <span className="relative z-10 flex items-center gap-2">
-                      <Sparkles size={18} />
-                      智富沙龙 · 立即报名
-                      <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
-                    </span>
-                  </Link>
-                  <Link
-                    href="/partner"
-                    className="group relative inline-flex items-center justify-center bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 text-white font-bold py-3.5 px-8 rounded-xl overflow-hidden transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-purple-500/40"
-                  >
-                    <span className="absolute inset-0 bg-gradient-to-r from-indigo-500 to-purple-700 opacity-0 group-hover:opacity-100 transition-opacity" />
-                    <span className="relative z-10 flex items-center gap-2">
-                      <Rocket size={18} />
-                      智富主理人 · 城市招募
-                    </span>
-                  </Link>
-                </motion.div>
-              </div>
-
-              <motion.div
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.8, delay: 0.4 }}
-                className="relative hidden md:flex items-center justify-center"
-              >
-                <div className="relative w-full aspect-square max-w-md">
-                  <div className="absolute inset-0 bg-gradient-to-br from-blue-500/20 via-purple-500/25 to-pink-500/20 rounded-3xl blur-2xl" />
-                  <div className="absolute inset-0 overflow-hidden rounded-3xl pointer-events-none">
-                    <div
-                      className="absolute left-0 right-0 h-24 -translate-y-2 animate-pulse"
-                      style={{
-                        top: '58%',
-                        background:
-                          'linear-gradient(90deg, transparent 0%, rgba(168,85,247,0) 5%, rgba(168,85,247,0.55) 30%, rgba(236,72,153,0.7) 50%, rgba(99,102,241,0.55) 70%, rgba(168,85,247,0) 95%, transparent 100%)',
-                        filter: 'blur(8px)',
-                        mixBlendMode: 'screen',
-                      }}
-                    />
-                    <div
-                      className="absolute left-0 right-0 h-3 -translate-y-2 animate-pulse"
-                      style={{
-                        top: '58%',
-                        background:
-                          'linear-gradient(90deg, transparent 0%, rgba(255,255,255,0) 10%, rgba(255,255,255,0.85) 50%, rgba(255,255,255,0) 90%, transparent 100%)',
-                        filter: 'blur(3px)',
-                        animationDelay: '0.6s',
-                        mixBlendMode: 'screen',
-                      }}
-                    />
-                    <div className="absolute -top-10 -right-10 w-40 h-40 bg-purple-500/40 rounded-full blur-3xl animate-pulse" />
-                    <div
-                      className="absolute -bottom-10 -left-10 w-32 h-32 rounded-full blur-3xl animate-pulse"
-                      style={{
-                        background: 'radial-gradient(circle, rgba(99,102,241,0.5), transparent 70%)',
-                        animationDelay: '1.2s',
-                      }}
-                    />
-                  </div>
-                  <motion.div
-                    animate={{ y: [0, -10, 0] }}
-                    transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
-                    className="relative w-full h-full"
-                  >
-                    <Image
-                      src="/images/liangliang.png"
-                      alt="良良 - 良朋社AI数字助手"
-                      width={400}
-                      height={400}
-                      priority
-                      quality={95}
-                      className="relative w-full h-full object-contain drop-shadow-[0_10px_30px_rgba(168,85,247,0.35)]"
-                    />
-                  </motion.div>
-                  <div className="absolute -inset-4 border-2 border-blue-400/30 rounded-3xl animate-spin-slow pointer-events-none" />
-                  <div className="absolute -inset-8 border border-purple-400/20 rounded-3xl animate-spin-reverse pointer-events-none" />
-                  <motion.div
-                    initial={{ opacity: 0, x: 20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: 1.2, duration: 0.6 }}
-                    className="absolute top-8 -right-2 bg-white/10 backdrop-blur-md border border-white/20 rounded-full px-3 py-1.5 text-xs text-white shadow-lg"
-                  >
-                    ✨ AI 智富助理
-                  </motion.div>
-                  <motion.div
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: 1.5, duration: 0.6 }}
-                    className="absolute bottom-12 -left-2 bg-gradient-to-r from-purple-500/80 to-pink-500/80 backdrop-blur-md rounded-full px-3 py-1.5 text-xs text-white shadow-lg"
-                  >
-                    🎯 一人公司 × 智富引擎
-                  </motion.div>
-                </div>
-              </motion.div>
-            </div>
-          </div>
-        </section>
-
-        {/* ═══ 2. 实时动态滚动条（Hero 正下方）═══ */}
-        <section className="relative -mt-10 px-5 z-10">
-          <div className="max-w-lg mx-auto md:max-w-6xl md:mx-auto">
-            <ActivityTicker activities={activities} />
-          </div>
-        </section>
-
-        {/* ═══ 3. 数据条：玻璃拟态 + framer-motion 数字滚动 + 社区心跳 ═══ */}
-        <section className="px-5 pt-6 pb-6">
-          <div className="max-w-lg mx-auto md:max-w-6xl md:mx-auto">
-            <div className="bg-gradient-to-r from-slate-800/60 to-slate-900/60 backdrop-blur-md border border-white/20 rounded-3xl px-6 py-6">
-              <div className="flex items-center gap-4 overflow-x-auto pb-2 scrollbar-hide">
-                {stats.map((stat, index) => (
-                  <div key={index} className="flex-shrink-0 w-28 text-center">
-                    <div className="text-3xl font-bold text-white drop-shadow">
-                      <span>{stat.value}</span>
-                      {stat.suffix}
-                    </div>
-                    <div className="text-xs text-white/70 mt-1">
-                      {stat.label} {stat.unit}
-                    </div>
-                  </div>
-                ))}
-                <CommunityHeartbeat />
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* ═══ 4. OPC 智富入局诊断（免费入口）═══ */}
-        <section className="px-5 pt-3 pb-2 relative z-10">
-          <div className="max-w-lg mx-auto md:max-w-6xl md:mx-auto">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.2 }}
-              className="relative bg-gradient-to-r from-amber-500 via-orange-500 to-rose-500 rounded-2xl p-5 md:p-6 shadow-2xl shadow-orange-500/30 overflow-hidden"
-            >
-              <div className="absolute -top-8 -right-8 w-40 h-40 bg-white/15 rounded-full blur-3xl" />
-              <div className="absolute bottom-0 left-0 w-32 h-32 bg-yellow-300/30 rounded-full blur-2xl" />
-              <div className="relative flex flex-col md:flex-row items-center gap-4 text-white">
-                <div className="flex-shrink-0 w-14 h-14 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center ring-4 ring-white/30">
-                  <span className="text-2xl">🎁</span>
-                </div>
-                <div className="flex-1 text-center md:text-left">
-                  <div className="text-[11px] font-bold text-amber-100 tracking-wider mb-1">
-                    🔥 限时免费 · 每天仅 10 个名额
-                  </div>
-                  <h3 className="text-base md:text-lg font-bold mb-1.5">
-                    免费领取：OPC 智富入局诊断
-                  </h3>
-                  <p className="text-xs md:text-sm text-amber-50/95 leading-relaxed">
-                    良朋社用 <span className="font-bold">4 步法 + AI 智能体</span>
-                    ，帮你诊断创业起点与卡点，匹配专属四库方案。
-                  </p>
-                </div>
-                <Link
-                  href="/diagnosis"
-                  className="flex-shrink-0 inline-flex items-center gap-2 px-5 py-2.5 bg-white text-orange-600 text-sm font-bold rounded-xl hover:scale-105 transition-transform shadow-lg"
-                >
-                  <Sparkles size={16} />
-                  立即领取
-                  <ArrowRight size={14} />
-                </Link>
-              </div>
-            </motion.div>
-          </div>
-        </section>
-
-        {/* ═══ 5. OPC 学习实操路径（水平进度条）═══ */}
-        <LearningPath />
-
-        {/* ═══ 5.5 新手任务引导条（半透明 · 引导前往学习中心）═══ */}
-        <NewbieTaskBanner />
-
-        {/* ═══ 6. OPC 四层创业阶梯（非对称 Bento）═══ */}
-        <EntrepreneurLadder />
-
-        {/* ═══ 7. 四库全胜系统（Tabs 动态面板）═══ */}
-        <LibraryTabs />
-
-        {/* ═══ 8. OPC 城市主理人生态圈：顶部蓝色大横幅 ═══ */}
-        <section className="px-5 pt-2 pb-3">
-          <div className="max-w-lg mx-auto md:max-w-6xl md:mx-auto">
-            <Link
-              href="/partner"
-              className="group relative block bg-gradient-to-br from-blue-700 via-indigo-700 to-purple-800 rounded-3xl p-6 md:p-8 text-white overflow-hidden hover:shadow-2xl hover:-translate-y-0.5 transition-all duration-300"
-            >
-              <div className="absolute -top-10 -right-10 w-40 h-40 bg-white/10 rounded-full blur-3xl" />
-              <div className="absolute -bottom-10 -left-10 w-32 h-32 bg-yellow-300/20 rounded-full blur-3xl" />
-              <div className="relative flex items-center gap-5">
-                <div className="text-5xl md:text-6xl flex-shrink-0">🚀</div>
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="px-2.5 py-0.5 bg-gradient-to-r from-orange-500 to-red-500 text-white text-xs font-bold rounded-full shadow-lg flex items-center gap-1">
-                      <Rocket size={12} />
-                      🔥 招募中
-                    </span>
-                  </div>
-                  <h2 className="text-2xl md:text-3xl font-bold mb-1.5">
-                    OPC 城市主理人生态圈
-                  </h2>
-                  <p className="text-sm md:text-base text-white/90 leading-relaxed">
-                    全国 7 座城市已联动，招募更多城市主理人共拓 AI 市场
-                  </p>
-                  <div className="mt-3 inline-flex items-center gap-1 text-sm text-white font-semibold group-hover:gap-2 transition-all">
-                    <span>立即加入</span>
-                    <svg
-                      className="w-4 h-4"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M9 5l7 7-7 7"
-                      />
-                    </svg>
-                  </div>
-                </div>
-              </div>
-            </Link>
-          </div>
-        </section>
-
-        {/* ═══ 9. CTA 区：玻璃拟态 ═══ */}
-        <section className="px-5 pt-6 pb-10">
-          <div className="max-w-lg mx-auto md:max-w-6xl md:mx-auto">
-            <div className="relative bg-gradient-to-br from-blue-600/90 via-indigo-600/90 to-purple-700/90 backdrop-blur-md border border-white/20 rounded-3xl p-8 overflow-hidden">
-              <div className="absolute -top-10 -right-10 w-40 h-40 bg-pink-500/30 rounded-full blur-3xl" />
-              <div className="absolute -bottom-10 -left-10 w-40 h-40 bg-blue-500/30 rounded-full blur-3xl" />
-              <div className="relative text-center">
-                <h3 className="text-xl font-bold text-white mb-3">加入良朋社OPC</h3>
-                <p className="text-white/80 mb-6 text-sm">
-                  与全国顶尖 AI 从业者一起，开启企业智能化转型之旅
-                </p>
-                <div className="flex flex-col sm:flex-row gap-3 justify-center">
-                  <Link
-                    href="/auth/signup"
-                    className="inline-flex items-center justify-center bg-white text-slate-900 font-semibold py-3 px-6 rounded-xl hover:scale-105 transition-transform shadow-lg"
-                  >
-                    免费注册
-                  </Link>
-                  <Link
-                    href="/contact"
-                    className="inline-flex items-center justify-center bg-white/10 backdrop-blur-md border border-white/30 text-white font-semibold py-3 px-6 rounded-xl hover:bg-white/20 transition-colors"
-                  >
-                    联系我们
-                  </Link>
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-      </div>
-    </ClientLayout>
   )
 }

@@ -11,20 +11,77 @@
 'use client'
 
 import { useState } from 'react'
-import { Sparkles, Handshake, ArrowRight, Users, Award } from 'lucide-react'
+import { useSearchParams } from 'next/navigation'
+import { Sparkles, Handshake, ArrowRight, Users, Award, X } from 'lucide-react'
 import { MarketContent } from '@/components/market/MarketContent'
 import { ExpertApplicationModal } from '@/components/market/ExpertApplicationModal'
 import { Toast } from '@/components/ui/toast'
 
+const LEVEL_LABEL: Record<string, string> = {
+  trader: '交易型 OPC',
+  flow: '流量型 OPC',
+  system: '系统型 OPC',
+  asset: '资产型 OPC',
+}
+
 export default function ServicesPage() {
+  const searchParams = useSearchParams()
+  const fromParam = searchParams?.get('from') ?? ''
+  const typeParam = searchParams?.get('type') ?? ''
+  const levelParam = searchParams?.get('level') ?? ''
+
+  // 来自【学习入门】页的战略抉择 → 找人合作
+  const isFromGuideCollaboration = fromParam === 'guide' && typeParam === 'collaboration'
+  const levelLabel = LEVEL_LABEL[levelParam] || '对应阶段'
+
   const [expertModalOpen, setExpertModalOpen] = useState(false)
   const [toastOpen, setToastOpen] = useState(false)
   const [toastMsg, setToastMsg] = useState('')
+  const [bannerVisible, setBannerVisible] = useState(true)
 
   return (
     <div>
+      {/* ════════ 来自学习入门页的协作欢迎横幅 ═══════ */}
+      {isFromGuideCollaboration && bannerVisible && (
+        <div className="mb-4 relative overflow-hidden rounded-2xl bg-gradient-to-r from-purple-50 via-fuchsia-50 to-amber-50 border border-purple-200 shadow-sm">
+          {/* 装饰光斑 */}
+          <div className="absolute -top-10 -right-10 w-32 h-32 bg-purple-300/30 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute -bottom-10 -left-10 w-32 h-32 bg-amber-300/30 rounded-full blur-3xl pointer-events-none" />
+
+          <div className="relative p-4 md:p-5 flex items-start gap-3">
+            <div className="flex-shrink-0 w-11 h-11 rounded-2xl bg-gradient-to-br from-purple-500 via-fuchsia-500 to-amber-500 flex items-center justify-center text-white shadow-lg shadow-purple-500/30">
+              <Handshake size={20} />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="text-[10px] md:text-xs font-extrabold text-purple-700 tracking-wider uppercase mb-0.5">
+                ✨ 欢迎回来！系统已为你精准定位
+              </div>
+              <h3 className="text-sm md:text-base font-extrabold text-slate-900 leading-tight">
+                根据您在【{levelLabel}】阶段的选择，系统为您推荐以下资深 OPC 伙伴与代运营服务
+              </h3>
+              <p className="mt-1 text-[11px] md:text-xs text-slate-600 leading-relaxed">
+                以下服务卡片已被高亮标记：点击 <span className="font-bold text-purple-700">OPC 陪跑</span> 或 <span className="font-bold text-purple-700">AI 网店代运营</span>，
+                即可在弹窗中查看与你所在城市匹配的 CITY_MAINTAINER 主理人/资产型 OPC 专家。
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setBannerVisible(false)}
+              aria-label="关闭横幅"
+              className="flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-white/70 transition-colors"
+            >
+              <X size={16} />
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* ════════ 原服务库内容（8 大服务板块 + 多选 + 企业需求弹窗）══════ */}
-      <MarketContent defaultTab="services" standalone={false} />
+      <MarketContent
+        defaultTab="services"
+        standalone={false}
+        collaborationHighlight={isFromGuideCollaboration}
+      />
 
       {/* ════════ 任务 1：底部 OPC 专家申请入口横幅 ═══════ */}
       <section className="mt-6 relative overflow-hidden rounded-2xl bg-gradient-to-br from-indigo-50 via-white to-purple-50 border border-indigo-100 shadow-sm">

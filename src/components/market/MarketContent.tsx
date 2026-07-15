@@ -39,6 +39,7 @@ import { serviceItems, type ServiceItem } from '@/data/service-items'
 import { projectItems, type ProjectItem } from '@/data/project-items'
 import { resourceItems, type ResourceItem } from '@/data/resource-items'
 import { FindSeniorOPCModal } from '@/components/market/FindSeniorOPCModal'
+import { CollaborationMatchModal } from '@/components/market/CollaborationMatchModal'
 import { UnlockResourceModal } from '@/components/market/UnlockResourceModal'
 import { UGCSubmissionSection } from '@/components/market/UGCSubmissionSection'
 import {
@@ -335,6 +336,7 @@ export function MarketContent({
   briefHighlight = null,
   selfToolsRef,
   recommendLevel,
+  collaborationHighlight = false,
 }: {
   defaultTab?: MarketTab
   /**
@@ -364,6 +366,12 @@ export function MarketContent({
    *   → 命中 level 的项目卡片（recommend:true 或 level 匹配）展示 ring-2 高亮
    */
   recommendLevel?: 'trader' | 'flow' | 'system' | 'asset'
+  /**
+   * 来自学习入门页的"找人合作"协作高亮
+   *   来自 /market/services?from=guide&type=collaboration
+   *   → 高亮「OPC 陪跑」与「AI 网店代运营」两张服务卡片
+   */
+  collaborationHighlight?: boolean
 }) {
   const router = useRouter()
   const pathname = usePathname()
@@ -372,6 +380,10 @@ export function MarketContent({
   // 多选需求引擎状态
   const [selectedServices, setSelectedServices] = useState<string[]>([])
   const [inquiryOpen, setInquiryOpen] = useState(false)
+  // ════════ 协作匹配弹窗（学习入门 → 找人合作 联动）══════
+  // 当 collaborationHighlight=true 且用户点击高亮服务卡时，弹出此弹窗
+  // 推荐匹配的 CITY_MAINTAINER / 资产型 OPC，并引导进入服务咨询表单
+  const [collaborationService, setCollaborationService] = useState<ServiceItem | null>(null)
   // 项目库 · 寻找资深 OPC 匹配弹窗状态（任务 3）
   const [findOpcProject, setFindOpcProject] = useState<ProjectItem | null>(null)
   // 资源库 · 招商加盟对接状态
@@ -428,6 +440,19 @@ export function MarketContent({
   }
 
   const toggleService = (id: string) => {
+    // ════════ 协作高亮卡 → 弹协作匹配弹窗（不走 toggle）══════
+    // 当 collaborationHighlight=true 且点击的是「OPC 陪跑 / AI 网店代运营」时
+    // 优先弹出推荐弹窗，引导至协作匹配而非简单勾选
+    if (
+      collaborationHighlight &&
+      (id === 'opc-coaching' || id === 'shop-daiyun')
+    ) {
+      const svc = serviceItems.find((s) => s.id === id)
+      if (svc) {
+        setCollaborationService(svc)
+        return
+      }
+    }
     setSelectedServices((prev) =>
       prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
     )
@@ -463,6 +488,39 @@ export function MarketContent({
     }
     return null
   })()
+
+  // 用户当前城市（兜底 '深圳'，与 CitySelector 保持一致）
+  // CitySelector 把城市 code（如 'shenzhen'）存在 lps.selectedCity 中
+  const CITY_CODE_TO_NAME: Record<string, string> = {
+    shenzhen: '深圳',
+    dongguan: '东莞',
+    liuzhou: '柳州',
+    wuhai: '乌海',
+  }
+  const userCity: string = (() => {
+    if (typeof window === 'undefined') return '深圳'
+    const code = window.localStorage.getItem('lps.selectedCity') || 'shenzhen'
+    return CITY_CODE_TO_NAME[code] || '深圳'
+  })()
+
+  /**
+   * 协作匹配弹窗 → 引导至服务咨询表单
+   * 流程：
+   *   1. 关闭协作匹配弹窗
+   *   2. 将当前 service 加入 selectedServices（单选）
+   *   3. 打开标准 ServiceInquiryModal（自动定位到服务咨询流程）
+   */
+  const handleCollaborationSubmitForm = () => {
+    if (!collaborationService) return
+    const sid = collaborationService.id
+    setCollaborationService(null)
+    // 确保该 service 在 selectedServices 中
+    setSelectedServices((prev) =>
+      prev.includes(sid) ? prev : [...prev, sid]
+    )
+    // 打开服务咨询弹窗
+    setInquiryOpen(true)
+  }
 
   // 同步读取 localStorage 中的会员等级（首次加载 + 监听 storage 事件）
   useEffect(() => {
@@ -646,6 +704,7 @@ export function MarketContent({
                   service={svc}
                   selected={selectedServices.includes(svc.id)}
                   onToggle={() => toggleService(svc.id)}
+                  highlighted={collaborationHighlight && (svc.id === 'opc-coaching' || svc.id === 'shop-daiyun')}
                 />
               ))}
             </div>
@@ -817,6 +876,17 @@ export function MarketContent({
         <FindSeniorOPCModal
           project={findOpcProject}
           onClose={() => setFindOpcProject(null)}
+        />
+      )}
+
+      {/* ════════ 协作匹配弹窗（学习入门 → 找人合作 联动）══════ */}
+      {collaborationService && (
+        <CollaborationMatchModal
+          service={collaborationService}
+          opcLevel={opcLevel}
+          city={userCity}
+          onClose={() => setCollaborationService(null)}
+          onSubmitForm={handleCollaborationSubmitForm}
         />
       )}
 
@@ -1051,10 +1121,16 @@ function ServiceSelectCard({
   service,
   selected,
   onToggle,
+  highlighted = false,
 }: {
   service: ServiceItem
   selected: boolean
   onToggle: () => void
+  /**
+   * 来自学习入门页"找人合作"协作高亮
+   * true → 紫色 ring-2 描边 + 协作推荐角标
+   */
+  highlighted?: boolean
 }) {
   const isAI = service.type === 'ai'
 
@@ -1066,13 +1142,21 @@ function ServiceSelectCard({
       className={cn(
         'group relative w-full text-left bg-white rounded-2xl shadow-sm hover:shadow-md transition-all p-5 cursor-pointer',
         'border-2',
-        selected
+        highlighted
+          ? 'border-purple-500 ring-2 ring-purple-500 shadow-purple-100'
+          : selected
           ? 'border-blue-500 ring-2 ring-blue-100 shadow-blue-100'
           : 'border-transparent hover:border-blue-200'
       )}
     >
-      {/* 选中对勾 */}
-      {selected && (
+      {/* 协作推荐角标（来自学习入门页） */}
+      {highlighted && (
+        <span className="absolute top-3 right-3 inline-flex items-center gap-1 text-[10px] font-extrabold text-white bg-gradient-to-r from-purple-500 to-fuchsia-500 px-2 py-0.5 rounded-full shadow-md">
+          🤝 协作推荐
+        </span>
+      )}
+      {/* 选中对勾（未高亮时显示） */}
+      {selected && !highlighted && (
         <span className="absolute top-3 right-3 inline-flex items-center justify-center w-6 h-6 rounded-full bg-blue-500 text-white shadow-md">
           <CheckCircle2 size={14} strokeWidth={3} />
         </span>

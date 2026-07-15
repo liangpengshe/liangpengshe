@@ -79,6 +79,10 @@
   .animate-spin-reverse {
     animation: spinReverse 30s linear infinite;
   }
+
+  .animate-float {
+    animation: floatY 4s ease-in-out infinite;
+  }
 }
 
 @keyframes slideUp {
@@ -120,6 +124,11 @@
 @keyframes spinReverse {
   from { transform: rotate(360deg); }
   to { transform: rotate(0deg); }
+}
+
+@keyframes floatY {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
 }
 
 /* ════════ 项目 SOP 详情页（/projects/[slug]）Duolingo 风格呼吸动效 ═══════ */

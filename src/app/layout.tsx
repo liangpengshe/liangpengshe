@@ -1,4 +1,4 @@
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 import { Suspense } from 'react'
 import GlobalLoading from './loading'
 import { ToastProvider } from '@/components/Toast'
@@ -11,6 +11,15 @@ export const metadata: Metadata = {
   authors: [{ name: '良朋社OPC' }],
   creator: '良朋社OPC',
   publisher: '良朋社OPC',
+}
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 5,
+  userScalable: true,
+  themeColor: '#2563eb',
+  viewportFit: 'cover',
 }
 
 export default function RootLayout({

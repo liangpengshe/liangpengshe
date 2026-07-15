@@ -270,7 +270,7 @@ export function FindSeniorOPCModal({
 
               {/* 底部说明 */}
               <div className="text-[10px] text-slate-400 text-center pt-2 pb-1">
-                匹配数据每 5 分钟更新一次；点击"立即对接"将展示主理人完整微信号与电话
+                匹配数据每 5 分钟更新一次；点击「立即对接」将展示主理人完整微信号与电话
               </div>
             </>
           )}

@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { MarketContent } from '@/components/market/MarketContent'
 
@@ -22,11 +22,11 @@ import { MarketContent } from '@/components/market/MarketContent'
 type TypeParam = 'trader' | 'flow' | null
 type SceneSlug =
   | 'self-tools'
+  | 'shop-workspace'
+  | 'media-login'
   | 'scene-writing'
   | 'scene-image'
   | 'scene-video'
-  | 'scene-coding'
-  | 'shop-workspace'
 
 const TYPE_TO_ANCHOR: Record<Exclude<TypeParam, null>, string> = {
   trader: 'tools-category-shop-workspace',
@@ -41,28 +41,22 @@ const TYPE_TO_HIGHLIGHT: Record<
   flow: 'media-login',
 }
 
-const SCENE_FILTERS: {
-  slug: SceneSlug
-  label: string
-  emoji: string
-  color: string
-  /** 该胶囊是否需要 router.push（URL 驱动） */
-  pushUrl?: boolean
-}[] = [
-  // ⭐ 自研工具置顶 + 特殊配色
-  { slug: 'self-tools',    label: '自研工具', emoji: '🧬', color: 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100', pushUrl: true },
-  // 5 场景胶囊（本地滚动）
-  { slug: 'scene-writing', label: '写文案',   emoji: '✍️', color: 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100' },
-  { slug: 'scene-image',   label: '做图片',   emoji: '🎨', color: 'bg-indigo-50 text-indigo-700 border-indigo-200 hover:bg-indigo-100' },
-  { slug: 'scene-video',   label: '搞视频',   emoji: '🎬', color: 'bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100' },
-  { slug: 'scene-coding',  label: '编代码',   emoji: '💻', color: 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100' },
-  { slug: 'shop-workspace', label: '开网店',  emoji: '🛒', color: 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100' },
+/**
+ * 6 大核心分类（精简后的工具库导航）
+ * 移动端横向滚动，桌面端单行展示
+ */
+const SCENE_FILTERS: { slug: SceneSlug; label: string }[] = [
+  { slug: 'self-tools',     label: '自研工具' },
+  { slug: 'shop-workspace', label: '网店工作台' },
+  { slug: 'media-login',    label: '自媒体登录' },
+  { slug: 'scene-writing',  label: 'AI文案写作' },
+  { slug: 'scene-image',    label: 'AI图片创作' },
+  { slug: 'scene-video',    label: 'AI音频视频' },
 ]
 
 const HEADER_OFFSET = 140
 
 export default function MarketToolsPage() {
-  const router = useRouter()
   const searchParams = useSearchParams()
   const typeParam = (searchParams?.get('type') as TypeParam) ?? null
   const tabParam = searchParams?.get('tab') ?? null
@@ -97,21 +91,15 @@ export default function MarketToolsPage() {
   }, [])
 
   /**
-   * 场景胶囊点击：滚动 + 短暂高亮 1.5s
-   * 自研工具：push URL ?tab=self_tools（触发 useEffect + 3s 闪烁高亮）
+   * 场景胶囊点击：滚动 + 1.5s 闪烁高亮（首张卡片 ring-2）
    */
   const handleSceneClick = useCallback(
-    (slug: SceneSlug, pushUrl?: boolean) => {
-      if (slug === 'self-tools' || pushUrl) {
-        // 自研工具走 URL 路径 → 触发 3s 闪烁效果
-        router.push('/market/tools?tab=self_tools', { scroll: false })
-        return
-      }
+    (slug: SceneSlug) => {
       scrollToCategory(slug)
       setBriefHighlight(slug)
       window.setTimeout(() => setBriefHighlight(null), 1500)
     },
-    [router, scrollToCategory]
+    [scrollToCategory]
   )
 
   /**
@@ -181,9 +169,9 @@ export default function MarketToolsPage() {
         </section>
       )}
 
-      {/* ════════ 场景胶囊筛选（任务 5）══════ */}
-      <section className="mb-4">
-        <div className="grid grid-cols-6 gap-1.5 md:gap-2">
+      {/* ════════ 6 大核心分类（横向滚动 · 移动端友好）══════ */}
+      <section className="mb-4 -mx-4">
+        <div className="flex overflow-x-auto whitespace-nowrap scrollbar-hide gap-3 px-4 pb-2">
           {SCENE_FILTERS.map((s) => {
             const isActive =
               briefHighlight === s.slug ||
@@ -192,57 +180,27 @@ export default function MarketToolsPage() {
               <button
                 key={s.slug}
                 type="button"
-                onClick={() => handleSceneClick(s.slug, s.pushUrl)}
-                className={`flex flex-col items-center justify-center gap-0.5 border rounded-full py-1.5 px-1 md:py-2 md:px-2 text-[10px] md:text-xs font-bold active:scale-95 transition-all whitespace-nowrap ${
+                onClick={() => handleSceneClick(s.slug)}
+                className={`flex-shrink-0 bg-white/50 border rounded-full px-4 py-2 text-sm font-bold transition whitespace-nowrap ${
                   isActive
-                    ? `${s.color} ring-2 ring-blue-300 border-blue-400`
-                    : s.color
+                    ? 'border-blue-500 bg-blue-50 text-blue-700 ring-2 ring-blue-500/30'
+                    : 'border-slate-200 text-slate-700 hover:bg-white'
                 }`}
               >
-                <span className="text-sm md:text-base leading-none">{s.emoji}</span>
-                <span className="leading-none">{s.label}</span>
+                {s.label}
               </button>
             )
           })}
         </div>
       </section>
 
-      {/* ════════ 新手快捷分流 + 数据统计（仅 tools 页显示）══════ */}
-      <section className="mb-5 space-y-3">
-        {/* 快捷分流胶囊 */}
-        <div className="grid grid-cols-2 gap-3 md:gap-4 max-w-xl mx-auto">
-          <button
-            type="button"
-            onClick={() => handleSceneClick('shop-workspace')}
-            className={`rounded-full py-2 px-3 md:px-4 text-xs md:text-sm font-bold active:scale-95 transition-all whitespace-nowrap ${
-              highlightCategory === 'shop-workspace'
-                ? 'bg-blue-100 text-blue-800 border-2 border-blue-400 ring-2 ring-blue-300'
-                : 'bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100'
-            }`}
-          >
-            🚀 我是开网店的
-          </button>
-          <button
-            type="button"
-            onClick={() => scrollToCategory('media-login')}
-            className={`rounded-full py-2 px-3 md:px-4 text-xs md:text-sm font-bold active:scale-95 transition-all whitespace-nowrap ${
-              highlightCategory === 'media-login'
-                ? 'bg-purple-100 text-purple-800 border-2 border-purple-400 ring-2 ring-purple-300'
-                : 'bg-purple-50 text-purple-700 border border-purple-200 hover:bg-purple-100'
-            }`}
-          >
-            🎬 我是做自媒体的
-          </button>
-        </div>
-
-        {/* 数据统计胶囊 */}
-        <div className="flex justify-center">
-          <div className="bg-white/80 backdrop-blur-sm px-4 py-2 rounded-full shadow-sm border border-slate-200 text-xs flex items-center gap-2 text-slate-700">
-            <span>📚</span>
-            <span className="font-medium">已收录 50+ 平台与工具</span>
-            <span className="text-slate-300">|</span>
-            <span>覆盖 4 大 OPC 赛道</span>
-          </div>
+      {/* ════════ 数据统计胶囊（保留）══════ */}
+      <section className="mb-5 flex justify-center">
+        <div className="bg-white/80 backdrop-blur-sm px-4 py-2 rounded-full shadow-sm border border-slate-200 text-xs flex items-center gap-2 text-slate-700">
+          <span>📚</span>
+          <span className="font-medium">已收录 50+ 平台与工具</span>
+          <span className="text-slate-300">|</span>
+          <span>覆盖 4 大 OPC 赛道</span>
         </div>
       </section>
 

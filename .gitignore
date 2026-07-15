@@ -55,6 +55,17 @@ verify-*.js
 verify-screenshots*/
 scripts-output/
 
+# ===== Dev / Debug artifacts =====
+*.backup
+fix_*.py
+fix_*.sh
+diag.ps1
+start.bat
+
+# ===== Test reports =====
+TEST_REPORT.md
+README-START.md
+
 # ===== Backups (huge) =====
 backups/
 *.zip

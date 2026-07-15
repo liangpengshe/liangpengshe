@@ -1,29 +1,13 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
-import dynamic from 'next/dynamic'
+import { useState, useEffect, useCallback, Suspense } from 'react'
 import { useRouter } from 'next/navigation'
 import CitySelector, { CITY_STORAGE_KEY } from '@/components/CitySelector'
 import Link from 'next/link'
 import { Lock, ArrowRight, Target, Wrench, CheckCircle2, Sparkles } from 'lucide-react'
-
-// 这些组件含客户端副作用（localStorage、setTimeout、动画），统一 ssr:false
-// 避免它们在 SSR 时输出的 DOM 与 client 第一次渲染不一致 → Hydration 报错
-const MobileBottomNav = dynamic(() => import('@/components/MobileBottomNav'), {
-  ssr: false,
-  loading: () => null,
-})
-
-const AIAssistant = dynamic(() => import('@/components/AIAssistant'), {
-  ssr: false,
-  loading: () => null,
-})
-
-// 进化项 2.2：移动端汉堡菜单（只在 < md 显示）
-const MobileHamburgerMenu = dynamic(
-  () => import('@/components/MobileHamburgerMenu'),
-  { ssr: false, loading: () => null }
-)
+import MobileBottomNav from '@/components/MobileBottomNav'
+import AIAssistant from '@/components/AIAssistant'
+import MobileHamburgerMenu from '@/components/MobileHamburgerMenu'
 
 /**
  * 工作台前置条件检查
@@ -66,9 +50,6 @@ export default function ClientLayout({
         const code = window.localStorage.getItem(CITY_STORAGE_KEY) || 'shenzhen'
         const map: Record<string, string> = {
           shenzhen: '深圳站',
-          guangzhou: '广州站',
-          hangzhou: '杭州站',
-          chengdu: '成都站',
           wuhai: '乌海站',
           dongguan: '东莞站',
           liuzhou: '柳州站',
@@ -155,7 +136,10 @@ export default function ClientLayout({
       </header>
       {children}
       <MobileBottomNav />
-      <AIAssistant />
+      {/* AIAssistant 使用了 useSearchParams，需要 Suspense 边界 */}
+      <Suspense fallback={null}>
+        <AIAssistant />
+      </Suspense>
 
       {/* ════════ 工作台前置拦截模态框 ═══════ */}
       {workspaceGuardOpen && (

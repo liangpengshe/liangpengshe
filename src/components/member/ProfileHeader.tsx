@@ -23,7 +23,7 @@ export interface ProfileHeaderProps {
   userName: string
   userAvatar?: string
   userStage: UserStage | null
-  coinsBalance: number
+  pointsBalance: number
   className?: string
 }
 
@@ -44,7 +44,7 @@ export function ProfileHeader({
   userName,
   userAvatar,
   userStage,
-  coinsBalance,
+  pointsBalance,
   className,
 }: ProfileHeaderProps) {
   const opcMeta = getOPCLevelMeta(userStage?.opcLevel)
@@ -147,7 +147,7 @@ export function ProfileHeader({
             </div>
           </div>
 
-          {/* 右侧：会员 + 良朋币徽章 */}
+          {/* 右侧：会员 + 智富积分徽章 */}
           <div className="flex flex-row md:flex-col gap-2 md:items-end">
             {/* 会员权益徽章 */}
             <div
@@ -183,10 +183,10 @@ export function ProfileHeader({
               <Coins size={14} className="text-amber-300" />
               <div className="text-left">
                 <div className="text-[9px] font-normal text-amber-100/80 leading-none">
-                  良朋币余额
+                  智富积分余额
                 </div>
                 <div className="text-sm md:text-base font-extrabold leading-tight mt-0.5">
-                  {coinsBalance.toLocaleString('zh-CN')}
+                  {pointsBalance.toLocaleString('zh-CN')}
                 </div>
               </div>
             </div>

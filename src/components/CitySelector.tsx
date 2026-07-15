@@ -6,12 +6,9 @@ import { MapPin, ChevronDown } from 'lucide-react'
 
 const cities = [
   { name: '深圳', code: 'shenzhen' },
-  { name: '广州', code: 'guangzhou' },
-  { name: '杭州', code: 'hangzhou' },
-  { name: '成都', code: 'chengdu' },
-  { name: '乌海', code: 'wuhai' },
   { name: '东莞', code: 'dongguan' },
   { name: '柳州', code: 'liuzhou' },
+  { name: '乌海', code: 'wuhai' },
 ]
 
 // localStorage 键名 + 跨组件共享当前选中城市
@@ -21,9 +18,6 @@ const CITY_CHANGE_EVENT = 'lps:cityChanged'
 // 各城市站首页路由映射
 const CITY_HOMEPAGE: Record<string, string> = {
   shenzhen: '/',
-  guangzhou: '/',
-  hangzhou: '/',
-  chengdu: '/',
   wuhai: '/wuhai',
   dongguan: '/dongguan',
   liuzhou: '/liuzhou',

@@ -325,7 +325,7 @@ export default function CityDailyConsole() {
             </div>
           ) : articles.length === 0 ? (
             <div className="text-center py-8 text-xs text-slate-400 bg-white rounded-2xl border border-dashed border-slate-200">
-              还没有历史文章，点击上方"生成今日日报"创建第一篇
+              还没有历史文章，点击上方「生成今日日报」创建第一篇
             </div>
           ) : (
             <div className="space-y-2.5">
@@ -384,8 +384,8 @@ export default function CityDailyConsole() {
               <p className="text-[11px] text-cyan-700 leading-relaxed">
                 每生成一篇文章，系统会发布到
                 <code className="bg-cyan-100 px-1 rounded mx-0.5 text-[10px]">/news/{cityToSlug(city)}/</code>
-                路径下，并附带完整的 <code className="bg-cyan-100 px-1 rounded text-[10px]">meta name="description"</code>、
-                OG tags、JSON-LD 结构化数据。百度/谷歌将这类 URL 视为"优质本地化内容"，
+                路径下，并附带完整的 <code className="bg-cyan-100 px-1 rounded text-[10px]">meta name=&quot;description&quot;</code>、
+                OG tags、JSON-LD 结构化数据。百度/谷歌将这类 URL 视为「优质本地化内容」，
                 极大提升 {city} 分站的本地搜索排名。
               </p>
               <p className="mt-1.5 text-[10px] text-cyan-600">
