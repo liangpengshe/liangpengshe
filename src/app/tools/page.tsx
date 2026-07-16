@@ -33,7 +33,7 @@ const fadeUp = {
 const selfTools = [
   {
     icon: ShoppingBag,
-    title: '豹纹工坊',
+    title: '豹纹工坊（豹纹+）',
     desc: '一键生成爆款商品素材，提升电商转化',
     href: '/tools/leopard',
     gradient: 'bg-gradient-to-br from-amber-400 via-orange-500 to-rose-500',

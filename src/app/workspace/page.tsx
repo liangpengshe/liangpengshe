@@ -87,7 +87,7 @@ const TODAY_TASKS: Task[] = [
 
 const QUICK_LINKS = [
   { name: '智富严选', desc: 'AI 选品分析', icon: '🛒', href: '/tools', core: true },
-  { name: '豹纹工坊', desc: '一键生成素材', icon: '🛠️', href: '/tools', core: true },
+  { name: '豹纹工坊（豹纹+）', desc: '一键生成素材', icon: '🛠️', href: '/tools', core: true },
   { name: '灵犀 AI', desc: '智能内容创作', icon: '✨', href: '/tools', core: true },
   { name: '先锋派数字人', desc: 'AI 数字人视频', icon: '🎬', href: '/tools', core: true },
 ]

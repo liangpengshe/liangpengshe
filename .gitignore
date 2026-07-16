@@ -66,6 +66,11 @@ start.bat
 TEST_REPORT.md
 README-START.md
 
+# ===== Debug screenshots =====
+tmp/
+*.scenario.png
+scenario-*.png
+
 # ===== Backups (huge) =====
 backups/
 *.zip

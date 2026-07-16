@@ -79,7 +79,7 @@ export const resourceItems: ResourceItem[] = [
   {
     id: 'ai-software',
     title: 'AI 自研软件库',
-    desc: '豹纹工坊、灵犀 AI、先锋派数字人等独家自研工具集。',
+    desc: '豹纹工坊（豹纹+）、灵犀 AI、先锋派数字人等独家自研工具集。',
     type: 'internal',
     icon: '🧰',
     borderTopColor: 'border-t-purple-500',

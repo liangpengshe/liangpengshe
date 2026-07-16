@@ -16,6 +16,15 @@ const nextConfig = {
   compress: true,
   poweredByHeader: false,
   generateEtags: true,
+  async redirects() {
+    return [
+      {
+        source: '/pitch',
+        destination: '/partner',
+        permanent: true,
+      },
+    ]
+  },
   async headers() {
     const staticCacheControl =
       process.env.NODE_ENV === 'development'

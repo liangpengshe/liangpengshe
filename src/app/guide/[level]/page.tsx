@@ -20,8 +20,12 @@ import {
   Rocket,
 } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
+import { AnimatePresence, motion } from 'framer-motion'
 import { UNLOCK_PRACTICE_THRESHOLD } from '@/lib/learning-progress-store'
 import { GuideAICoach } from '@/components/guide/GuideAICoach'
+
+/** 拦截弹窗防抖：同一 session 内已展示过则不再重复弹 */
+const INTERCEPT_SESSION_KEY = 'intercept_guide_shown'
 
 /**
  * OPC 学习入门 · AI 知识能力构图
@@ -50,6 +54,9 @@ import { GuideAICoach } from '@/components/guide/GuideAICoach'
 
 type Level = 'trader' | 'flow' | 'system' | 'asset'
 
+type RegisterLink = { label: string; url: string }
+type ToolButton = { label: string; url: string }
+
 const LEVEL_META: Record<Level, {
   label: string
   emoji: string
@@ -57,11 +64,12 @@ const LEVEL_META: Record<Level, {
   badge: string
   bg: string
   ring: string
-  // 任务 平台跳转链接
-  registerUrl: string
-  registerLabel: string
-  downloadUrl: string
-  downloadLabel: string
+  // 任务 3B 改造：单赛道统一为 registerUrls（多入口），仅保留淘宝/抖店/公众号等指定渠道
+  registerUrls: RegisterLink[]
+  // 任务 3 改造（trader 限定）：双 AI 工具并排按钮（淘宝 + 抖音），其他 level 用 downloadUrl/downloadLabel
+  toolButtons?: ToolButton[]
+  downloadUrl?: string
+  downloadLabel?: string
 }> = {
   trader: {
     label: '交易型 OPC',
@@ -70,22 +78,31 @@ const LEVEL_META: Record<Level, {
     badge: '第一层 · 跑通',
     bg: 'bg-gradient-to-br from-amber-400 via-orange-500 to-rose-500',
     ring: 'ring-amber-300/60',
-    registerUrl: 'https://ishop.taobao.com/openshop/tb_open_shop_landing.htm',
-    registerLabel: '前往淘宝商家开店',
-    downloadUrl: 'https://www.lingxixai.com',
-    downloadLabel: '前往灵犀 AI',
+    // 任务 3B：trader 限定淘宝 + 抖店双入口
+    registerUrls: [
+      { label: '🏪 淘宝开店', url: 'https://ishop.taobao.com/' },
+      { label: '🛍️ 抖店入驻', url: 'https://fxg.jinritemai.com/?source=ddgwdlymzxjsjrz' },
+    ],
+    // 任务 3 改造：双 AI 工具并排胶囊按钮（淘宝通义 / 抖音即梦），无 downloadUrl
+    toolButtons: [
+      { label: '淘宝AI工具', url: 'https://tongyi.aliyun.com/wan/' },
+      { label: '抖音AI电商工具', url: 'https://aic.oceanengine.com/login' },
+    ],
   },
   flow: {
     label: '流量型 OPC',
-    emoji: '🔥',
+    emoji: '🚀',
     tagline: '内容获客 · 自媒体矩阵 · 流量变现',
     badge: '第二层 · 放大',
     bg: 'bg-gradient-to-br from-rose-500 to-pink-600',
     ring: 'ring-rose-300/60',
-    registerUrl: 'https://www.douyin.com/',
-    registerLabel: '前往抖音创作者中心',
-    downloadUrl: 'https://jimeng.jianying.com',
-    downloadLabel: '前往即梦 Dreamina',
+    // 任务 3B 改造：flow 从抖音改为公众号（统一自媒体图文运营入口）
+    registerUrls: [
+      { label: '📱 微信公众号', url: 'https://mp.weixin.qq.com/' },
+    ],
+    // 流量型 OPC 任务 3 改造：跳转豹纹PLUS（豹纹工坊）AI 内容工具
+    downloadUrl: 'https://www.baowenplus.com/',
+    downloadLabel: '豹纹PLUS',
   },
   system: {
     label: '系统型 OPC',
@@ -94,8 +111,9 @@ const LEVEL_META: Record<Level, {
     badge: '第三层 · 转型',
     bg: 'bg-gradient-to-br from-blue-500 to-indigo-600',
     ring: 'ring-blue-300/60',
-    registerUrl: 'https://www.coze.cn/overview',
-    registerLabel: '前往扣子 Coze',
+    registerUrls: [
+      { label: '🧠 扣子 Coze', url: 'https://www.coze.cn/overview' },
+    ],
     downloadUrl: 'https://www.dify.ai',
     downloadLabel: '前往 Dify',
   },
@@ -106,8 +124,9 @@ const LEVEL_META: Record<Level, {
     badge: '第四层 · 资产化',
     bg: 'bg-gradient-to-br from-violet-500 to-fuchsia-600',
     ring: 'ring-violet-300/60',
-    registerUrl: 'https://www.coze.cn/store',
-    registerLabel: '前往 Coze 商店',
+    registerUrls: [
+      { label: '🛍️ Coze 商店', url: 'https://www.coze.cn/store' },
+    ],
     downloadUrl: 'https://www.lingxixai.com',
     downloadLabel: '前往灵犀 AI',
   },
@@ -172,7 +191,7 @@ const knowledgeData: Record<Level, KnowledgeData> = {
         desc: '10 秒生成 1 套详情页 + 营销话术，替代逐字手写',
       },
       {
-        tool: '豹纹工坊',
+        tool: '豹纹工坊（豹纹+）',
         title: '批量生成短视频素材',
         desc: '上传产品图 → 一键出 30 条短视频，自动匹配爆款 BGM',
       },
@@ -309,56 +328,56 @@ const knowledgeData: Record<Level, KnowledgeData> = {
   system: {
     skills: [
       {
-        title: '业务流程解构',
-        desc: '把一个企业流程拆解为 SOP：输入 / 处理 / 输出 / 异常处理',
+        title: '需求分析',
+        desc: '30 分钟问对 5 个问题，准确定位客户真实痛点（而非表面需求），画出 1 张需求图谱',
       },
       {
-        title: 'AI 改造可行性评估',
-        desc: '判断哪个环节值得 AI 化：高重复 + 低创意 + 有数据 = 优先改造',
+        title: '架构设计',
+        desc: '把业务需求拆解为「数据层 + AI 层 + 业务层 + 接口层」4 层架构，输出可落地技术方案',
       },
       {
-        title: '客户需求诊断',
-        desc: '30 分钟问对 5 个问题，准确定位客户真实痛点（而非表面需求）',
+        title: '客户交付流程',
+        desc: 'POC 验证 → 灰度上线 → 全量交付 → 运维支持 4 阶段交付 SOP，每个节点有明确验收标准',
       },
       {
-        title: '项目报价与交付',
-        desc: '按效果 / 按节点 / 按月费 3 种报价模式，匹配不同客户类型',
+        title: 'AI 智能体配置',
+        desc: '在 Dify / Coze 平台搭建工作流 + 知识库 + 工具集，把业务逻辑沉淀为可复用智能体',
       },
     ],
     tools: [
       {
         tool: 'Dify',
-        title: '工作流编排 + 智能体发布',
-        desc: '拖拽式搭建企业级 AI 应用：客服 / 知识库 / 数据分析',
+        title: '企业级 AI 工作流编排',
+        desc: '拖拽式搭建企业级 AI 应用：客服 / 知识库 / 数据分析，支持私有化部署',
       },
       {
         tool: 'Coze 扣子',
-        title: '零代码搭建企业级智能助手',
-        desc: '30 分钟搭出专属 AI 客服 / 销售助手，零基础也能交付',
+        title: '零代码搭建企业智能助手',
+        desc: '30 分钟搭出专属 AI 客服 / 销售助手，无缝对接企业微信 / 飞书 / 钉钉',
       },
       {
         tool: 'TRAE IDE',
-        title: 'AI 原生 IDE',
-        desc: '面向系统型 OPC 的代码生成工具，加速 MVP 开发',
+        title: 'AI 原生开发环境',
+        desc: '面向系统型 OPC 的代码生成工具，加速 MVP / 集成代码交付',
       },
       {
-        tool: '飞书多维表格',
-        title: '企业数据中台',
-        desc: 'AI 字段 + 自动化流程 = 替代 80% 的传统 CRM',
+        tool: '硅基流动',
+        title: '多模型算力调度',
+        desc: '按需调用 Qwen / DeepSeek / GLM 等大模型，单次调用成本压到 0.01 元',
       },
     ],
     rules: [
       {
-        title: '企业数据合规',
-        desc: '客户数据本地化部署 / 隐私计算 / GDPR 适配：B 端必谈',
+        title: '定制化系统开发流程',
+        desc: '需求调研 → 原型设计 → MVP 开发 → 客户验收 → 部署上线 5 阶段，每个阶段必须签字确认',
       },
       {
-        title: 'AI 落地效果评估',
-        desc: '不能只看 demo：实际节省人力 / 提升转化 / ROI 才是付费标准',
+        title: '企业数据安全与合规红线',
+        desc: '客户数据本地化部署 / 隐私计算 / GDPR / 等保 2.0：B 端必谈，0 妥协',
       },
       {
         title: '合同与知识产权',
-        desc: '工作流代码 / 智能体 / 训练数据：归属与复用条款必须写清',
+        desc: '工作流代码 / 智能体 / 训练数据：归属与复用条款必须写清，避免后期扯皮',
       },
       {
         title: '持续运维 SLA',
@@ -389,60 +408,60 @@ const knowledgeData: Record<Level, KnowledgeData> = {
   asset: {
     skills: [
       {
-        title: '数字资产估值',
-        desc: '判断一个 AI 工具 / 工作流 / 智能体值多少钱：复用次数 × 边际成本',
+        title: '数字产品选品',
+        desc: '判断哪些数字资产有复利价值：提示词包 / 模板库 / 数字素材 / AI 工作流',
       },
       {
-        title: 'SaaS 化产品设计',
-        desc: '把单次服务封装为可订阅的标准化产品（用户自助 / 自动交付）',
+        title: '跨境平台规则',
+        desc: 'Gumroad / Etsy / Amazon KDP / Coze 商店 各平台合规、税务、提现规则',
       },
       {
-        title: '全球外包交付',
-        desc: 'AI + 海外兼职：把交付时间从 30 天压缩到 3 天',
+        title: '定价与汇率策略',
+        desc: '按目标市场购买力分档定价 + 实时汇率对冲 + 订阅 / 一次性 / 阶梯 3 套组合',
       },
       {
-        title: '投资人对接能力',
-        desc: '讲清"为什么是你 / 为什么是现在 / 为什么能赚大钱"3 个核心问题',
+        title: '全球分发与冷启动',
+        desc: 'X / YouTube / 小红书 / 即刻 4 平台同步导流，跑通首月 100 单',
       },
     ],
     tools: [
       {
-        tool: 'Dify',
-        title: '工作流 + 智能体商业化',
-        desc: '把内部工作流封装为对外可售卖的 SaaS / 智能体',
-      },
-      {
-        tool: 'Coze 商店',
-        title: '智能体上架变现',
-        desc: '在 Coze 商店发布你的智能体，按调用次数自动分账',
-      },
-      {
         tool: '灵犀 AI',
         title: '数字内容资产沉淀',
-        desc: '把碎片化经验沉淀为可复用的提示词 / 工作流 / 知识库',
+        desc: '把碎片化经验沉淀为可复用的提示词包 / 模板库 / 知识库',
       },
       {
-        tool: '硅基流动',
-        title: 'AI 算力调度',
-        desc: '按需调度多模型算力，把单次调用成本压到 0.01 元',
+        tool: 'Midjourney',
+        title: '高质数字素材生成',
+        desc: '为数字产品生成封面 / 海报 / 周边素材，单张成本压到 0.5 元',
+      },
+      {
+        tool: 'Gumroad',
+        title: '全球数字商品售卖',
+        desc: '一键上架全球售卖，自动结算美元 / 欧元 / 英镑，平台抽成仅 10%',
+      },
+      {
+        tool: '先锋派数字人',
+        title: '7×24h 全球口播视频',
+        desc: '1 张照片 + 1 段文案 = 多语种口播视频，覆盖 YouTube / TikTok / 小红书',
       },
     ],
     rules: [
       {
-        title: '数字资产确权',
-        desc: '工作流 / 智能体 / 训练数据：在 GitHub / 区块链 / 版权局多重备案',
+        title: '国际支付结算',
+        desc: 'PayPal / Stripe / Payoneer / PingPong 4 通道选择 + 汇率风险对冲',
       },
       {
-        title: '订阅经济模型',
-        desc: '免费试用 → 基础版 → 专业版 → 企业版：4 档定价覆盖 90% 客群',
+        title: '原创版权合规',
+        desc: 'AI 生成素材的版权声明 + 训练数据来源标注 + 平台 DMCA 风险防范',
       },
       {
-        title: '全球合规适配',
-        desc: '数据出境 / 税务 / 支付：海外营收必须做合规架构',
+        title: '海外流量获取渠道',
+        desc: 'X(Twitter) / YouTube / Reddit / Product Hunt 4 大海外流量入口的运营 SOP',
       },
       {
-        title: '资产退出路径',
-        desc: '持续运营 / 并购 / 上市：3 条退出路径决定资产估值倍数',
+        title: '资产退出与放大',
+        desc: '持续运营 / 被并购 / 平台分销 3 条路径，决定数字资产的最终估值倍数',
       },
     ],
     pitfalls: [
@@ -514,12 +533,119 @@ export default function LevelGuidePage() {
   const meta = LEVEL_META[level]
   const fromSource = searchParams?.get('from') || ''
 
+  /**
+   * 任务清单文案 · 按 OPC level 差异化（任务 3B 覆盖）
+   * trader: 淘宝店 + 抖店（双入口，文案统一）
+   * flow: 微信公众号（统一自媒体图文运营入口）
+   * system/asset: 保持差异化
+   */
+  const TASK_TEXTS_BY_LEVEL: Record<Level, {
+    task2Title: string
+    task2Score: number
+    task2Desc: string
+    task2Icon: string
+    task3Title: string
+    task3Score: number
+    task3Desc: string
+    task3Icon: string
+  }> = {
+    trader: {
+      task2Title: '注册你的第一家淘宝店或抖音店（+40 分）',
+      task2Score: 40,
+      task2Desc: 'AI 数字网店与无货源网店统一从淘宝店或抖店起步',
+      task2Icon: '🏪',
+      task3Title: '点击进入你的淘宝AI电商工具或抖音AI电商工具（+40 分）',
+      task3Desc: '从淘宝 AI 工具或抖音 AI 电商工具中任选其一，体验 AI 电商能力。',
+      task3Score: 40,
+      task3Icon: '⚙️',
+    },
+    flow: {
+      task2Title: '注册你的第一个微信公众号（+40 分）',
+      task2Score: 40,
+      task2Desc: 'AI 自媒体图文运营统一从公众号起步',
+      task2Icon: '📱',
+      task3Title: '体验AI工具（+40 分）',
+      task3Score: 40,
+      task3Desc: '使用豹纹PLUS 一站式 AI 内容工具，零门槛产出公众号/小红书爆款。',
+      task3Icon: '⚙️',
+    },
+    system: {
+      task2Title: '建立企业需求模拟诊断模型（+40 分）',
+      task2Score: 40,
+      task2Desc: '用 AI 帮一个虚拟企业建立需求诊断模型，输出 1 张需求图谱',
+      task2Icon: '🏢',
+      task3Title: '生成 AI 系统定制方案框架（+40 分）',
+      task3Score: 40,
+      task3Desc: '在 Dify / Coze 平台搭建 1 套工作流 + 智能体框架，输出可交付原型',
+      task3Icon: '🛠️',
+    },
+    asset: {
+      task2Title: '完成第一个数字产品选品调研（+40 分）',
+      task2Score: 40,
+      task2Desc: '在 Gumroad / Coze 商店调研 5 个同类数字产品，输出 1 张选品报告',
+      task2Icon: '💎',
+      task3Title: '完成竞品定价调研与自身定价策略（+40 分）',
+      task3Score: 40,
+      task3Desc: '梳理 10 个标杆竞品定价 + 自身 ROI 模型，输出 3 档定价表',
+      task3Icon: '💰',
+    },
+  }
+  const taskTexts = TASK_TEXTS_BY_LEVEL[level]
+
   // 当前 level 的知识能力数据（无接口，静态 Mock，永不空白）
   const knowledge = knowledgeData[level]
 
   // ──── 学习进度状态 ────
   const [progress, setProgress] = useState<LearningProgress | null>(null)
   const [submittingTask, setSubmittingTask] = useState<string | null>(null)
+  // 拦截弹窗状态：未达 UNLOCK_PRACTICE_THRESHOLD 分时阻止跳转
+  const [interceptOpen, setInterceptOpen] = useState(false)
+  // 待执行的跳转（用户完成"去完成任务"后继续跳转的目标 URL）
+  const [pendingTarget, setPendingTarget] = useState<string | null>(null)
+
+  /**
+   * 战略抉择按钮的拦截处理器
+   * ------------------------------------------------------------
+   * 命中条件：learning_score >= UNLOCK_PRACTICE_THRESHOLD → 立即跳转
+   * 未命中  ：打开拦截弹窗，显示当前进度 + 任务完成情况
+   * 防抖    ：sessionStorage 标记已展示，避免反复点击反复弹窗
+   *           关闭弹窗时清除标记，30 秒内再次点击仍可触发（兜底）
+   * ------------------------------------------------------------
+   */
+  const handleChoice = useCallback(
+    (target: string, _kind: 'solo' | 'collab' | 'practice') => {
+      // 直接从 progress 读，避免与下方 const score 重名 TDZ
+      const currentScore = progress?.learning_score ?? 0
+      if (currentScore >= UNLOCK_PRACTICE_THRESHOLD) {
+        // ✅ 达标：直接跳转
+        router.push(target)
+        return
+      }
+      // ❌ 未达标：检查 session 防抖
+      let alreadyShown = false
+      try {
+        alreadyShown = window.sessionStorage.getItem(INTERCEPT_SESSION_KEY) === 'true'
+      } catch {
+        /* sessionStorage 异常时降级为每次都弹 */
+      }
+      if (alreadyShown) {
+        // 已弹过：直接滚到任务清单
+        document
+          .getElementById('task-list')
+          ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+        return
+      }
+      // 弹窗
+      setPendingTarget(target)
+      setInterceptOpen(true)
+      try {
+        window.sessionStorage.setItem(INTERCEPT_SESSION_KEY, 'true')
+      } catch {
+        /* 忽略 */
+      }
+    },
+    [progress, router]
+  )
 
   // 首次加载拉取进度
   useEffect(() => {
@@ -853,12 +979,13 @@ export default function LevelGuidePage() {
       {/* ════════ 引用"运营实操"阶段的钩子横幅 ════════ */}
       <section className="px-5 py-4 md:py-6">
         <div className="max-w-lg md:max-w-6xl md:mx-auto">
+          {/* STEP 03 预告横幅（已移除右侧按钮：唯一行动枢纽在底部"恭喜达标"横幅） */}
           <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-blue-600 via-indigo-600 to-violet-600 text-white shadow-lg">
             <div aria-hidden className="absolute -top-12 -right-12 w-40 h-40 rounded-full bg-white/10 blur-3xl" />
             <div aria-hidden className="absolute -bottom-12 -left-12 w-40 h-40 rounded-full bg-white/10 blur-3xl" />
 
-            <div className="relative p-4 md:p-5 flex flex-col md:flex-row md:items-center gap-3 md:gap-4">
-              <div className="flex items-start md:items-center gap-3 flex-1 min-w-0">
+            <div className="relative p-4 md:p-5 flex items-center gap-3 md:gap-4">
+              <div className="flex items-center gap-3 flex-1 min-w-0">
                 <div className="flex-shrink-0 w-10 h-10 md:w-12 md:h-12 rounded-2xl bg-white/20 backdrop-blur flex items-center justify-center">
                   <Rocket size={20} className="md:w-6 md:h-6" />
                 </div>
@@ -875,59 +1002,159 @@ export default function LevelGuidePage() {
                   </p>
                 </div>
               </div>
-              <button
-                type="button"
-                onClick={() => router.push(`/market/projects?recommend=${level}`)}
-                className="group flex-shrink-0 inline-flex items-center justify-center gap-1.5 bg-white hover:bg-amber-50 text-blue-700 font-extrabold text-sm px-5 py-3 rounded-xl shadow-md hover:shadow-lg active:scale-[0.98] transition-all"
-              >
-                前往运营实操
-                <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
-              </button>
             </div>
           </div>
         </div>
       </section>
 
-      {/* ════════ 战略抉择卡：自己干 vs 找人合作 ═══════ */}
-      <section className="px-5 py-2">
-        <div className="max-w-lg md:max-w-6xl md:mx-auto">
-          <div className="bg-white rounded-2xl shadow-md border border-slate-200 p-6 mb-8 flex flex-col gap-4">
-            <div>
-              <h2 className="text-base md:text-lg font-extrabold text-slate-900 leading-tight">
-                🎯 你已经了解 OPC 所需工具，下一步打算怎么做？
-              </h2>
-              <p className="mt-1.5 text-xs md:text-sm text-slate-600 leading-relaxed">
-                你是打算自己一步步落地干，还是想找有经验的资深 OPC 合作共赢？
-              </p>
-            </div>
+      {/* ════════ 拦截弹窗：未达 80 分时阻止跳转 ═══════ */}
+      <AnimatePresence>
+        {interceptOpen && (
+          <motion.div
+            key="intercept-modal"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[60] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4"
+            onClick={() => setInterceptOpen(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, y: 20, opacity: 0 }}
+              animate={{ scale: 1, y: 0, opacity: 1 }}
+              exit={{ scale: 0.95, y: 20, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="w-full max-w-md bg-white rounded-2xl shadow-2xl p-6 md:p-7"
+            >
+              <div className="flex items-start gap-3 mb-3">
+                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center flex-shrink-0 text-2xl">
+                  🔒
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-base md:text-lg font-extrabold text-slate-900 leading-tight">
+                    还未达到解锁门槛
+                  </h3>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    继续完成下方学习任务，积累到 {UNLOCK_PRACTICE_THRESHOLD} 分即可解锁
+                  </p>
+                </div>
+              </div>
 
-            <div className="flex flex-col md:flex-row gap-4 mt-2">
-              {/* 按钮 1：自己来，进入运营实操 */}
+              {/* 进度条 */}
+              <div className="my-4">
+                <div className="flex items-center justify-between text-xs mb-1.5">
+                  <span className="text-slate-500">当前学习积分</span>
+                  <span className="font-bold text-slate-900">
+                    {score} / {UNLOCK_PRACTICE_THRESHOLD}
+                    <span className="ml-1.5 text-amber-600">
+                      （还差 {UNLOCK_PRACTICE_THRESHOLD - score} 分）
+                    </span>
+                  </span>
+                </div>
+                <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-gradient-to-r from-amber-400 to-orange-500 transition-all"
+                    style={{ width: `${Math.min(100, (score / UNLOCK_PRACTICE_THRESHOLD) * 100)}%` }}
+                  />
+                </div>
+              </div>
+
+              {/* 任务清单（动态反映真实进度） */}
+              <div className="bg-slate-50 rounded-xl p-3.5 space-y-2 mb-5">
+                <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">
+                  📋 你目前完成情况
+                </div>
+                {/* 任务 1：浏览（1.5s 自动完成） */}
+                <div className="flex items-center gap-2 text-xs">
+                  {progress?.task_browse ? (
+                    <CheckCircle2 size={14} className="text-emerald-500 flex-shrink-0" />
+                  ) : (
+                    <Circle size={14} className="text-slate-300 flex-shrink-0" />
+                  )}
+                  <span className={progress?.task_browse ? 'text-slate-500 line-through' : 'text-slate-700'}>
+                    浏览学习中心（+30 分）
+                  </span>
+                  {progress?.task_browse && <span className="text-emerald-600 text-[10px]">✅</span>}
+                </div>
+                {/* 任务 2：注册账号 */}
+                <div className="flex items-center gap-2 text-xs">
+                  {progress?.task_register ? (
+                    <CheckCircle2 size={14} className="text-emerald-500 flex-shrink-0" />
+                  ) : (
+                    <Circle size={14} className="text-amber-500 flex-shrink-0" />
+                  )}
+                  <span className={progress?.task_register ? 'text-slate-500 line-through' : 'text-slate-700'}>
+                    注册账号 / 加入社群（+30 分）
+                  </span>
+                  {progress?.task_register ? (
+                    <span className="text-emerald-600 text-[10px]">✅</span>
+                  ) : (
+                    <span className="text-amber-600 text-[10px]">⏳</span>
+                  )}
+                </div>
+                {/* 任务 3：下载工具 */}
+                <div className="flex items-center gap-2 text-xs">
+                  {progress?.task_download ? (
+                    <CheckCircle2 size={14} className="text-emerald-500 flex-shrink-0" />
+                  ) : (
+                    <Circle size={14} className="text-amber-500 flex-shrink-0" />
+                  )}
+                  <span className={progress?.task_download ? 'text-slate-500 line-through' : 'text-slate-700'}>
+                    下载体验工具（+30 分）
+                  </span>
+                  {progress?.task_download ? (
+                    <span className="text-emerald-600 text-[10px]">✅</span>
+                  ) : (
+                    <span className="text-amber-600 text-[10px]">⏳</span>
+                  )}
+                </div>
+              </div>
+
+              {/* 任务 4A：总结行（与硬编码任务名对齐） */}
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-2.5 mb-4 text-[11px] leading-relaxed text-amber-900">
+                <span className="font-bold">📝 任务总结：</span>
+                已完成：
+                <span className={progress?.task_browse ? 'text-emerald-700 font-bold' : 'text-slate-500'}>
+                  浏览学习
+                </span>
+                。待完成：
+                <span className={progress?.task_register ? 'text-emerald-700 font-bold line-through' : 'text-amber-700 font-bold'}>
+                  {taskTexts.task2Title.replace(/\s*\(\+\d+\s*分\)/, '')}
+                </span>
+                、
+                <span className={progress?.task_download ? 'text-emerald-700 font-bold line-through' : 'text-amber-700 font-bold'}>
+                  {taskTexts.task3Title.replace(/\s*\(\+\d+\s*分\)/, '')}
+                </span>
+                。
+              </div>
+
               <button
-                type="button"
-                onClick={() => router.push(`/market/projects?recommend=${level}`)}
-                className="flex-1 h-14 inline-flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-sm md:text-base rounded-xl shadow-md hover:shadow-lg active:scale-[0.98] transition-all"
+                onClick={() => {
+                  setInterceptOpen(false)
+                  // 平滑滚到任务清单
+                  setTimeout(() => {
+                    document
+                      .getElementById('task-list')
+                      ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                  }, 200)
+                }}
+                className="w-full h-12 inline-flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-extrabold rounded-xl shadow-md hover:shadow-lg active:scale-[0.98] transition-all"
               >
-                💪 我自己来，开始干！
+                🎯 去完成任务
                 <ArrowRight size={16} />
               </button>
-
-              {/* 按钮 2：找人合作，进入服务撮合 */}
               <button
-                type="button"
-                onClick={() => router.push('/market/services?from=guide&type=collaboration')}
-                className="flex-1 h-14 inline-flex items-center justify-center gap-2 bg-purple-600 hover:bg-purple-700 text-white font-extrabold text-sm md:text-base rounded-xl shadow-md hover:shadow-lg active:scale-[0.98] transition-all"
+                onClick={() => setInterceptOpen(false)}
+                className="w-full h-10 mt-2 text-xs text-slate-500 hover:text-slate-700 transition-colors"
               >
-                🤝 找人合作，我要找资深 OPC / 资产型 OPC 帮我操盘！
-                <ArrowRight size={16} />
+                稍后再说
               </button>
-            </div>
-          </div>
-        </div>
-      </section>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* ════════ 新手启航任务清单（任务 2 核心）══════ */}
-      <section className="px-5 py-2">
+      <section id="task-list" className="px-5 py-2 scroll-mt-20">
         <div className="max-w-lg md:max-w-6xl md:mx-auto">
           <div className="relative rounded-3xl bg-white border border-slate-200 shadow-sm p-5 md:p-7 overflow-hidden">
             {/* 装饰光晕 */}
@@ -979,6 +1206,28 @@ export default function LevelGuidePage() {
                 </div>
               </div>
 
+              {/* 199 智富会员快捷入口（任务 2B） */}
+              <Link
+                href="/join"
+                className="group block rounded-xl bg-amber-50/50 border border-amber-200 hover:bg-amber-50 hover:border-amber-300 hover:shadow-md transition-all p-4"
+              >
+                <div className="flex items-start gap-3">
+                  <div className="text-2xl flex-shrink-0">📢</div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm md:text-base font-extrabold text-amber-900 leading-tight">
+                      想和 300+ 同频创业者一起交流？加入良朋社 OPC 智富社群。
+                    </div>
+                    <div className="text-xs text-amber-700/80 mt-1">
+                      享受每日资源对接、AI 日报与专属圈子。
+                    </div>
+                  </div>
+                  <span className="flex-shrink-0 inline-flex items-center gap-1 h-8 px-3 rounded-full bg-amber-500 text-white text-xs font-bold group-hover:bg-amber-600 transition-colors whitespace-nowrap">
+                    了解 199 元/年 会员权益
+                    <ArrowRight size={12} className="group-hover:translate-x-0.5 transition-transform" />
+                  </span>
+                </div>
+              </Link>
+
               {/* 3 个任务卡 */}
               <div className="space-y-3">
                 <TaskCard
@@ -993,29 +1242,29 @@ export default function LevelGuidePage() {
                   color="emerald"
                 />
                 <TaskCard
-                  icon="🏪"
-                  title="任务 2：注册账号"
-                  desc={`前往注册你的第一个${level === 'flow' ? '自媒体' : '网店'}账号`}
-                  score={40}
+                  icon={taskTexts.task2Icon}
+                  title={`任务 2：${taskTexts.task2Title.replace(/\s*\(\+\d+\s*分\)/, '')}`}
+                  desc={taskTexts.task2Desc}
+                  score={taskTexts.task2Score}
                   done={!!progress?.task_register}
                   loading={submittingTask === 'register'}
                   onComplete={() => completeTask('register')}
-                  externalUrl={meta.registerUrl}
-                  externalLabel={meta.registerLabel}
-                  ctaText="我已注册，完成打卡"
+                  externalUrls={meta.registerUrls}
+                  ctaText="我已完成任务 2"
                   color="blue"
                 />
                 <TaskCard
-                  icon="⚙️"
-                  title="任务 3：下载工具"
-                  desc="配置并下载首款 AI 工具（灵犀 AI / 即梦 / Dify 等）"
-                  score={40}
+                  icon={taskTexts.task3Icon}
+                  title={`任务 3：${taskTexts.task3Title.replace(/\s*\(\+\d+\s*分\)/, '')}`}
+                  desc={taskTexts.task3Desc}
+                  score={taskTexts.task3Score}
                   done={!!progress?.task_download}
                   loading={submittingTask === 'download'}
                   onComplete={() => completeTask('download')}
                   externalUrl={meta.downloadUrl}
                   externalLabel={meta.downloadLabel}
-                  ctaText="我已下载/配置完成"
+                  toolButtons={meta.toolButtons}
+                  ctaText="我已完成任务 3"
                   color="purple"
                 />
               </div>
@@ -1038,27 +1287,85 @@ export default function LevelGuidePage() {
               <>
                 <div aria-hidden className="absolute -top-16 -right-16 w-56 h-56 rounded-full bg-white/10 blur-3xl" />
                 <div aria-hidden className="absolute -bottom-16 -left-16 w-56 h-56 rounded-full bg-white/10 blur-3xl" />
-                <div className="relative flex flex-col md:flex-row items-center md:items-center gap-4 md:gap-6">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-center md:justify-start gap-2 text-xs font-bold tracking-wider text-white/80 uppercase mb-2">
+                <div className="relative flex flex-col items-center text-center gap-4">
+                  <div className="w-full">
+                    <div className="flex items-center justify-center gap-2 text-xs font-bold tracking-wider text-white/80 uppercase mb-2">
                       <Sparkles size={14} />
                       STEP 03 · 已解锁
                     </div>
                     <h3 className="text-xl md:text-2xl font-extrabold leading-snug">
-                      恭喜达标！前往运营实操 → 开启你的第一个项目
+                      恭喜达标！开启你的第一个项目
                     </h3>
                     <p className="mt-1.5 text-xs md:text-sm text-white/85">
                       从【项目库】精准选品，跟随 SOP 执行第一套完整商业闭环节奏
                     </p>
                   </div>
-                  <Link
-                    href="/market/projects"
-                    className="group flex-shrink-0 inline-flex items-center gap-2 bg-gradient-to-r from-amber-400 to-orange-500 hover:from-amber-500 hover:to-orange-600 text-white px-6 py-3 md:px-8 md:py-4 rounded-2xl font-extrabold text-sm md:text-base shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition-all"
-                  >
-                    <Rocket size={18} className="md:w-5 md:h-5" />
-                    前往运营实操
-                    <ArrowRight size={18} className="md:w-5 md:h-5 group-hover:translate-x-1 transition-transform" />
-                  </Link>
+
+                  {/* 唯一行动枢纽：自己干 vs 找人合作（移动端 flex-col，PC 端 flex-row） */}
+                  <div className="w-full flex flex-col md:flex-row gap-3 md:gap-4 mt-1">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        // 关键修复：URL level 优先于 localStorage opc_level
+                        // 原因：用户当前明确处于 /guide/[level] 页面，URL 是最强意图信号
+                        //      localStorage 中的 opc_level 可能是历史诊断残留（例如
+                        //      用户之前诊断为 TRADER，后来又打开 /guide/flow 体验流量型任务），
+                        //      此时若继续以 localStorage 为主，会出现"在 flow 页点击却跳到
+                        //      trader 精准推荐页"的错位 bug。
+                        //
+                        // 优先级：URL level > localStorage opc_level
+                        const normalizedUrl = (level || '').toLowerCase()
+                        const isValidUrl =
+                          normalizedUrl === 'trader' ||
+                          normalizedUrl === 'flow' ||
+                          normalizedUrl === 'system' ||
+                          normalizedUrl === 'asset'
+                        const userLevel: Level = isValidUrl
+                          ? (normalizedUrl as Level)
+                          : level
+                        // 顺手把 URL level 同步回 localStorage，确保后续路由/状态一致
+                        try {
+                          const upper = userLevel.toUpperCase()
+                          if (typeof window !== 'undefined') {
+                            window.localStorage.setItem('opc_level', upper)
+                          }
+                        } catch {
+                          /* localStorage 不可用时静默 */
+                        }
+                        // 标记 STEP 03 进入（一次性）
+                        try {
+                          const phone = localStorage.getItem('opc_device_id') || 'demo-device'
+                          fetch('/api/user/learning-progress', {
+                            method: 'PATCH',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ phone, action: 'practice-done' }),
+                          }).catch(() => {})
+                        } catch {}
+                        handleChoice(
+                          `/market/projects?recommend=${userLevel}`,
+                          'solo'
+                        )
+                      }}
+                      className="flex-1 h-12 md:h-14 inline-flex items-center justify-center gap-2 bg-white/20 hover:bg-white/30 border border-white/50 text-white rounded-xl px-6 py-3 font-extrabold text-sm md:text-base transition-all active:scale-[0.98]"
+                    >
+                      💪 我自己来，开始干！
+                      <ArrowRight size={16} />
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() =>
+                        handleChoice(
+                          '/market/services?from=guide&type=collaboration',
+                          'collab'
+                        )
+                      }
+                      className="flex-1 h-12 md:h-14 inline-flex items-center justify-center gap-2 bg-white text-slate-800 hover:bg-slate-100 rounded-xl px-6 py-3 font-extrabold text-sm md:text-base transition-all active:scale-[0.98] shadow-md"
+                    >
+                      🤝 找人合作，我要找资深OPC帮我操盘！
+                      <ArrowRight size={16} />
+                    </button>
+                  </div>
                 </div>
               </>
             ) : (
@@ -1131,6 +1438,8 @@ function TaskCard({
   onComplete,
   externalUrl,
   externalLabel,
+  externalUrls,
+  toolButtons,
   ctaText,
   color,
 }: {
@@ -1143,10 +1452,21 @@ function TaskCard({
   onComplete: () => void
   externalUrl?: string
   externalLabel?: string
+  /** 任务 3B 改造：多入口链接数组（任务 2 注册账号支持 1-2 个平台） */
+  externalUrls?: RegisterLink[]
+  /** 任务 3 改造（trader 限定）：双 AI 工具并排按钮，浅色背景 + 品牌色描边 */
+  toolButtons?: ToolButton[]
   ctaText: string
   color: keyof typeof COLOR_MAP
 }) {
   const c = COLOR_MAP[color]
+  // 兼容：优先使用 externalUrls 数组，回退到 externalUrl 单值
+  const links: RegisterLink[] =
+    externalUrls && externalUrls.length > 0
+      ? externalUrls
+      : externalUrl
+      ? [{ label: externalLabel || '打开链接', url: externalUrl }]
+      : []
   return (
     <div
       className={`rounded-2xl border p-4 transition-all ${
@@ -1178,41 +1498,64 @@ function TaskCard({
           </p>
 
           {!done && (
-            <div className="mt-2.5 flex flex-wrap items-center gap-2">
-              {externalUrl && (
-                <a
-                  href={externalUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={`inline-flex items-center gap-1 text-[11px] font-bold ${c.text} hover:underline`}
+            <div className="mt-2.5 space-y-2">
+              {toolButtons && toolButtons.length > 0 ? (
+                // 任务 3 改造（trader 限定）：双 AI 工具并排胶囊按钮，与任务 2 淘宝开店/抖店入驻样式一致
+                <div className="flex flex-row flex-wrap gap-2 mt-3">
+                  {toolButtons.map((btn, i) => (
+                    <a
+                      key={`${btn.url}-${i}`}
+                      href={btn.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="bg-white border border-slate-200 rounded-full px-3 py-1.5 text-sm flex items-center gap-1.5 hover:bg-slate-50 transition-colors w-fit"
+                    >
+                      <span>{btn.label}</span>
+                      <ExternalLink size={12} className="flex-shrink-0" />
+                    </a>
+                  ))}
+                </div>
+              ) : links.length > 0 ? (
+                <div className="flex flex-wrap items-center gap-2">
+                  {links.map((l, i) => (
+                    <a
+                      key={`${l.url}-${i}`}
+                      href={l.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className={`inline-flex items-center gap-1 text-[11px] font-bold ${c.text} hover:underline`}
+                    >
+                      {l.label} <ExternalLink size={10} />
+                    </a>
+                  ))}
+                </div>
+              ) : null}
+              <div className="flex justify-end">
+                <button
+                  type="button"
+                  onClick={onComplete}
+                  disabled={loading}
+                  className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-[11px] font-bold text-white transition-all active:scale-95 disabled:opacity-50 ${
+                    color === 'emerald'
+                      ? 'bg-emerald-500 hover:bg-emerald-600'
+                      : color === 'blue'
+                      ? 'bg-blue-500 hover:bg-blue-600'
+                      : 'bg-purple-500 hover:bg-purple-600'
+                  }`}
                 >
-                  {externalLabel} <ExternalLink size={10} />
-                </a>
-              )}
-              <button
-                type="button"
-                onClick={onComplete}
-                disabled={loading}
-                className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-[11px] font-bold text-white transition-all active:scale-95 disabled:opacity-50 ${
-                  color === 'emerald'
-                    ? 'bg-emerald-500 hover:bg-emerald-600'
-                    : color === 'blue'
-                    ? 'bg-blue-500 hover:bg-blue-600'
-                    : 'bg-purple-500 hover:bg-purple-600'
-                }`}
-              >
-                {loading ? (
-                  <>
-                    <span className="w-3 h-3 border-2 border-white/40 border-t-white rounded-full animate-spin" />
-                    打卡中...
-                  </>
-                ) : (
-                  <>
-                    <CheckCircle2 size={12} />
-                    {ctaText}
-                  </>
-                )}
-              </button>
+                  {loading ? (
+                    <>
+                      <span className="w-3 h-3 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                      打卡中...
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle2 size={12} />
+                      {ctaText}
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
           )}
         </div>

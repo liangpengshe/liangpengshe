@@ -1,122 +1,223 @@
+/**
+ * 城市主理人 · 顶流商业说明页（合并 /pitch 全景 + 城市主理人权益）
+ * ------------------------------------------------------------
+ * 路由: /partner
+ *
+ * 设计目标（深色科技风 · Duolingo / Linear 风格）：
+ *   1. [任务 2] 深色科技底：bg-gradient-to-b from-slate-900 to-slate-800
+ *   2. [任务 2] 玻璃态卡片：bg-white/5 backdrop-blur-sm border border-white/10
+ *   3. [任务 2] 主标题渐变：text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-orange-500
+ *   4. [任务 3] 商业全景数据大盘 + 9 大 AI 智能体（3x3 网格）
+ *   5. [任务 4] 城市主理人变现与收益闭环（2x2 Bento 网格）
+ *   6. [任务 5] 4 大权益模块（深色化）+ 5980 元价格显性化 + 加盟 CTA
+ *   7. [任务 6] 移动端单列折叠，padding p-4/p-5 舒适
+ * ------------------------------------------------------------
+ */
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 import { motion } from 'framer-motion'
 import {
-  MapPin,
-  Building2,
-  DollarSign,
-  Award,
-  FileText,
-  Bot,
-  Users,
   ArrowRight,
+  Sparkles,
+  Coins,
+  Users,
+  MapPin,
+  Cpu,
+  UserCog,
+  Megaphone,
+  Mail,
+  Headphones,
+  Search,
+  Target,
+  DollarSign,
+  Rocket,
+  Server,
+  BookOpen,
+  Wrench,
+  Phone,
+  Award,
   CheckCircle2,
   User,
   Smartphone,
-  Server,
-  Sparkles,
-  BookOpen,
-  Wrench,
   Banknote,
-  Phone,
+  ShieldCheck,
+  Building2,
+  Briefcase,
+  Crown,
+  Mic,
+  type LucideIcon,
 } from 'lucide-react'
-import Link from 'next/link'
 import AIMatchmakerWidget from '@/components/AIMatchmakerWidget'
 
 const fadeUp = {
   initial: { opacity: 0, y: 20 },
   whileInView: { opacity: 1, y: 0 },
-  viewport: { once: true },
+  viewport: { once: true, amount: 0.2 },
   transition: { duration: 0.5 },
 }
 
-const stats = [
+// ═══════════════════════════════════════════════════════════
+// 数据大盘（4 大指标）
+// ═══════════════════════════════════════════════════════════
+const heroStats: { icon: LucideIcon; value: string; label: string; gold?: boolean }[] = [
+  { icon: Coins,  value: '¥210 万+', label: '累计交易额', gold: true },
+  { icon: Users,  value: '300+',     label: '活跃主理人' },
+  { icon: MapPin, value: '5 城',     label: '覆盖城市' },
+  { icon: Cpu,    value: '9 个',     label: 'AI 智能体' },
+]
+
+// ═══════════════════════════════════════════════════════════
+// 9 大 AI 智能体（与 /pitch 全站一致）
+// ═══════════════════════════════════════════════════════════
+const aiAgents: { icon: LucideIcon; name: string; desc: string; color: string }[] = [
+  { icon: UserCog,    name: 'CEO 智能体',   desc: '战略决策 + 业务规划',    color: 'from-blue-500 to-indigo-500' },
+  { icon: Cpu,        name: '技术智能体',   desc: 'AI 工作流 + 自动化部署', color: 'from-cyan-500 to-blue-500' },
+  { icon: Megaphone,  name: '营销智能体',   desc: '内容生成 + 投流优化',    color: 'from-pink-500 to-rose-500' },
+  { icon: Mail,       name: '邮件智能体',   desc: 'EDM + 私域触达',         color: 'from-amber-500 to-orange-500' },
+  { icon: Headphones, name: '客服智能体',   desc: '7×24 自动应答',          color: 'from-emerald-500 to-teal-500' },
+  { icon: Search,     name: '研究智能体',   desc: '行业调研 + 竞品分析',    color: 'from-violet-500 to-purple-500' },
+  { icon: Target,     name: '广告智能体',   desc: '多平台投放 + ROI 优化',  color: 'from-red-500 to-rose-500' },
+  { icon: DollarSign, name: '财务智能体',   desc: '成本核算 + 分润计算',    color: 'from-green-500 to-emerald-500' },
+  { icon: Rocket,     name: '执行智能体',   desc: '任务拆解 + 自动跟进',    color: 'from-orange-500 to-amber-500' },
+]
+
+// ═══════════════════════════════════════════════════════════
+// 城市主理人商业闭环（Bento 2x2）
+// ═══════════════════════════════════════════════════════════
+const businessLoop: {
+  no: string
+  title: string
+  desc: string
+  icon: LucideIcon
+  emoji: string
+  color: string
+}[] = [
   {
-    icon: MapPin,
-    value: '5 场',
-    label: '成功举办线下沙龙',
+    no: '01',
+    title: '工具与系统赋能',
+    desc: '利用总部系统与 AI 工具（豹纹工坊（豹纹+）、灵犀 AI、先锋派数字人），降低本地获客与交付成本',
+    icon: Wrench,
+    emoji: '🛠️',
+    color: 'from-blue-500 to-cyan-500',
   },
   {
+    no: '02',
+    title: '本地沙龙引流',
+    desc: '利用总部 60 天主理人训练营 SOP，开展本地公开课与精准客户沙龙，沉淀本地私域',
+    icon: Mic,
+    emoji: '🎤',
+    color: 'from-pink-500 to-rose-500',
+  },
+  {
+    no: '03',
+    title: '深度陪跑与代运营',
+    desc: '为本地企业提供高阶陪跑 + AI 自动化代运营，赚取 1 万 - 30 万/单 的高客单利润',
+    icon: Crown,
+    emoji: '👑',
+    color: 'from-amber-500 to-orange-500',
+  },
+  {
+    no: '04',
+    title: '分站规模化复制',
+    desc: '跑通本地样本后，在区域内扩张 3-5 个分站 / 子主理人，获取区域性资产红利',
     icon: Building2,
-    value: '70+ 家',
-    label: '累计服务企业',
-  },
-  {
-    icon: DollarSign,
-    value: '300 万+',
-    label: '帮助客户节省成本',
+    emoji: '🏙️',
+    color: 'from-emerald-500 to-teal-500',
   },
 ]
 
-const benefits = [
-  {
-    icon: Award,
-    title: '品牌授权与背书',
-    desc: '共享良朋社 OPC 品牌，中科院中科创科学院背书资源，提升本地影响力',
-    color: 'border-blue-500',
-    iconBg: 'bg-blue-50',
-    iconColor: 'text-blue-500',
-  },
-  {
-    icon: FileText,
-    title: '标准化沙龙 SOP',
-    desc: '总部提供邀约、PPT、现场流程等整套执行文档，一键复制成功经验',
-    color: 'border-purple-500',
-    iconBg: 'bg-purple-50',
-    iconColor: 'text-purple-500',
-  },
-  {
-    icon: Bot,
-    title: '全套 AI 工具库',
-    desc: '开放内部自研工具（豹纹工坊、灵犀AI、先锋派数字人等），赋能本地企业',
-    color: 'border-green-500',
-    iconBg: 'bg-green-50',
-    iconColor: 'text-green-500',
-  },
-  {
-    icon: Users,
-    title: '深度陪跑与内训',
-    desc: '总部提供 1v1 陪跑，协助本地第一场沙龙落地，全程保驾护航',
-    color: 'border-amber-500',
-    iconBg: 'bg-amber-50',
-    iconColor: 'text-amber-500',
-  },
-]
-
-// ─── 主理人合作模式与费用：4 大权益模块 ───
-const franchiseModules = [
+// ═══════════════════════════════════════════════════════════
+// 4 大权益模块（深色玻璃态）
+// ═══════════════════════════════════════════════════════════
+const benefits: { icon: LucideIcon; title: string; desc: string; color: string }[] = [
   {
     icon: Server,
-    title: '分站系统租赁与定制费（年费）',
-    desc: '城市独立 SaaS 后台、品牌域名、客户/订单/分润数据看板，年度付费即可使用全套系统。',
+    title: '品牌授权与背书',
+    desc: '共享良朋社 OPC 品牌，中科院中科创科学院背书资源，提升本地影响力',
     color: 'from-blue-500 to-indigo-500',
-    lightBg: 'bg-blue-50',
-    border: 'border-blue-200',
-  },
-  {
-    icon: Sparkles,
-    title: '年度系统更新与 AI 工具升级',
-    desc: '豹纹工坊、灵犀 AI、先锋派数字人等自研工具免费同步升级，紧跟 GPT-5 / Claude 等模型迭代。',
-    color: 'from-violet-500 to-purple-500',
-    lightBg: 'bg-violet-50',
-    border: 'border-violet-200',
   },
   {
     icon: BookOpen,
-    title: '总部城市主理人培训 SOP 与陪跑',
-    desc: '60 天「主理人成长训练营」+ 1V1 陪跑顾问，从 0 到 1 跑通本地第一场沙龙与第一笔订单。',
-    color: 'from-emerald-500 to-teal-500',
-    lightBg: 'bg-emerald-50',
-    border: 'border-emerald-200',
+    title: '标准化沙龙 SOP',
+    desc: '总部提供邀约、PPT、现场流程等整套执行文档，一键复制成功经验',
+    color: 'from-pink-500 to-rose-500',
   },
   {
-    icon: Wrench,
-    title: '总部品牌与专利授权使用',
-    desc: '合法使用「良朋社 OPC」「OPC 智富生态」品牌、商标与软著专利，本地宣传与签约场景无忧。',
+    icon: Cpu,
+    title: '全套 AI 工具库',
+    desc: '开放内部自研工具（豹纹工坊（豹纹+）、灵犀 AI、先锋派数字人等），赋能本地企业',
+    color: 'from-emerald-500 to-teal-500',
+  },
+  {
+    icon: ShieldCheck,
+    title: '深度陪跑与内训',
+    desc: '总部提供 1v1 陪跑，协助本地第一场沙龙落地，全程保驾护航',
     color: 'from-amber-500 to-orange-500',
-    lightBg: 'bg-amber-50',
-    border: 'border-amber-200',
+  },
+]
+
+// ═══════════════════════════════════════════════════════════
+// 4 大权益（加盟费内含模块）
+// ═══════════════════════════════════════════════════════════
+const franchiseModules: { icon: LucideIcon; title: string; desc: string; color: string }[] = [
+  {
+    icon: Server,
+    title: '分站系统租赁与定制（年费）',
+    desc: '城市独立 SaaS 后台、品牌域名、客户/订单/分润数据看板，年度付费即可使用全套系统',
+    color: 'from-blue-500 to-indigo-500',
+  },
+  {
+    icon: Sparkles,
+    title: '年度系统更新 + AI 工具升级',
+    desc: '豹纹工坊（豹纹+）、灵犀 AI、先锋派数字人等自研工具免费同步升级，紧跟 GPT-5 / Claude 等模型迭代',
+    color: 'from-violet-500 to-purple-500',
+  },
+  {
+    icon: BookOpen,
+    title: '60 天主理人训练营 + 1V1 陪跑',
+    desc: '从 0 到 1 跑通本地第一场沙龙与第一笔订单，总部顾问全程在线答疑',
+    color: 'from-emerald-500 to-teal-500',
+  },
+  {
+    icon: Award,
+    title: '总部品牌与专利授权使用',
+    desc: '合法使用「良朋社 OPC」「OPC 智富生态」品牌、商标与软著专利，本地宣传与签约场景无忧',
+    color: 'from-amber-500 to-orange-500',
+  },
+]
+
+// ═══════════════════════════════════════════════════════════
+// 三方分润
+// ═══════════════════════════════════════════════════════════
+const parties: { role: string; emoji: string; icon: LucideIcon; range: string; subtitle: string; path: string; color: string }[] = [
+  {
+    role: '资源方',
+    emoji: '🏢',
+    icon: Briefcase,
+    range: '75% - 85%',
+    subtitle: '工具商 · 项目方 · 服务商',
+    path: '通过 OPC 平台卖出工具与服务',
+    color: 'from-amber-400 to-orange-500',
+  },
+  {
+    role: '城市主理人',
+    emoji: '🤝',
+    icon: UserCog,
+    range: '10% - 20%',
+    subtitle: '落地运营商',
+    path: '向本地企业推荐 OPC 工具与陪跑',
+    color: 'from-violet-500 to-purple-500',
+  },
+  {
+    role: '良朋社总部',
+    emoji: '🏛️',
+    icon: Award,
+    range: '5% - 15%',
+    subtitle: '平台方',
+    path: '提供 SaaS 系统 + AI 诊断 + 全国客户池',
+    color: 'from-sky-400 to-blue-500',
   },
 ]
 
@@ -161,242 +262,468 @@ export default function PartnerPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 font-sans">
-      <motion.header
-        {...fadeUp}
-        className="px-4 pt-20 pb-8 bg-gradient-to-b from-slate-900 to-slate-50"
-      >
-        <div className="max-w-lg mx-auto md:max-w-6xl">
-          <div className="flex items-center gap-2 mb-4">
-            <Link href="/" className="text-white/80 hover:text-white transition-colors text-sm">
-              返回首页
-            </Link>
-          </div>
+    <div className="min-h-screen bg-gradient-to-b from-slate-900 to-slate-800 text-white font-sans">
+      {/* ═══ HERO 区：商业全景 + 数据大盘 ═══ */}
+      <section className="relative overflow-hidden pt-20 pb-12 px-5">
+        {/* 装饰光晕 */}
+        <div className="absolute top-10 left-1/4 w-72 h-72 bg-amber-500/20 rounded-full blur-3xl animate-pulse" />
+        <div className="absolute top-32 right-1/4 w-96 h-96 bg-purple-500/20 rounded-full blur-3xl animate-pulse" />
+        <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-full h-32 bg-gradient-to-t from-slate-800 to-transparent" />
 
-          <h1 className="text-3xl font-bold text-white mb-3">
-            携手共赢：良朋社 OPC 全国城市主理人招募
-          </h1>
+        <div className="relative max-w-lg mx-auto md:max-w-6xl md:mx-auto text-center">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+            className="inline-flex items-center gap-2 bg-gradient-to-r from-amber-500/15 via-yellow-400/15 to-amber-500/15 backdrop-blur-md border border-amber-400/40 rounded-full px-4 py-1.5 mb-6"
+          >
+            <Sparkles size={14} className="text-amber-300" />
+            <span className="text-sm text-amber-100 font-semibold tracking-wide">
+              良朋社 OPC · 城市主理人招募计划
+            </span>
+          </motion.div>
 
-          <p className="text-slate-400 text-lg mb-6">
-            我们在深圳跑通了 AI 商业落地的全链路闭环，现面向全国招募城市主理人。
-          </p>
+          <motion.h1
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.1 }}
+            className="text-3xl md:text-5xl lg:text-6xl font-extrabold leading-tight mb-4 text-white"
+          >
+            看懂<span className="text-amber-400">商业全景</span>
+            <br />
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-orange-400 to-rose-400">
+              成为城市主理人
+            </span>
+          </motion.h1>
 
-          <div className="grid grid-cols-3 gap-3">
-            {stats.map((stat, index) => (
+          <motion.p
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.2 }}
+            className="text-base md:text-lg text-slate-300 leading-relaxed mb-10 max-w-2xl mx-auto"
+          >
+            我们在深圳跑通了 AI 商业落地的全链路闭环，现面向全国招募
+            <span className="text-amber-300 font-semibold">5 城 · 300+ 主理人 · 9 AI Agent</span>
+            ，复制这套已盈利的商业操作系统。
+          </motion.p>
+
+          {/* 数据大盘 · 4 卡玻璃态 */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.3 }}
+            className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4"
+          >
+            {heroStats.map((s) => (
               <div
-                key={index}
-                className="bg-white/10 backdrop-blur-sm rounded-xl p-4 text-center"
+                key={s.label}
+                className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-4 text-center hover:bg-white/10 transition-colors"
               >
-                <stat.icon size={20} className="mx-auto mb-2 text-blue-400" />
-                <div className="text-xl font-bold text-white">{stat.value}</div>
-                <div className="text-xs text-slate-400 mt-1">{stat.label}</div>
+                <s.icon
+                  size={22}
+                  className={`mx-auto mb-2 ${s.gold ? 'text-amber-400' : 'text-slate-300'}`}
+                />
+                <div
+                  className={`text-xl md:text-2xl font-extrabold leading-tight ${
+                    s.gold ? 'text-amber-400' : 'text-white'
+                  }`}
+                >
+                  {s.value}
+                </div>
+                <div className="text-[11px] md:text-xs text-slate-400 mt-1">{s.label}</div>
               </div>
+            ))}
+          </motion.div>
+        </div>
+      </section>
+
+      {/* ═══ 9 大 AI 智能体矩阵 ═══ */}
+      <section className="px-5 py-16">
+        <div className="max-w-lg mx-auto md:max-w-6xl md:mx-auto">
+          <motion.div {...fadeUp} className="text-center mb-10">
+            <span className="inline-block px-3 py-1 text-xs font-semibold text-violet-200 bg-violet-500/20 border border-violet-400/30 rounded-full mb-3">
+              🧠 AI Agent 矩阵
+            </span>
+            <h2 className="text-2xl md:text-3xl font-bold text-white mb-2">
+              核心引擎 · <span className="text-amber-400">9 大 AI 智能体</span>，为你打工
+            </h2>
+            <p className="text-slate-400 text-sm md:text-base max-w-2xl mx-auto">
+              每一个 Agent 都在 OPC 真实业务里跑通过，复制到你的城市主理人生意，效率提升 10 倍。
+            </p>
+          </motion.div>
+
+          <div className="grid grid-cols-3 gap-2 md:gap-3">
+            {aiAgents.map((a) => (
+              <motion.div
+                key={a.name}
+                {...fadeUp}
+                className="group relative bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-3 md:p-4 text-center hover:bg-white/10 hover:border-amber-400/40 transition-all"
+              >
+                <div
+                  className={`w-10 h-10 md:w-12 md:h-12 mx-auto rounded-xl bg-gradient-to-br ${a.color} flex items-center justify-center text-white shadow-md mb-2`}
+                >
+                  <a.icon size={18} className="md:hidden" />
+                  <a.icon size={22} className="hidden md:block" />
+                </div>
+                <h3 className="font-bold text-white text-xs md:text-sm leading-tight">{a.name}</h3>
+                <p className="text-[10px] md:text-[11px] text-slate-400 mt-1 leading-relaxed line-clamp-2">
+                  {a.desc}
+                </p>
+              </motion.div>
             ))}
           </div>
         </div>
-      </motion.header>
+      </section>
 
-      {/* ═══ 主理人合作模式与费用（4 大权益模块 + 报价 CTA）═══ */}
-      <motion.section
-        {...fadeUp}
-        className="px-4 py-8"
-      >
-        <div className="max-w-lg mx-auto md:max-w-6xl">
-          <div className="text-center mb-6">
-            <div className="inline-flex items-center gap-1.5 bg-amber-50 border border-amber-200 text-amber-700 text-xs font-semibold px-3 py-1 rounded-full mb-3">
-              <Banknote size={12} />
-              <span>💰 主理人合作模式与费用</span>
-            </div>
-            <h2 className="text-xl md:text-2xl font-bold text-gray-900">
-              4 大权益模块，构筑主理人护城河
+      {/* ═══ 城市主理人商业闭环（Bento 2x2）═══ */}
+      <section className="px-5 py-16 bg-slate-900/40">
+        <div className="max-w-lg mx-auto md:max-w-6xl md:mx-auto">
+          <motion.div {...fadeUp} className="text-center mb-10">
+            <span className="inline-block px-3 py-1 text-xs font-semibold text-emerald-200 bg-emerald-500/20 border border-emerald-400/30 rounded-full mb-3">
+              💰 商业闭环
+            </span>
+            <h2 className="text-2xl md:text-3xl font-bold text-white mb-2">
+              你的专属 <span className="text-amber-400">OPC 城市商业闭环</span>
             </h2>
-            <p className="text-sm text-slate-500 mt-2 max-w-xl mx-auto">
-              一次性年费涵盖以下全部模块，城市规模不同，报价区间略有差异。
+            <p className="text-slate-400 text-sm md:text-base max-w-2xl mx-auto">
+              从工具赋能 → 本地引流 → 高客单陪跑 → 区域复制，4 步走完本地化商业闭环。
             </p>
-          </div>
+          </motion.div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
-            {franchiseModules.map((m, i) => (
-              <div
-                key={i}
-                className={`group relative overflow-hidden ${m.lightBg} ${m.border} border rounded-2xl p-4 md:p-5 shadow-sm hover:shadow-md transition-all`}
+            {businessLoop.map((step, i) => (
+              <motion.div
+                key={step.no}
+                {...fadeUp}
+                transition={{ duration: 0.5, delay: i * 0.06 }}
+                className="group relative bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-4 md:p-5 hover:bg-white/10 hover:border-amber-400/40 transition-all overflow-hidden"
               >
-                <div className="flex items-start gap-3">
+                <div
+                  className={`absolute -top-10 -right-10 w-32 h-32 bg-gradient-to-br ${step.color} opacity-20 rounded-full blur-2xl`}
+                />
+                <div className="relative flex items-start gap-3">
                   <div
-                    className={`flex-shrink-0 w-11 h-11 rounded-xl bg-gradient-to-br ${m.color} flex items-center justify-center shadow-md`}
+                    className={`flex-shrink-0 w-12 h-12 rounded-xl bg-gradient-to-br ${step.color} flex items-center justify-center text-2xl shadow-md`}
+                  >
+                    {step.emoji}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <h3 className="font-bold text-white text-base leading-tight">
+                        {step.title}
+                      </h3>
+                      <span
+                        className={`text-[10px] font-bold tracking-wider bg-gradient-to-r ${step.color} bg-clip-text text-transparent`}
+                      >
+                        STEP {step.no}
+                      </span>
+                    </div>
+                    <p className="text-xs md:text-sm text-slate-300 leading-relaxed">
+                      {step.desc}
+                    </p>
+                  </div>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ═══ 三方分润 ═══ */}
+      <section className="px-5 py-16">
+        <div className="max-w-lg mx-auto md:max-w-6xl md:mx-auto">
+          <motion.div {...fadeUp} className="text-center mb-10">
+            <span className="inline-block px-3 py-1 text-xs font-semibold text-amber-200 bg-amber-500/20 border border-amber-400/30 rounded-full mb-3">
+              💰 收益模型
+            </span>
+            <h2 className="text-2xl md:text-3xl font-bold text-white mb-2">
+              稳定的三方分润 · <span className="text-amber-400">共赢</span>
+            </h2>
+            <p className="text-slate-400 text-sm md:text-base max-w-2xl mx-auto">
+              每一笔成交，三方按约定自动分润，全部留痕可查。
+            </p>
+          </motion.div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4">
+            {parties.map((p, i) => (
+              <motion.div
+                key={p.role}
+                {...fadeUp}
+                transition={{ duration: 0.5, delay: i * 0.08 }}
+                className="group relative bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-5 hover:bg-white/10 hover:border-amber-400/40 transition-all overflow-hidden"
+              >
+                <div
+                  className={`absolute -top-12 -right-12 w-40 h-40 bg-gradient-to-br ${p.color} opacity-20 rounded-full blur-3xl`}
+                />
+
+                <div className="relative">
+                  <div className="flex items-center gap-2.5 mb-3">
+                    <div
+                      className={`w-11 h-11 rounded-xl bg-gradient-to-br ${p.color} flex items-center justify-center text-2xl shadow-md`}
+                    >
+                      {p.emoji}
+                    </div>
+                    <div>
+                      <div className="font-bold text-white text-base leading-tight">
+                        {p.role}
+                      </div>
+                      <div className="text-[11px] text-slate-400 leading-tight">
+                        {p.subtitle}
+                      </div>
+                    </div>
+                  </div>
+
+                  <p className="text-xs text-slate-300 leading-relaxed mb-3">
+                    <span className="font-semibold text-amber-300">路径：</span>
+                    {p.path}
+                  </p>
+
+                  <div
+                    className={`bg-gradient-to-r ${p.color} rounded-xl px-4 py-3 flex items-center justify-between shadow-md`}
+                  >
+                    <div>
+                      <div className="text-[10px] text-white/80">分润比例</div>
+                      <div className="text-2xl md:text-3xl font-extrabold text-white leading-tight">
+                        {p.range}
+                      </div>
+                    </div>
+                    <p.icon size={32} className="text-white/30" />
+                  </div>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ═══ 4 大权益模块（深色玻璃态）═══ */}
+      <section className="px-5 py-16 bg-slate-900/40">
+        <div className="max-w-lg mx-auto md:max-w-6xl md:mx-auto">
+          <motion.div {...fadeUp} className="text-center mb-10">
+            <span className="inline-block px-3 py-1 text-xs font-semibold text-pink-200 bg-pink-500/20 border border-pink-400/30 rounded-full mb-3">
+              ✨ 核心权益
+            </span>
+            <h2 className="text-2xl md:text-3xl font-bold text-white mb-2">
+              4 大权益模块 · <span className="text-amber-400">构筑主理人护城河</span>
+            </h2>
+            <p className="text-slate-400 text-sm md:text-base">
+              一次性年费涵盖以下全部模块，城市规模不同，报价区间略有差异。
+            </p>
+          </motion.div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
+            {benefits.map((b, i) => (
+              <motion.div
+                key={i}
+                {...fadeUp}
+                transition={{ duration: 0.5, delay: i * 0.06 }}
+                className="group relative bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-4 md:p-5 hover:bg-white/10 hover:border-amber-400/40 transition-all overflow-hidden"
+              >
+                <div
+                  className={`absolute -top-10 -right-10 w-32 h-32 bg-gradient-to-br ${b.color} opacity-20 rounded-full blur-2xl`}
+                />
+                <div className="relative flex items-start gap-3">
+                  <div
+                    className={`flex-shrink-0 w-11 h-11 rounded-xl bg-gradient-to-br ${b.color} flex items-center justify-center shadow-md`}
+                  >
+                    <b.icon size={20} className="text-white" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-bold text-slate-100 text-base leading-tight mb-1.5">
+                      {b.title}
+                    </h3>
+                    <p className="text-xs md:text-sm text-slate-400 leading-relaxed">
+                      {b.desc}
+                    </p>
+                  </div>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ═══ 4 大加盟费内含模块 + 5980 元价格显性化 ═══ */}
+      <section className="px-5 py-16">
+        <div className="max-w-lg mx-auto md:max-w-6xl md:mx-auto">
+          <motion.div {...fadeUp} className="text-center mb-8">
+            <span className="inline-block px-3 py-1 text-xs font-semibold text-amber-200 bg-amber-500/20 border border-amber-400/30 rounded-full mb-3">
+              💎 加盟方案
+            </span>
+            <h2 className="text-2xl md:text-3xl font-bold text-white mb-2">
+              加盟费 <span className="text-amber-400">5980 元 / 年</span>
+            </h2>
+            <p className="text-slate-400 text-sm md:text-base">
+              一次性年费，4 大模块全部解锁（含 SaaS 系统 / AI 工具升级 / 训练营 / 品牌授权）
+            </p>
+          </motion.div>
+
+          {/* 价格大卡片 · 顶部 */}
+          <motion.div
+            {...fadeUp}
+            className="relative overflow-hidden bg-gradient-to-br from-amber-500 via-orange-500 to-rose-500 rounded-3xl p-5 md:p-6 shadow-2xl shadow-orange-500/30 mb-6"
+          >
+            <div className="absolute -top-12 -right-12 w-48 h-48 bg-white/15 rounded-full blur-3xl" />
+            <div className="absolute bottom-0 left-0 w-32 h-32 bg-pink-400/20 rounded-full blur-2xl" />
+            <div className="relative flex flex-col md:flex-row items-start md:items-center gap-4">
+              <div className="flex-shrink-0 w-14 h-14 md:w-16 md:h-16 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center shadow-md">
+                <Banknote size={28} className="text-white" />
+              </div>
+              <div className="flex-1">
+                <div className="text-[10px] font-extrabold tracking-widest text-white/80 mb-1">
+                  城市主理人 · 年费方案
+                </div>
+                <div className="flex items-baseline gap-2 mb-1.5">
+                  <span className="text-4xl md:text-5xl font-extrabold text-white leading-none">
+                    ¥5,980
+                  </span>
+                  <span className="text-sm text-white/80 font-semibold">/ 年</span>
+                </div>
+                <p className="text-xs md:text-sm text-white/95 leading-relaxed">
+                  一次性付费，4 大模块全部解锁 · 享受 1V1 陪跑 + 9 大 AI 智能体 + 全国客户池
+                </p>
+              </div>
+            </div>
+          </motion.div>
+
+          {/* 4 大加盟模块 */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
+            {franchiseModules.map((m, i) => (
+              <motion.div
+                key={i}
+                {...fadeUp}
+                transition={{ duration: 0.5, delay: i * 0.05 }}
+                className="group relative bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-4 md:p-5 hover:bg-white/10 hover:border-amber-400/40 transition-all overflow-hidden"
+              >
+                <div
+                  className={`absolute -top-10 -right-10 w-28 h-28 bg-gradient-to-br ${m.color} opacity-20 rounded-full blur-2xl`}
+                />
+                <div className="relative flex items-start gap-3">
+                  <div
+                    className={`flex-shrink-0 w-10 h-10 md:w-11 md:h-11 rounded-xl bg-gradient-to-br ${m.color} flex items-center justify-center shadow-md`}
                   >
                     <m.icon size={20} className="text-white" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <div className="text-[11px] font-bold text-slate-500 mb-0.5">
-                      权益模块 {i + 1}
+                    <div className="text-[10px] font-extrabold text-amber-300 tracking-wider mb-0.5">
+                      已含 · 权益模块 {i + 1}
                     </div>
-                    <h3 className="font-bold text-gray-900 text-base leading-tight mb-1">
+                    <h3 className="font-bold text-slate-100 text-sm md:text-base leading-tight mb-1">
                       {m.title}
                     </h3>
-                    <p className="text-xs md:text-sm text-slate-600 leading-relaxed">
+                    <p className="text-xs text-slate-400 leading-relaxed">
                       {m.desc}
                     </p>
                   </div>
                 </div>
-              </div>
-            ))}
-          </div>
-
-          {/* 底部加盟报价 CTA 卡 */}
-          <Link
-            href="#partner-form"
-            className="group block mt-5 relative overflow-hidden bg-gradient-to-r from-amber-50 via-orange-50 to-rose-50 border-2 border-amber-200 rounded-2xl p-5 md:p-6 hover:shadow-xl hover:border-amber-300 transition-all"
-          >
-            <div className="absolute -top-10 -right-10 w-32 h-32 bg-amber-300/30 rounded-full blur-3xl" />
-            <div className="relative flex flex-col md:flex-row items-start md:items-center gap-4">
-              <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center shadow-lg">
-                <Phone size={22} className="text-white" />
-              </div>
-              <div className="flex-1">
-                <h3 className="font-bold text-slate-900 text-base md:text-lg leading-tight">
-                  🤝 联系总部获取精准报价
-                </h3>
-                <p className="text-xs md:text-sm text-slate-600 leading-relaxed mt-1">
-                  根据城市规模与预期目标定制年费，不再是“一口价”，而是“一份双方共建的增长方案”。
-                </p>
-              </div>
-              <span className="flex-shrink-0 w-full md:w-auto inline-flex items-center justify-center gap-1 bg-gradient-to-r from-amber-500 to-orange-500 text-white font-bold px-4 py-2.5 rounded-full text-sm shadow-md group-hover:scale-105 transition-transform">
-                <span>立即咨询</span>
-                <ArrowRight size={14} />
-              </span>
-            </div>
-          </Link>
-        </div>
-      </motion.section>
-
-      <motion.section
-        {...fadeUp}
-        className="px-4 py-8"
-      >
-        <div className="max-w-lg mx-auto md:max-w-6xl">
-          <h2 className="text-xl font-bold text-gray-900 mb-6 text-center">
-            合作模式与权益
-          </h2>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {benefits.map((benefit, index) => (
-              <div
-                key={index}
-                className={`bg-white rounded-2xl p-5 shadow-sm hover:shadow-md transition-all duration-300 border-t-4 ${benefit.color}`}
-              >
-                <div className="flex items-start gap-4">
-                  <div className={`w-12 h-12 rounded-xl ${benefit.iconBg} flex items-center justify-center flex-shrink-0`}>
-                    <benefit.icon size={24} className={benefit.iconColor} />
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-gray-900 text-lg mb-1">
-                      {benefit.title}
-                    </h3>
-                    <p className="text-slate-600 text-sm">{benefit.desc}</p>
-                  </div>
-                </div>
-              </div>
+              </motion.div>
             ))}
           </div>
         </div>
-      </motion.section>
+      </section>
 
-      <motion.section
-        {...fadeUp}
-        className="px-4 py-8"
-      >
-        <div className="max-w-lg mx-auto md:max-w-6xl">
-          <h2 className="text-xl font-bold text-gray-900 mb-6 text-center">
-            加入我们，成为 OPC 城市主理人
-          </h2>
+      {/* ═══ 合作意向表单 ═══ */}
+      <section id="partner-form" className="px-5 py-16 bg-slate-900/40">
+        <div className="max-w-lg mx-auto md:max-w-3xl md:mx-auto">
+          <motion.div {...fadeUp} className="text-center mb-8">
+            <span className="inline-block px-3 py-1 text-xs font-semibold text-cyan-200 bg-cyan-500/20 border border-cyan-400/30 rounded-full mb-3">
+              🤝 申请加盟
+            </span>
+            <h2 className="text-2xl md:text-3xl font-bold text-white mb-2">
+              立即咨询 <span className="text-amber-400">5980 城市主理人加盟</span>
+            </h2>
+            <p className="text-slate-400 text-sm md:text-base">
+              根据你的城市规模与预期目标，1V1 定制方案
+            </p>
+          </motion.div>
 
           {isSubmitted ? (
-            <div className="bg-white p-8 rounded-2xl shadow-sm text-center">
-              <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-green-100 flex items-center justify-center">
-                <CheckCircle2 size={32} className="text-green-500" />
+            <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-8 text-center">
+              <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-emerald-500/20 flex items-center justify-center">
+                <CheckCircle2 size={32} className="text-emerald-400" />
               </div>
-              <h3 className="text-lg font-bold text-gray-900 mb-2">
-                提交成功！
-              </h3>
-              <p className="text-slate-600 mb-4">
+              <h3 className="text-lg font-bold text-white mb-2">提交成功！</h3>
+              <p className="text-slate-300 mb-4 text-sm">
                 您的合作意向已提交，我们将在 24 小时内与您联系。
               </p>
               <button
                 onClick={() => setIsSubmitted(false)}
-                className="text-blue-600 hover:text-blue-700 font-medium"
+                className="text-amber-300 hover:text-amber-200 font-medium text-sm"
               >
                 继续提交其他城市
               </button>
             </div>
           ) : (
-            <form onSubmit={handleSubmit} className="bg-white p-6 rounded-2xl shadow-sm">
+            <form
+              onSubmit={handleSubmit}
+              className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-5 md:p-6"
+            >
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                  <label className="block text-sm font-medium text-slate-200 mb-1.5">
                     姓名
                   </label>
                   <div className="relative">
-                    <User size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                    <User size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
                     <input
                       type="text"
                       required
                       value={formData.name}
                       onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                       placeholder="请输入您的姓名"
-                      className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full pl-10 pr-4 py-2.5 bg-white/5 border border-white/10 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-amber-400/60 focus:border-amber-400/60"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                  <label className="block text-sm font-medium text-slate-200 mb-1.5">
                     意向城市
                   </label>
                   <div className="relative">
-                    <MapPin size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                    <MapPin size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 z-10" />
                     <select
                       required
                       value={formData.city}
                       onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                      className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none bg-white"
+                      className="w-full pl-10 pr-4 py-2.5 bg-white/5 border border-white/10 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-amber-400/60 focus:border-amber-400/60 appearance-none"
                     >
-                      <option value="">请选择意向城市</option>
-                      <option value="beijing">北京</option>
-                      <option value="shanghai">上海</option>
-                      <option value="guangzhou">广州</option>
-                      <option value="hangzhou">杭州</option>
-                      <option value="chengdu">成都</option>
-                      <option value="wuhan">武汉</option>
-                      <option value="nanjing">南京</option>
-                      <option value="shenzhen">深圳</option>
-                      <option value="xian">西安</option>
-                      <option value="chongqing">重庆</option>
-                      <option value="tianjin">天津</option>
-                      <option value="other">其他城市</option>
+                      <option value="" className="bg-slate-800">请选择意向城市</option>
+                      <option value="beijing" className="bg-slate-800">北京</option>
+                      <option value="shanghai" className="bg-slate-800">上海</option>
+                      <option value="guangzhou" className="bg-slate-800">广州</option>
+                      <option value="hangzhou" className="bg-slate-800">杭州</option>
+                      <option value="chengdu" className="bg-slate-800">成都</option>
+                      <option value="wuhan" className="bg-slate-800">武汉</option>
+                      <option value="nanjing" className="bg-slate-800">南京</option>
+                      <option value="shenzhen" className="bg-slate-800">深圳</option>
+                      <option value="xian" className="bg-slate-800">西安</option>
+                      <option value="chongqing" className="bg-slate-800">重庆</option>
+                      <option value="tianjin" className="bg-slate-800">天津</option>
+                      <option value="other" className="bg-slate-800">其他城市</option>
                     </select>
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                    微信号/手机号
+                  <label className="block text-sm font-medium text-slate-200 mb-1.5">
+                    微信号 / 手机号
                   </label>
                   <div className="relative">
-                    <Smartphone size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                    <Smartphone size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
                     <input
                       type="text"
                       required
                       value={formData.contact}
                       onChange={(e) => setFormData({ ...formData, contact: e.target.value })}
                       placeholder="请输入微信号或手机号"
-                      className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full pl-10 pr-4 py-2.5 bg-white/5 border border-white/10 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-amber-400/60 focus:border-amber-400/60"
                     />
                   </div>
                 </div>
 
                 {errorMessage && (
-                  <div className="text-red-500 text-sm bg-red-50 p-3 rounded-lg">
+                  <div className="text-red-300 text-sm bg-red-500/10 border border-red-400/30 p-3 rounded-lg">
                     {errorMessage}
                   </div>
                 )}
@@ -405,42 +732,82 @@ export default function PartnerPage() {
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="w-full mt-6 py-3 rounded-xl font-semibold text-white bg-gradient-to-r from-blue-600 to-indigo-600 hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center justify-center gap-2"
+                className="w-full mt-6 py-3.5 rounded-xl font-extrabold text-white bg-gradient-to-r from-amber-500 via-orange-500 to-rose-500 hover:opacity-95 transition-opacity disabled:opacity-50 flex items-center justify-center gap-2 shadow-xl shadow-orange-500/30 active:scale-[0.98]"
               >
                 {isSubmitting ? (
                   '提交中...'
                 ) : (
                   <>
-                    提交合作意向
+                    立即咨询 5980 城市主理人加盟
                     <ArrowRight size={18} />
                   </>
                 )}
               </button>
+
+              <p className="text-[11px] text-slate-500 text-center mt-3">
+                已有 <span className="text-amber-300 font-bold">300+</span> 位主理人
+                在 <span className="text-amber-300 font-bold">5 座城市</span> 运营中
+              </p>
             </form>
           )}
         </div>
-      </motion.section>
+      </section>
 
       {/* AI 智能供需匹配模块 */}
-      <section className="px-4 py-12">
+      <section className="px-5 py-12">
         <div className="max-w-lg mx-auto md:max-w-6xl">
           <AIMatchmakerWidget defaultCity="" />
         </div>
       </section>
 
-      <footer className="px-4 py-8 bg-slate-900 text-white">
+      {/* ═══ 底部 CTA · 浅色化以便跟深色底色区分 ═══ */}
+      <section className="px-5 py-12">
+        <div className="max-w-lg mx-auto md:max-w-3xl md:mx-auto">
+          <motion.div
+            {...fadeUp}
+            className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-3xl p-6 text-center"
+          >
+            <div className="text-3xl mb-2">🚀</div>
+            <h2 className="text-xl md:text-2xl font-extrabold text-white leading-tight mb-2">
+              加入我们，成为 OPC 城市主理人
+            </h2>
+            <p className="text-sm md:text-base text-slate-300 leading-relaxed mb-5 max-w-xl mx-auto">
+              良朋社 OPC · 招募 5 城合伙人，复制深圳已跑通的整套商业操作系统。
+            </p>
+            <div className="flex flex-col sm:flex-row gap-3 justify-center">
+              <Link
+                href="#partner-form"
+                className="inline-flex items-center justify-center gap-2 bg-gradient-to-r from-amber-500 via-orange-500 to-rose-500 text-white font-bold px-5 py-3 rounded-xl text-sm shadow-lg shadow-orange-500/30 hover:scale-[1.02] active:scale-95 transition-transform"
+              >
+                <Phone size={16} />
+                立即咨询 5980 城市主理人加盟
+                <ArrowRight size={14} />
+              </Link>
+              <Link
+                href="/workspace"
+                className="inline-flex items-center justify-center gap-2 bg-white/10 border border-white/20 text-white font-bold px-5 py-3 rounded-xl text-sm hover:bg-white/15 transition-colors"
+              >
+                <Sparkles size={16} />
+                先完成 OPC 诊断
+              </Link>
+            </div>
+          </motion.div>
+        </div>
+      </section>
+
+      <footer className="px-4 py-8 border-t border-white/10">
         <div className="max-w-lg mx-auto md:max-w-6xl">
           <div className="flex flex-col md:flex-row items-center justify-center gap-4 text-center">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
-                <span className="text-lg font-bold">OPC</span>
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center">
+                <span className="text-lg font-bold text-white">OPC</span>
               </div>
               <div>
-                <h3 className="font-bold">良朋社 OPC</h3>
-                <p className="text-xs text-gray-400">一人公司 × AI 商业操作系统</p>
+                <h3 className="font-bold text-white">良朋社 OPC</h3>
+                <p className="text-xs text-slate-400">一人公司 × AI 商业操作系统</p>
               </div>
             </div>
-            <div className="text-sm text-gray-400 md:border-l md:border-gray-700 md:pl-4">
+            <div className="text-sm text-slate-400 md:border-l md:border-white/10 md:pl-4">
               <p>主办方：良朋社 OPC / 中科院中科创科学院</p>
             </div>
           </div>

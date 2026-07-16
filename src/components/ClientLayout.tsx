@@ -111,10 +111,10 @@ export default function ClientLayout({
                 📚 学习中心
               </Link>
               <Link
-                href="/pitch"
+                href="/partner"
                 className="text-sm font-medium text-slate-600 hover:text-blue-600 transition-colors"
               >
-                💼 商业全景
+                💼 城市主理人
               </Link>
               <button
                 type="button"

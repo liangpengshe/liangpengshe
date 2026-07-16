@@ -127,7 +127,7 @@ const layerProfiles: Record<LayerKey, LayerProfile> = {
     label: '流量型 OPC',
     emoji: '🔥',
     description: '内容获客 + 自媒体矩阵，跑出稳定流量',
-    weapons: ['豹纹工坊 · 爆款素材', 'AI 自媒体项目库', '灵犀 AI · 短视频脚本'],
+    weapons: ['豹纹工坊（豹纹+） · 爆款素材', 'AI 自媒体项目库', '灵犀 AI · 短视频脚本'],
     color: 'rose',
     gradient: 'from-rose-500 to-pink-600',
   },
@@ -154,16 +154,24 @@ const layerProfiles: Record<LayerKey, LayerProfile> = {
 interface Selection {
   identity?: string
   strength?: string
-  bottleneck?: string
+  /**
+   * 最大瓶颈（多选）
+   * 保留为 string[] 是因为多数用户同时面临 2-3 个交叉卡点（例如「不会获客 + 不会变现」）。
+   * matchLayer 会用 includes() 匹配，比单选更精准。
+   */
+  bottleneck?: string[]
   goal?: string
 }
 
 function matchLayer(sel: Selection): LayerProfile | null {
+  // 多选兼容：bottleneck 为数组，包含某 value 即视为命中
+  const has = (v: string) => sel.bottleneck?.includes(v) ?? false
+
   // 路径 1：交易型 — 个人/小微 + 懂供应链/销售 + 变现/获客 + 跑通一单
   if (
     (sel.identity === 'solo' || sel.identity === 'micro') &&
     (sel.strength === 'supply' || sel.strength === 'sales') &&
-    (sel.bottleneck === 'monetize' || sel.bottleneck === 'traffic') &&
+    (has('monetize') || has('traffic')) &&
     sel.goal === 'first'
   ) {
     return layerProfiles.trading
@@ -173,7 +181,7 @@ function matchLayer(sel: Selection): LayerProfile | null {
   if (
     sel.identity === 'solo' &&
     (sel.strength === 'content' || sel.strength === 'local') &&
-    (sel.bottleneck === 'traffic' || sel.bottleneck === 'monetize') &&
+    (has('traffic') || has('monetize')) &&
     (sel.goal === '30k' || sel.goal === 'first')
   ) {
     return layerProfiles.traffic
@@ -183,7 +191,7 @@ function matchLayer(sel: Selection): LayerProfile | null {
   if (
     (sel.identity === 'boss' || sel.identity === 'micro') &&
     (sel.strength === 'tech' || sel.strength === 'sales') &&
-    (sel.bottleneck === 'pricing' || sel.bottleneck === 'traffic') &&
+    (has('pricing') || has('traffic')) &&
     (sel.goal === 'enterprise' || sel.goal === '30k')
   ) {
     return layerProfiles.system
@@ -193,7 +201,7 @@ function matchLayer(sel: Selection): LayerProfile | null {
   if (
     sel.identity === 'boss' &&
     (sel.strength === 'sales' || sel.strength === 'local') &&
-    sel.bottleneck === 'scale' &&
+    has('scale') &&
     (sel.goal === 'national' || sel.goal === 'enterprise')
   ) {
     return layerProfiles.asset
@@ -260,7 +268,7 @@ const pathComparisons: PathComparison[] = [
     gradient: 'from-rose-500 via-pink-500 to-fuchsia-500',
     ring: 'ring-rose-400/50',
     badge: '内容创作者首选',
-    weapon: ['豹纹工坊 · 爆款素材', 'AI 自媒体项目库', '灵犀 AI · 短视频脚本'],
+    weapon: ['豹纹工坊（豹纹+） · 爆款素材', 'AI 自媒体项目库', '灵犀 AI · 短视频脚本'],
   },
 ]
 
@@ -389,7 +397,7 @@ const mockReport = {
       tools: ['GEO 增长陪跑（自研）', '企业级智能客服 FastGPT'],
       projects: ['AI 企业内训 SOP', '高客单 GEO 增长包'],
       service: '智富 AI 内训服务',
-      resource: 'OPC 工具订阅（豹纹工坊 Pro）',
+      resource: 'OPC 工具订阅（豹纹工坊（豹纹+））',
     },
     roadmap: {
       title: '30 天行动路线图',
@@ -447,8 +455,31 @@ async function mockCheckout(amount: number) {
   return { success: true, data: { orderId: `mock_${Date.now()}`, amount } }
 }
 
-async function mockBookExpert(payload: { name: string; phone: string }) {
-  await new Promise((r) => setTimeout(r, 600))
+/**
+ * 提交 15 分钟免费咨询预约
+ * 真实调用 /api/consultations（占位接口），失败时降级到 mock
+ */
+async function submitQuickConsult(payload: { name: string; contact: string }) {
+  try {
+    const r = await fetch('/api/consultations', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: payload.name,
+        contact: payload.contact,
+        source: 'diagnosis-report-15min',
+      }),
+    })
+    if (r.ok) {
+      const j = await r.json().catch(() => ({}))
+      if (j?.success) {
+        return { success: true, data: j.data || { bookingId: `bk_${Date.now()}` } }
+      }
+    }
+  } catch {
+    // 网络失败 / API 未就绪 → 降级 mock
+  }
+  await new Promise((r) => setTimeout(r, 400))
   return { success: true, data: { bookingId: `bk_${Date.now()}`, ...payload } }
 }
 
@@ -483,6 +514,50 @@ function RadioGroup({
             <span className="whitespace-nowrap">{opt.label}</span>
             {selected && (
               <CheckCircle2 size={12} className="ml-auto text-emerald-400" />
+            )}
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
+/**
+ * MultiButtonGroup：多选按钮组（用于"最大瓶颈"等可多选题）
+ * 点击行为：未选 → 添加；已选 → 移除。
+ * 视觉反馈：选中用 bg-blue-600 text-white 高亮，未选保持半透明。
+ * 移动端：min-height 44px 舒适点击区，flex-wrap 自动换行。
+ */
+function MultiButtonGroup({
+  options,
+  values,
+  onToggle,
+}: {
+  options: QuestionOption[]
+  values: string[]
+  onToggle: (v: string) => void
+}) {
+  return (
+    <div className="flex flex-wrap gap-2 mt-3">
+      {options.map((opt) => {
+        const selected = values.includes(opt.value)
+        return (
+          <button
+            key={opt.value}
+            onClick={() => onToggle(opt.value)}
+            aria-pressed={selected}
+            className={`group inline-flex items-center gap-2 px-3 md:px-4 min-h-[44px] rounded-xl text-sm font-medium transition-all border ${
+              selected
+                ? 'bg-gradient-to-r from-blue-600 to-indigo-600 border-blue-400 text-white shadow-lg shadow-blue-500/30 ring-1 ring-blue-300/50'
+                : 'bg-slate-800/50 border-slate-600/50 text-white/70 hover:border-blue-400/50 hover:bg-slate-700/60 hover:text-white'
+            }`}
+          >
+            <span className="text-base">{opt.emoji}</span>
+            <span className="whitespace-nowrap">{opt.label}</span>
+            {selected ? (
+              <CheckCircle2 size={12} className="text-emerald-300 flex-shrink-0" />
+            ) : (
+              <span className="w-3 h-3 rounded-full border border-white/30 flex-shrink-0" />
             )}
           </button>
         )
@@ -602,7 +677,7 @@ export default function DiagnosisPage() {
     setSelection({
       identity: 'boss',
       strength: 'tech',
-      bottleneck: 'pricing',
+      bottleneck: ['pricing'],
       goal: 'enterprise',
     })
     setCurrentQIdx(4)
@@ -612,14 +687,40 @@ export default function DiagnosisPage() {
       void mockGenerateDiagnosis({
         identity: 'boss',
         strength: 'tech',
-        bottleneck: 'pricing',
+        bottleneck: ['pricing'],
         goal: 'enterprise',
       }, 'SYSTEM', 5000, 3)
     }, 500)
   }
 
-  // 用户选择了一个选项
+  // 用户选择了一个选项（单选 / 多选统一入口）
   const handleSelect = (key: Question['key'], value: string) => {
+    // bottleneck 是数组：toggle 行为
+    if (key === 'bottleneck') {
+      const cur = selection.bottleneck || []
+      const next = cur.includes(value)
+        ? cur.filter((x) => x !== value)
+        : [...cur, value]
+      setSelection({ ...selection, bottleneck: next })
+      // 多选不立即触发下一步（用户可能继续选），智能分流也实时反推
+      const reversed = matchLayer({ ...selection, bottleneck: next })
+      if (reversed) {
+        const map: Record<string, SelectedPath> = {
+          trading: 'TRADER',
+          traffic: 'FLOW',
+          system: 'SYSTEM',
+          asset: 'ASSET',
+        }
+        const lv = map[reversed.key]
+        if (lv) {
+          setSelectedPath(lv)
+          saveOPCRouteToStorage(lv)
+        }
+      }
+      return
+    }
+
+    // 其他问题（单选）
     const newSel = { ...selection, [key]: value }
     setSelection(newSel)
 
@@ -890,34 +991,84 @@ export default function DiagnosisPage() {
                             {idx + 1}. {q.text}
                           </div>
                         </div>
-                        {/* 单选按钮区（未选/正在选） */}
+                        {/* 选项区：单选 / 多选分支 */}
                         {idx === currentQIdx && currentQIdx < questions.length && (
                           <div className="pl-2">
-                            <RadioGroup
-                              options={q.options}
-                              value={userAnswer}
-                              onChange={(v) => handleSelect(q.key, v)}
-                            />
+                            {q.key === 'bottleneck' ? (
+                              <>
+                                <p className="text-[11px] text-amber-200/80 mt-2">
+                                  💡 可多选（多数老板同时面临 2-3 个卡点）
+                                </p>
+                                <MultiButtonGroup
+                                  options={q.options}
+                                  values={(userAnswer as string[] | undefined) || []}
+                                  onToggle={(v) => handleSelect(q.key, v)}
+                                />
+                                {/* 多选不自动切题，给"完成本题"按钮 */}
+                                {((userAnswer as string[] | undefined) || []).length > 0 && (
+                                  <button
+                                    onClick={() => {
+                                      // 用最新 bottleneck 数组（避免闭包陷阱）
+                                      const finalBottleneck = (selection.bottleneck || []) as string[]
+                                      const finalSel = { ...selection, bottleneck: finalBottleneck }
+                                      // 手动进入下一问
+                                      if (currentQIdx < questions.length - 1) {
+                                        setCurrentQIdx(currentQIdx + 1)
+                                      } else {
+                                        setCurrentQIdx(currentQIdx + 1)
+                                        setTimeout(() => {
+                                          setStage('report')
+                                          void mockGenerateDiagnosis(
+                                            finalSel,
+                                            selectedPath,
+                                            budget,
+                                            dailyHours
+                                          )
+                                        }, 800)
+                                      }
+                                    }}
+                                    className="mt-3 inline-flex items-center gap-1.5 px-5 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-semibold rounded-full text-sm shadow-md hover:shadow-lg active:scale-95 transition-all"
+                                  >
+                                    完成本题，继续
+                                    <ArrowRight size={14} />
+                                  </button>
+                                )}
+                              </>
+                            ) : (
+                              <RadioGroup
+                                options={q.options}
+                                value={userAnswer as string | undefined}
+                                onChange={(v) => handleSelect(q.key, v)}
+                              />
+                            )}
                           </div>
                         )}
-                        {/* 已选答案反馈 */}
-                        {userAnswer && idx < currentQIdx && (
-                          <div className="flex justify-end">
-                            <div className="max-w-[80%] bg-gradient-to-br from-blue-500 to-indigo-600 text-white rounded-2xl rounded-tr-sm px-4 py-2 text-sm flex items-center gap-2">
-                              <span>
-                                {
-                                  q.options.find((o) => o.value === userAnswer)
-                                    ?.emoji
-                                }
-                              </span>
-                              <span>
-                                {
-                                  q.options.find((o) => o.value === userAnswer)
-                                    ?.label
-                                }
-                              </span>
+                        {/* 已选答案反馈（多选用列表形式） */}
+                        {idx < currentQIdx && (
+                          (q.key === 'bottleneck' && Array.isArray(userAnswer) && userAnswer.length > 0) ? (
+                            <div className="flex justify-end">
+                              <div className="max-w-[85%] bg-gradient-to-br from-blue-500 to-indigo-600 text-white rounded-2xl rounded-tr-sm px-4 py-2 text-sm flex flex-wrap items-center gap-1.5">
+                                {userAnswer.map((v: string) => {
+                                  const opt = q.options.find((o) => o.value === v)
+                                  return opt ? (
+                                    <span key={v} className="inline-flex items-center gap-1 bg-white/15 rounded-full px-2 py-0.5 text-xs">
+                                      <span>{opt.emoji}</span>
+                                      <span>{opt.label}</span>
+                                    </span>
+                                  ) : null
+                                })}
+                              </div>
                             </div>
-                          </div>
+                          ) : (
+                            userAnswer && !Array.isArray(userAnswer) && (
+                              <div className="flex justify-end">
+                                <div className="max-w-[80%] bg-gradient-to-br from-blue-500 to-indigo-600 text-white rounded-2xl rounded-tr-sm px-4 py-2 text-sm flex items-center gap-2">
+                                  <span>{q.options.find((o) => o.value === userAnswer)?.emoji}</span>
+                                  <span>{q.options.find((o) => o.value === userAnswer)?.label}</span>
+                                </div>
+                              </div>
+                            )
+                          )
                         )}
                       </motion.div>
                     )
@@ -1291,34 +1442,79 @@ export default function DiagnosisPage() {
                   )}
                 </div>
 
-                {/* ═══ 5. 专家跃迁卡片 ═══ */}
+                {/* ═══ 5. 15 分钟 1V1 免费咨询卡片（任务 1 R1）═══ */}
                 <AnimatePresence>
                   {paid && (
                     <motion.div
                       initial={{ opacity: 0, y: 20 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: 0.6 }}
-                      className="mt-6 bg-white/5 backdrop-blur-md border border-white/15 rounded-xl p-4 flex flex-col md:flex-row items-center gap-3"
+                      className="mt-4 bg-blue-50 border border-blue-200 rounded-xl p-4 flex flex-col md:flex-row items-center gap-3"
                     >
-                      <div className="text-3xl">🤔</div>
+                      <div className="text-3xl flex-shrink-0">🎯</div>
                       <div className="flex-1 text-center md:text-left">
-                        <div className="text-sm font-bold text-white">
-                          需要专家帮您深入解读这份蓝皮书？
+                        <div className="text-sm font-bold text-slate-900">
+                          需要专家帮您把把关？
                         </div>
-                        <div className="text-xs text-white/60 mt-0.5">
-                          良朋社主理人 1v1 视频解读 · 限时免费
+                        <div className="text-xs text-slate-600 mt-0.5">
+                          良朋社主理人 1V1 · 15 分钟免费诊断咨询
                         </div>
                       </div>
                       <button
                         onClick={() => setBookingOpen(true)}
-                        className="h-12 px-5 bg-white text-slate-900 text-sm font-bold rounded-xl hover:scale-105 active:scale-95 transition-transform flex items-center gap-2"
+                        className="h-12 px-5 bg-blue-600 text-white text-sm font-bold rounded-xl hover:bg-blue-700 active:scale-95 transition flex items-center gap-2 shadow-sm"
                       >
                         <CalendarDays size={14} />
-                        预约 15 分钟免费咨询
+                        立即预约 15 分钟 1V1 免费诊断咨询
                       </button>
                     </motion.div>
                   )}
                 </AnimatePresence>
+
+                {/* ═══ 5.5 加入良朋社 OPC 智富社群 · 扫码入口 ═══ */}
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.7 }}
+                  className="mt-4 bg-white/5 backdrop-blur-md border border-slate-700/50 rounded-xl p-4 flex flex-col sm:flex-row items-center gap-4"
+                >
+                  {/* 二维码 */}
+                  <div className="flex-shrink-0 mx-auto sm:mx-0">
+                    <div className="relative w-[120px] h-[120px] bg-white rounded-xl p-1.5 shadow-2xl shadow-blue-500/20">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src="/images/opc-qr.png"
+                        width={120}
+                        height={120}
+                        alt="良朋社OPC社群二维码"
+                        className="w-full h-full object-contain rounded-lg"
+                      />
+                      <span className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 text-white text-[10px] font-bold flex items-center justify-center shadow-lg">
+                        9.9
+                      </span>
+                    </div>
+                  </div>
+                  {/* 文案 */}
+                  <div className="flex-1 text-center sm:text-left">
+                    <div className="flex items-center justify-center sm:justify-start gap-1.5 mb-1.5">
+                      <span className="text-base">💬</span>
+                      <h3 className="text-sm md:text-base font-bold text-white">
+                        加入良朋社 OPC 智富社群
+                      </h3>
+                      <span className="text-[10px] font-bold text-amber-300 bg-amber-500/20 border border-amber-400/30 rounded-full px-1.5 py-0.5">
+                        9.9 诊断专属
+                      </span>
+                    </div>
+                    <p className="text-xs text-white/70 leading-relaxed">
+                      与 <span className="font-bold text-amber-300">300+</span> 同频创业者一起交流，
+                      获取每日实操干货与资源对接。
+                    </p>
+                    <div className="mt-2 inline-flex items-center gap-1.5 text-[11px] text-cyan-300 bg-cyan-500/10 border border-cyan-400/20 rounded-lg px-2 py-1">
+                      <span>📱</span>
+                      <span>扫码添加良朋社小助手，备注【9.9诊断】，立即进群</span>
+                    </div>
+                  </div>
+                </motion.div>
               </div>
 
               {/* ═══ 5. 专属行动指令（基于 selectedPath） ═══ */}
@@ -1403,15 +1599,15 @@ export default function DiagnosisPage() {
                     </button>
                   </div>
                   <p className="text-xs text-white/60 mb-4">
-                    填写您的联系方式，专家会在 24 小时内主动与您预约时间。
+                    填写您的姓名与微信号，专家将在 1 小时内主动联系您。
                   </p>
                   <form
                     onSubmit={async (e) => {
                       e.preventDefault()
                       const fd = new FormData(e.currentTarget)
-                      await mockBookExpert({
+                      await submitQuickConsult({
                         name: String(fd.get('name') || ''),
-                        phone: String(fd.get('phone') || ''),
+                        contact: String(fd.get('contact') || ''),
                       })
                       setBookingSent(true)
                     }}
@@ -1422,23 +1618,22 @@ export default function DiagnosisPage() {
                       <input
                         name="name"
                         required
-                        className="w-full h-12 bg-white/5 border border-white/15 rounded-xl px-4 text-sm text-white focus:outline-none focus:border-amber-400/60"
+                        className="w-full h-12 bg-white/5 border border-white/15 rounded-xl px-4 text-sm text-white focus:outline-none focus:border-blue-400/60"
                         placeholder="请输入您的姓名"
                       />
                     </div>
                     <div>
-                      <label className="text-[11px] text-white/50 mb-1 block">手机号</label>
+                      <label className="text-[11px] text-white/50 mb-1 block">微信号</label>
                       <input
-                        name="phone"
+                        name="contact"
                         required
-                        pattern="[0-9]{11}"
-                        className="w-full h-12 bg-white/5 border border-white/15 rounded-xl px-4 text-sm text-white focus:outline-none focus:border-amber-400/60"
-                        placeholder="请输入 11 位手机号"
+                        className="w-full h-12 bg-white/5 border border-white/15 rounded-xl px-4 text-sm text-white focus:outline-none focus:border-blue-400/60"
+                        placeholder="请输入您的微信号"
                       />
                     </div>
                     <button
                       type="submit"
-                      className="w-full h-12 bg-gradient-to-r from-amber-500 to-orange-500 text-white font-bold rounded-xl hover:scale-[1.02] active:scale-95 transition-transform"
+                      className="w-full h-12 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold rounded-xl hover:scale-[1.02] active:scale-95 transition-transform"
                     >
                       提交预约
                     </button>
@@ -1451,7 +1646,7 @@ export default function DiagnosisPage() {
                   </div>
                   <h3 className="text-lg font-bold text-white mb-2">预约成功！</h3>
                   <p className="text-sm text-white/70 mb-5">
-                    我们的专家会在 24 小时内主动联系您，请保持手机畅通。
+                    专家将在 1 小时内通过微信联系您，请留意好友申请。
                   </p>
                   <button
                     onClick={() => {

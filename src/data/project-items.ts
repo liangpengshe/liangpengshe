@@ -241,6 +241,33 @@ export const projectItems: ProjectItem[] = [
     roleSupport: ['partner', 'manager'],
     startChecklist: ['选择 1 个城市行业切入', '准备 GEO 落地页模板', '对接本地企业 BD'],
   },
+  // ─────── 9. 资产型 · AI 数字产品（数字资产 + 全球分发） ───────
+  {
+    id: 'p9',
+    slug: 'ai-digital-product',
+    title: 'AI数字产品项目',
+    categoryEmoji: '💎',
+    category: '数字资产 / 全球分发',
+    tagColor: 'bg-violet-100 text-violet-700',
+    desc: '把 AI 工作流 / 提示词 / 模板 / 数字素材封装为可订阅、可分发的全球数字资产，在 Gumroad / Coze 商店 / 先锋派 持续变现。',
+    level: 'asset',
+    recommend: false,
+    highlights: [
+      '🎯 选品逻辑：判断哪些数字资产有复利价值（提示词包 / 模板库 / 数字素材）',
+      '🌍 全球分发：一套资产多平台售卖（Gumroad / Coze 商店 / 先锋派 / 自建 SaaS）',
+      '💰 边际成本趋近 0：售出第 100 份 ≠ 制作第 100 份',
+      '🔁 订阅 + 续费 + 转介绍 三重复利',
+    ],
+    forWho: '适合：具备专业能力（设计 / 编程 / 写作 / AI 工具），想把单次服务沉淀为可复用数字资产的进阶主理人',
+    sop: [
+      { title: '第 1 周 · 资产盘点', desc: '梳理你已有的素材 / 模板 / 工作流，筛 3-5 个可售卖的高价值资产' },
+      { title: '第 2 周 · 选品定价', desc: '调研 Gumroad / Coze 商店同类型定价 + 自身 ROI，输出 3 档定价表' },
+      { title: '第 3 周 · 上架分发', desc: '打包 + 上架 Gumroad / Coze / 先锋派，配置自动交付' },
+      { title: '第 4 周 · 引流放大', desc: '用 X(Twitter) / YouTube / 小红书 短视频导流，跑通首月 100 单' },
+    ],
+    roleSupport: ['executor', 'manager'],
+    startChecklist: ['盘点已有数字资产', '调研 Gumroad 同类竞品定价', '准备 1 套可售卖的样板资产'],
+  },
 ]
 
 /** 根据 slug 查找项目（详情页使用） */

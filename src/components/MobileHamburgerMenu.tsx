@@ -6,7 +6,7 @@
  * 进化项 2.2：
  *   - 屏幕宽度 < 768px 时显示
  *   - 点击 ≡ 弹出全屏抽屉式菜单
- *   - 包含所有 PC 端导航项：学习中心、商业全景、工作台、登录、注册
+ *   - 包含所有 PC 端导航项：学习中心、城市主理人、工作台、登录、注册
  *   - 流畅动画（framer-motion）
  *   - 点击菜单项自动关闭
  * ------------------------------------------------------------
@@ -44,7 +44,7 @@ interface MenuItem {
 
 const MENU_ITEMS: MenuItem[] = [
   { href: '/market/tools', label: '学习中心', icon: BookOpen },
-  { href: '/pitch', label: '商业全景', icon: Briefcase },
+  { href: '/partner', label: '城市主理人', icon: Briefcase },
   { href: '/workspace', label: '我的工作台', icon: Rocket, highlight: true, isWorkspace: true },
 ]
 

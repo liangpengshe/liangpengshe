@@ -326,7 +326,7 @@ export function getStageDetail(
           },
           {
             title: '商品图 / 视频素材',
-            desc: '通过豹纹工坊产出的爆款素材。',
+            desc: '通过豹纹工坊（豹纹+）产出的爆款素材。',
             meta: '12 张主图 + 3 支短视频',
           },
         ],

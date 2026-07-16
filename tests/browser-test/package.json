@@ -1,0 +1,9 @@
+{
+  "name": "opc-browser-test",
+  "version": "1.0.0",
+  "private": true,
+  "type": "commonjs",
+  "dependencies": {
+    "playwright": "^1.61.1"
+  }
+}

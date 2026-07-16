@@ -43,7 +43,7 @@ const TRADER: LibrariesSnapshot = {
       href: '/market/tools?from=guide&level=trader',
     },
     {
-      name: '豹纹工坊',
+      name: '豹纹工坊（豹纹+）',
       desc: '一键生成爆款商品素材图',
       icon: '🛠️',
       href: '/market/tools?from=guide&level=trader',

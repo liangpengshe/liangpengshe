@@ -137,7 +137,7 @@ const revenuePillars: {
     icon: Wrench,
     emoji: '🛠️',
     title: '自研工具 SaaS',
-    desc: '豹纹工坊、灵犀 AI 等工具提供月度/年度订阅收入，毛利极高。',
+    desc: '豹纹工坊（豹纹+）、灵犀 AI 等工具提供月度/年度订阅收入，毛利极高。',
     highlight: '月 / 年订阅',
     color: 'from-violet-400 to-fuchsia-500',
     href: '/tools',

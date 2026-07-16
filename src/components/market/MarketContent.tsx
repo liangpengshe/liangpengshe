@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import {
   Search,
   ArrowRight,
@@ -137,9 +137,9 @@ const toolCategories: ToolCategory[] = [
   {
     title: '自研工具',
     emoji: '🧬',
-    subtitle: 'OPC 独家自研 · 豹纹工坊 / 灵犀 AI / 先锋派数字人',
+    subtitle: 'OPC 独家自研 · 豹纹工坊（豹纹+） / 灵犀 AI / 先锋派数字人',
     platforms: [
-      { name: '豹纹工坊', url: 'https://www.baowenplus.com', description: 'AI 自媒体内容生成（豹纹+）', icon: '🐆', tag: '独家' },
+      { name: '豹纹工坊（豹纹+）', url: 'https://www.baowenplus.com', description: 'AI 自媒体内容生成 · 豹纹+', icon: '🐆', tag: '独家' },
       { name: '灵犀 AI', url: 'https://www.lingxixai.com', description: '智能内容创作助手', icon: '🦊', tag: '热门' },
       { name: '先锋派数字人', url: 'https://www.xianfengpai.com.cn', description: 'AI 数字人视频生成', icon: '🎬', tag: '爆款' },
     ],
@@ -402,6 +402,36 @@ export function MarketContent({
   // ════════ 资源库 · UGC 投稿弹窗状态（任务 2）══════
   const [submissionOpen, setSubmissionOpen] = useState(false)
   const [needLoginOpen, setNeedLoginOpen] = useState(false)
+
+  /**
+   * 流量型 OPC 精准推荐配置
+   * ------------------------------------------------------------
+   * recommendLevel === 'flow' 时：
+   *   1) 仅「AI自媒体运营项目」「AI工具销售推广项目」标记为 isHighlighted
+   *   2) 这两个项目置顶到网格最前面
+   *   3) 其他项目的"优先推荐"徽章自动消失
+   *
+   * trader 模式沿用：AI数字网店项目 + AI无货源实物网店项目
+   * system / asset 模式暂未配置置顶集合（保持原顺序 + level 匹配高亮）
+   * ------------------------------------------------------------
+   */
+  const PRIORITY_TITLES_BY_LEVEL: Record<NonNullable<typeof recommendLevel>, string[]> = {
+    trader: ['AI数字网店项目', 'AI无货源实物网店项目'],
+    flow: ['AI自媒体运营项目', 'AI工具销售推广项目'],
+    system: ['AI编程系统开发项目', 'AI企业GEO项目'],
+    asset: ['AI跨境电商项目', 'AI数字产品项目'],
+  }
+
+  const displayProjects = useMemo(() => {
+    if (!recommendLevel) return projectItems
+    const priorities = PRIORITY_TITLES_BY_LEVEL[recommendLevel] || []
+    if (priorities.length === 0) return projectItems
+    const prioritySet = new Set(priorities)
+    const pinned = projectItems.filter((p) => prioritySet.has(p.title))
+    const others = projectItems.filter((p) => !prioritySet.has(p.title))
+    // 保持原数组中的相对顺序（不再次排序 pinned）
+    return [...pinned, ...others]
+  }, [recommendLevel])
 
   /**
    * 读取当前 OPC 用户身份（演示版：从 localStorage 解析）
@@ -721,11 +751,18 @@ export function MarketContent({
               💡 选择感兴趣的项目方向，提交后我们将为您匹配 AI 启动清单 / 资深 OPC 主理人
             </p>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {projectItems.map((proj) => {
-                // 精准推荐模式（任务 2）：recommend:true 或 level 匹配 → 高亮
-                const isHighlighted = !!recommendLevel && (
-                  proj.recommend === true || proj.level === recommendLevel
-                )
+              {displayProjects.map((proj) => {
+                // 精准推荐模式（任务 2 收口）：
+                //   唯一高亮依据：项目 title 是否在 PRIORITY_TITLES_BY_LEVEL[recommendLevel] 集合内
+                //   移除历史的 proj.recommend === true / proj.level === recommendLevel 全局兼容，
+                //   否则 AI数字网店 / AI无货源实物（recommend:true + level:trader）会在 flow/system/asset 模式下被误高亮
+                const prioritySet = recommendLevel
+                  ? new Set(PRIORITY_TITLES_BY_LEVEL[recommendLevel] || [])
+                  : null
+                const isHighlighted =
+                  recommendLevel !== undefined &&
+                  prioritySet !== null &&
+                  prioritySet.has(proj.title)
                 return (
                   <ProjectCard
                     key={proj.id}

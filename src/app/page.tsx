@@ -31,10 +31,42 @@ const learningPath = [
 ]
 
 const entrepreneurLadder = [
-  { layer: '第一层', title: '🛒 交易型 OPC', desc: 'AI 网店群、智富严选、跑通首单', href: '/guide/trader', color: 'bg-gradient-to-r from-orange-400 to-amber-500' },
-  { layer: '第二层', title: '📢 流量型 OPC', desc: '内容获客、自媒体矩阵', href: '/guide/flow', color: 'bg-gradient-to-r from-pink-500 to-rose-500' },
-  { layer: '第三层', title: '⚙️ 系统型 OPC', desc: '企业流程改造、高客单', href: '/guide/system', color: 'bg-gradient-to-r from-blue-500 to-indigo-600' },
-  { layer: '第四层', title: '💎 资产型 OPC', desc: '数字资产、全球外包', href: '/guide/asset', color: 'bg-gradient-to-r from-purple-500 to-indigo-700' },
+  {
+    layer: '第一层',
+    title: '🛒 交易型 OPC',
+    desc: 'AI 网店群、智富严选、跑通首单',
+    href: '/guide/trader',
+    color: 'bg-gradient-to-r from-orange-400 to-amber-500',
+    level: 'trader' as const,
+    tooltip: '专注 AI 网店群的变现模式，适合直接卖货的创业者。',
+  },
+  {
+    layer: '第二层',
+    title: '📢 流量型 OPC',
+    desc: '内容获客、自媒体矩阵',
+    href: '/guide/flow',
+    color: 'bg-gradient-to-r from-pink-500 to-rose-500',
+    level: 'flow' as const,
+    tooltip: '专注 AI 自媒体矩阵的流量增长，适合做内容的创作者。',
+  },
+  {
+    layer: '第三层',
+    title: '⚙️ 系统型 OPC',
+    desc: '企业流程改造、高客单',
+    href: '/guide/system',
+    color: 'bg-gradient-to-r from-blue-500 to-indigo-600',
+    level: 'system' as const,
+    tooltip: '为 B 端企业提供 AI 系统开发与流程改造，适合有技术/项目背景的操盘手。',
+  },
+  {
+    layer: '第四层',
+    title: '💎 资产型 OPC',
+    desc: '数字资产、全球外包',
+    href: '/guide/asset',
+    color: 'bg-gradient-to-r from-purple-500 to-indigo-700',
+    level: 'asset' as const,
+    tooltip: '专注数字资产与全球化外包，实现被动收入和资产放大。',
+  },
 ]
 
 const libraryCards = [
@@ -85,6 +117,104 @@ export default function HomePage() {
   const [opcLevel, setOpcLevel] = useState<string | null>(null)
   const [learningScore, setLearningScore] = useState<number>(0)
   const [canUnlockPractice, setCanUnlockPractice] = useState<boolean>(false)
+
+  // ──────────────────────────────────────────────────────────
+  // OPC 四层智富阶梯 · 智能访问判定
+  // ──────────────────────────────────────────────────────────
+  //
+  // 智能分级规则（覆盖诊断 / 学习 / 实操 / 放大 4 阶段）：
+  //
+  // 【基础层：交易型 / 流量型】
+  //   只要满足以下任一条件，即视为"已过诊断门槛"，可正常打开：
+  //     ① is_registered === 'true'        已完成注册
+  //     ② diagnosis_accepted === 'true'   已接受诊断时间线
+  //     ③ localStorage['opc_level'] 已设  诊断后已选定 OPC 路径
+  //     ④ task_browse === 'true'          已开始浏览学习任务
+  //     ⑤ learning_score > 0             学习阶段已获得任意积分
+  //     ⑥ can_unlock_practice === 'true'  实操已解锁
+  //
+  // 【高阶层：系统型 / 资产型】
+  //   需同时满足"已选路径 + 基础闭环"或"付费会员"：
+  //     ① membership_level >= 1980        1980 / 5980 付费会员
+  //     ② opc_level 已设 且 can_unlock_practice === 'true'
+  //     ③ learning_score >= 80            学习阶段高分（视作已跑通基础闭环）
+  // ──────────────────────────────────────────────────────────
+  const canAccessBasicLadder = (): boolean => {
+    if (typeof window === 'undefined') return false
+    try {
+      if (window.localStorage.getItem('is_registered') === 'true') return true
+      if (window.localStorage.getItem('diagnosis_accepted') === 'true') return true
+      if (window.localStorage.getItem('opc_level')) return true
+      if (window.localStorage.getItem('task_browse') === 'true') return true
+      const score = parseInt(window.localStorage.getItem('learning_score') || '0', 10)
+      if (Number.isFinite(score) && score > 0) return true
+      if (window.localStorage.getItem('can_unlock_practice') === 'true') return true
+      return false
+    } catch {
+      return false
+    }
+  }
+
+  const canAccessAdvancedLadder = (): boolean => {
+    if (typeof window === 'undefined') return false
+    try {
+      const level = parseInt(window.localStorage.getItem('membership_level') || '0', 10)
+      if (Number.isFinite(level) && level >= 1980) return true
+      if (
+        window.localStorage.getItem('opc_level') &&
+        window.localStorage.getItem('can_unlock_practice') === 'true'
+      )
+        return true
+      const score = parseInt(window.localStorage.getItem('learning_score') || '0', 10)
+      if (Number.isFinite(score) && score >= 80) return true
+      return false
+    } catch {
+      return false
+    }
+  }
+
+  const [blocker, setBlocker] = useState<{
+    open: boolean
+    message: string
+    ctaLabel: string
+    ctaHref: string
+  }>({ open: false, message: '', ctaLabel: '', ctaHref: '' })
+
+  // 四层智富阶梯点击拦截（智能判断：基于诊断 / 学习 / 实操多维状态）
+  const handleLadderClick = (
+    e: React.MouseEvent,
+    item: (typeof entrepreneurLadder)[number]
+  ) => {
+    // 基础层：交易型 / 流量型 → 只要过了诊断门槛即可
+    if (item.level === 'trader' || item.level === 'flow') {
+      if (!canAccessBasicLadder()) {
+        e.preventDefault()
+        setBlocker({
+          open: true,
+          message:
+            '🔒 尚未开启诊断。您尚未完成 OPC 智富入局诊断。建议您先完成诊断，找到最适合您的起点。',
+          ctaLabel: '去完成诊断 →',
+          ctaHref: '/diagnosis',
+        })
+      }
+      return
+    }
+
+    // 高阶层：系统型 / 资产型 → 需付费会员或基础闭环
+    if (item.level === 'system' || item.level === 'asset') {
+      if (!canAccessAdvancedLadder()) {
+        e.preventDefault()
+        setBlocker({
+          open: true,
+          message:
+            '🔒 需先跑通基础版图。高阶商业版图需要您在【运营实操】阶段完成单店/单号的基础闭环后，方可解锁。您可以先专注于基础层 OPC。',
+          ctaLabel: '了解进阶路径 →',
+          ctaHref: '/member',
+        })
+      }
+      return
+    }
+  }
 
   useEffect(() => {
     // 简单心跳（避免服务端阻塞）
@@ -455,8 +585,14 @@ export default function HomePage() {
                 <Link
                   key={item.title}
                   href={item.href}
-                  className={cn('rounded-2xl p-4 text-white min-h-[120px] flex flex-col justify-between active:scale-[0.98] transition-transform shadow-md', item.color)}
+                  title={item.tooltip}
+                  onClick={(e) => handleLadderClick(e, item)}
+                  className={cn('relative rounded-2xl p-4 text-white min-h-[120px] flex flex-col justify-between active:scale-[0.98] transition-transform shadow-md', item.color)}
                 >
+                  {/* 高阶层（系统型/资产型）右上角小锁标识，不影响卡片整体样式 */}
+                  {(item.level === 'system' || item.level === 'asset') && (
+                    <Lock className="absolute top-2 right-2 w-3 h-3 text-slate-400" />
+                  )}
                   <div>
                     <div className="text-[9px] font-bold text-white/80 tracking-widest mb-0.5">{item.layer}</div>
                     <h3 className="text-base font-extrabold leading-tight">{item.title}</h3>
@@ -572,6 +708,40 @@ export default function HomePage() {
           </div>
         </section>
       </div>
+
+      {/* ═══ OPC 四层智富阶梯 · 拦截弹窗（任务 1/2 改造）═══ */}
+      {blocker.open && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center px-5 bg-slate-900/60 backdrop-blur-sm"
+          onClick={() => setBlocker({ open: false, message: '', ctaLabel: '', ctaHref: '' })}
+        >
+          <div
+            className="relative w-full max-w-sm bg-white rounded-2xl shadow-2xl p-5 md:p-6"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              type="button"
+              onClick={() => setBlocker({ open: false, message: '', ctaLabel: '', ctaHref: '' })}
+              className="absolute top-3 right-3 w-8 h-8 flex items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-colors"
+              aria-label="关闭"
+            >
+              ✕
+            </button>
+            <div className="text-sm md:text-base text-slate-800 leading-relaxed font-medium pr-6">
+              {blocker.message}
+            </div>
+            <div className="mt-5 flex justify-end">
+              <Link
+                href={blocker.ctaHref}
+                onClick={() => setBlocker({ open: false, message: '', ctaLabel: '', ctaHref: '' })}
+                className="inline-flex items-center gap-1 h-11 px-5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-sm font-bold rounded-xl shadow-md hover:scale-105 active:scale-95 transition-transform"
+              >
+                {blocker.ctaLabel}
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
     </ClientLayout>
   )
 }

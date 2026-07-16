@@ -27,7 +27,7 @@ const fadeUp = {
 const tools = [
   {
     id: 'leopard',
-    name: '豹纹工坊',
+    name: '豹纹工坊（豹纹+）',
     icon: ShoppingBag,
     emoji: '🐆',
     desc: '一键生成爆款商品素材，提升电商转化率。',
@@ -105,7 +105,7 @@ export default function ToolSubscriptionPage() {
               </span>
             </h1>
             <p className="text-sm md:text-base text-slate-400 max-w-2xl mx-auto">
-              豹纹工坊 · 灵犀 AI · 先锋派数字人 —— 三款核心 SaaS，
+              豹纹工坊（豹纹+） · 灵犀 AI · 先锋派数字人 —— 三款核心 SaaS，
               独立订阅或组合包年灵活选择。
             </p>
           </motion.div>
@@ -133,7 +133,7 @@ export default function ToolSubscriptionPage() {
                   🎁 加入 199 元基础会员，工具订阅直接 8 折
                 </h3>
                 <p className="text-xs md:text-sm text-white/90 mt-1">
-                  豹纹工坊年费 ¥988 → ¥790；灵犀 AI 年费 ¥788 → ¥630；先锋派年费 ¥1,988 → ¥1,590
+                  豹纹工坊（豹纹+）年费 ¥988 → ¥790；灵犀 AI 年费 ¥788 → ¥630；先锋派年费 ¥1,988 → ¥1,590
                 </p>
               </div>
               <Link
@@ -250,7 +250,7 @@ export default function ToolSubscriptionPage() {
                   <span className="text-sm text-slate-300 line-through ml-2">¥3,764</span>
                 </h3>
                 <p className="text-xs md:text-sm text-slate-300 leading-relaxed">
-                  豹纹工坊 + 灵犀 AI + 先锋派数字人，一次性打包，
+                  豹纹工坊（豹纹+） + 灵犀 AI + 先锋派数字人，一次性打包，
                   折合每天仅 ¥8.16。基础会员叠加再享 8 折。
                 </p>
               </div>

@@ -43,7 +43,7 @@ const QUICK_BUTTONS: Array<{
   icon: LucideIcon
   defaultItemName: string
 }> = [
-  { tab: 'tools', label: 'AI智富工具库', icon: Wrench, defaultItemName: '豹纹工坊' },
+  { tab: 'tools', label: 'AI智富工具库', icon: Wrench, defaultItemName: '豹纹工坊（豹纹+）' },
   { tab: 'projects', label: 'AI智富项目库', icon: FolderKanban, defaultItemName: 'AI 网店群' },
   { tab: 'services', label: 'AI智富服务库', icon: Briefcase, defaultItemName: 'GEO 增长陪跑' },
   { tab: 'resources', label: 'AI智富资源库', icon: BookOpen, defaultItemName: '行业研报' },

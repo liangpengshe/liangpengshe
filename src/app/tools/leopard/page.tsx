@@ -88,14 +88,14 @@ export default function LeopardPage() {
             <ArrowLeft size={20} />
             <span>返回工具库</span>
           </Link>
-          <span className="font-bold text-gray-900">豹纹工坊</span>
+          <span className="font-bold text-gray-900">豹纹工坊（豹纹+）</span>
           <div className="w-20"></div>
         </div>
       </header>
 
       <main className="px-5 py-6">
         <section className="bg-gradient-to-br from-amber-500 to-orange-600 rounded-2xl p-6 text-white mb-6">
-          <h1 className="text-2xl font-bold mb-2">豹纹工坊</h1>
+          <h1 className="text-2xl font-bold mb-2">豹纹工坊（豹纹+）</h1>
           <p className="text-amber-100 text-sm mb-4">AI 驱动的内容生产引擎，让创意无限可能</p>
           <div className="flex items-center gap-2 text-sm bg-white/20 px-3 py-1.5 rounded-full w-fit">
             <span className="w-2 h-2 bg-green-400 rounded-full"></span>
