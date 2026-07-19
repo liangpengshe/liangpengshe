@@ -1,0 +1,17 @@
+{
+  "version": 2,
+  "buildCommand": "prisma generate && next build",
+  "devCommand": "next dev -p 3001",
+  "installCommand": "npm install",
+  "framework": "nextjs",
+  "regions": ["hkg1", "sin1"],
+  "github": {
+    "silent": false,
+    "autoAlias": true
+  },
+  "build": {
+    "env": {
+      "NEXT_TELEMETRY_DISABLED": "1"
+    }
+  }
+}
