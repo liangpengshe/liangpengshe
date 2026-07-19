@@ -21,10 +21,21 @@ export default function ConsoleDashboard() {
     const fetchData = async () => {
       try {
         const supabase = createClient()
+        // 🛡️ 容错：凭证缺失时降级到 /auth/login，避免 null.auth 崩溃
+        if (!supabase) {
+          // 用 console.info 标记为非错误（仅 dev 提示一次）
+          if (typeof window !== 'undefined' && !(window as any).__supabase_warned) {
+            console.info('[Console] Supabase 凭证未配置，降级到登录页')
+            ;(window as any).__supabase_warned = true
+          }
+          // 🛡️ { scroll: false } 避免 sticky/fixed header 警告
+          router.push('/auth/login', { scroll: false })
+          return
+        }
         const { data: { user } } = await supabase.auth.getUser()
-        
+
         if (!user) {
-          router.push('/auth/login')
+          router.push('/auth/login', { scroll: false })
           return
         }
 
@@ -54,8 +65,15 @@ export default function ConsoleDashboard() {
 
   const handleLogout = async () => {
     const supabase = createClient()
-    await supabase.auth.signOut()
-    router.push('/auth/login')
+    // 🛡️ 容错：signOut 前检查 client
+    if (supabase) {
+      try {
+        await supabase.auth.signOut()
+      } catch (e) {
+        console.info('[Console] 登出异常（可能未配置凭证）:', e)
+      }
+    }
+    router.push('/auth/login', { scroll: false })
   }
 
   const navItems = [

@@ -18,13 +18,12 @@ import Link from 'next/link'
 import {
   Menu,
   X,
-  BookOpen,
-  Briefcase,
   Rocket,
   LogIn,
   UserPlus,
   ArrowRight,
   Sparkles,
+  UserCircle,
 } from 'lucide-react'
 import { usePathname } from 'next/navigation'
 import { useRouter } from 'next/navigation'
@@ -43,8 +42,7 @@ interface MenuItem {
 }
 
 const MENU_ITEMS: MenuItem[] = [
-  { href: '/market/tools', label: '学习中心', icon: BookOpen },
-  { href: '/partner', label: '城市主理人', icon: Briefcase },
+  { href: '/member', label: '个人中心', icon: UserCircle },
   { href: '/workspace', label: '我的工作台', icon: Rocket, highlight: true, isWorkspace: true },
 ]
 

@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, Suspense } from 'react'
 import { useRouter } from 'next/navigation'
 import CitySelector, { CITY_STORAGE_KEY } from '@/components/CitySelector'
 import Link from 'next/link'
-import { Lock, ArrowRight, Target, Wrench, CheckCircle2, Sparkles } from 'lucide-react'
+import { Lock, ArrowRight, Target, Wrench, CheckCircle2, Sparkles, UserCircle } from 'lucide-react'
 import MobileBottomNav from '@/components/MobileBottomNav'
 import AIAssistant from '@/components/AIAssistant'
 import MobileHamburgerMenu from '@/components/MobileHamburgerMenu'
@@ -105,16 +105,12 @@ export default function ClientLayout({
             <MobileHamburgerMenu onWorkspaceClick={handleWorkspaceClick} />
             <div className="hidden md:flex items-center gap-3">
               <Link
-                href="/market/tools"
-                className="text-sm font-medium text-slate-600 hover:text-blue-600 transition-colors"
+                href="/member"
+                className="text-sm font-medium text-slate-600 hover:text-blue-600 transition-colors flex items-center gap-1"
+                data-testid="nav-personal-center"
               >
-                📚 学习中心
-              </Link>
-              <Link
-                href="/partner"
-                className="text-sm font-medium text-slate-600 hover:text-blue-600 transition-colors"
-              >
-                💼 城市主理人
+                <UserCircle size={16} className="text-slate-500" />
+                个人中心
               </Link>
               <button
                 type="button"

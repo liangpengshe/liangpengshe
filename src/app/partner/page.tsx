@@ -17,7 +17,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import {
   ArrowRight,
   Sparkles,
@@ -47,6 +47,7 @@ import {
   Briefcase,
   Crown,
   Mic,
+  Loader2,
   type LucideIcon,
 } from 'lucide-react'
 import AIMatchmakerWidget from '@/components/AIMatchmakerWidget'
@@ -231,6 +232,16 @@ export default function PartnerPage() {
   const [isSubmitted, setIsSubmitted] = useState(false)
   const [errorMessage, setErrorMessage] = useState('')
 
+  // ── 城市主理人 · 5980 加盟转化漏斗（任务 1） ──
+  const [joinLoading, setJoinLoading] = useState(false)
+  const [joinResult, setJoinResult] = useState<{
+    orderId: string
+    points: { bonus: number; currentBalance: number; totalEarned: number; logId: string; source: string }
+    city: { code: string; linked: boolean }
+    paidAt: string
+  } | null>(null)
+  const [joinError, setJoinError] = useState('')
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsSubmitting(true)
@@ -258,6 +269,69 @@ export default function PartnerPage() {
       setErrorMessage('网络异常，请稍后重试')
     } finally {
       setIsSubmitting(false)
+    }
+  }
+
+  /** 任务 1：底部 CTA → /api/payment/create-checkout */
+  const handleJoinCity = async () => {
+    if (joinLoading) return
+    setJoinLoading(true)
+    setJoinError('')
+
+    // 优先使用已填表单的城市；否则 shenzhen
+    const cityCode = formData.city && formData.city !== 'other' ? formData.city : 'shenzhen'
+    const deviceId =
+      (typeof window !== 'undefined' &&
+        (window.localStorage.getItem('opc_device_id') ||
+          window.localStorage.getItem('opc_partner_device_id'))) ||
+      `web_${Date.now().toString(36).slice(-6)}`
+
+    try {
+      // 持久化 deviceId 供后续 API 复用
+      if (typeof window !== 'undefined') {
+        try {
+          window.localStorage.setItem('opc_device_id', deviceId)
+        } catch {}
+      }
+
+      const r = await fetch('/api/payment/create-checkout', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-device-id': deviceId,
+        },
+        body: JSON.stringify({ cityCode }),
+      })
+      const json = await r.json()
+      if (json.success) {
+        setJoinResult({
+          orderId: json.data.orderId,
+          points: json.data.points,
+          city: json.data.city,
+          paidAt: json.data.paidAt,
+        })
+        // 同步 localStorage：标记主理人身份 + 积分余额
+        if (typeof window !== 'undefined') {
+          try {
+            const owned: string[] = JSON.parse(
+              window.localStorage.getItem('opc_owned_plans') || '[]'
+            )
+            if (!owned.includes('CITY_5980')) {
+              owned.push('CITY_5980')
+              window.localStorage.setItem('opc_owned_plans', JSON.stringify(owned))
+            }
+            window.localStorage.setItem('membership_level', '5980')
+            window.localStorage.setItem('opc_user_role', 'CITY_MAINTAINER')
+            window.localStorage.setItem('opc_points_balance', String(json.data.points.currentBalance))
+          } catch {}
+        }
+      } else {
+        setJoinError(json.error || '支付失败，请稍后重试')
+      }
+    } catch {
+      setJoinError('网络异常，请稍后重试')
+    } finally {
+      setJoinLoading(false)
     }
   }
 
@@ -775,14 +849,25 @@ export default function PartnerPage() {
               良朋社 OPC · 招募 5 城合伙人，复制深圳已跑通的整套商业操作系统。
             </p>
             <div className="flex flex-col sm:flex-row gap-3 justify-center">
-              <Link
-                href="#partner-form"
-                className="inline-flex items-center justify-center gap-2 bg-gradient-to-r from-amber-500 via-orange-500 to-rose-500 text-white font-bold px-5 py-3 rounded-xl text-sm shadow-lg shadow-orange-500/30 hover:scale-[1.02] active:scale-95 transition-transform"
+              <button
+                type="button"
+                onClick={handleJoinCity}
+                disabled={joinLoading}
+                className="inline-flex items-center justify-center gap-2 bg-gradient-to-r from-amber-500 via-orange-500 to-rose-500 text-white font-bold px-5 py-3 rounded-xl text-sm shadow-lg shadow-orange-500/30 hover:scale-[1.02] active:scale-95 transition-transform disabled:opacity-60 disabled:cursor-not-allowed"
               >
-                <Phone size={16} />
-                立即咨询 5980 城市主理人加盟
-                <ArrowRight size={14} />
-              </Link>
+                {joinLoading ? (
+                  <>
+                    <Loader2 size={16} className="animate-spin" />
+                    支付中…
+                  </>
+                ) : (
+                  <>
+                    <Phone size={16} />
+                    立即咨询 5980 城市主理人加盟
+                    <ArrowRight size={14} />
+                  </>
+                )}
+              </button>
               <Link
                 href="/workspace"
                 className="inline-flex items-center justify-center gap-2 bg-white/10 border border-white/20 text-white font-bold px-5 py-3 rounded-xl text-sm hover:bg-white/15 transition-colors"
@@ -791,9 +876,129 @@ export default function PartnerPage() {
                 先完成 OPC 诊断
               </Link>
             </div>
+            {joinError && (
+              <p className="text-xs text-rose-300 text-center mt-3">⚠️ {joinError}</p>
+            )}
           </motion.div>
         </div>
       </section>
+
+      {/* ═══ 任务 1：加盟成功模态框 ═══ */}
+      <AnimatePresence>
+        {joinResult && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[80] bg-slate-900/85 backdrop-blur-sm flex items-center justify-center px-5"
+            onClick={() => setJoinResult(null)}
+          >
+            <motion.div
+              initial={{ scale: 0.6, y: 30, opacity: 0 }}
+              animate={{ scale: 1, y: 0, opacity: 1 }}
+              exit={{ scale: 0.8, y: 20, opacity: 0 }}
+              transition={{ type: 'spring', stiffness: 280, damping: 22 }}
+              onClick={(e) => e.stopPropagation()}
+              className="relative w-full max-w-md bg-gradient-to-b from-slate-800 via-slate-900 to-black border border-amber-400/40 rounded-3xl p-6 text-center overflow-hidden shadow-2xl shadow-amber-500/30"
+            >
+              {/* 光晕 */}
+              <div className="absolute -top-20 -left-20 w-48 h-48 bg-amber-400/30 rounded-full blur-3xl" />
+              <div className="absolute -bottom-20 -right-20 w-48 h-48 bg-rose-400/30 rounded-full blur-3xl" />
+
+              <div className="relative">
+                {/* 中心皇冠图标 */}
+                <motion.div
+                  initial={{ scale: 0, rotate: -180 }}
+                  animate={{ scale: 1, rotate: 0 }}
+                  transition={{ delay: 0.15, type: 'spring', stiffness: 220, damping: 16 }}
+                  className="w-20 h-20 mx-auto mb-3 rounded-2xl bg-gradient-to-br from-amber-400 via-yellow-500 to-amber-600 flex items-center justify-center shadow-lg"
+                >
+                  <Crown size={36} className="text-slate-900" />
+                </motion.div>
+
+                <motion.h3
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.25 }}
+                  className="text-xl md:text-2xl font-extrabold text-white mb-1"
+                >
+                  🎉 主理人身份已激活
+                </motion.h3>
+                <motion.p
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.3 }}
+                  className="text-sm text-slate-300 mb-5"
+                >
+                  城市 <span className="text-amber-300 font-bold">{joinResult.city.code}</span> 已关联
+                  {joinResult.city.linked ? ' ✅' : '（待人工对接）'}
+                </motion.p>
+
+                {/* 积分到账提示卡 */}
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.4 }}
+                  className="bg-gradient-to-r from-amber-500/20 via-yellow-500/15 to-rose-500/20 border border-amber-400/40 rounded-2xl p-4 mb-4"
+                >
+                  <div className="text-xs text-amber-200 font-bold mb-1">🎁 智富积分到账</div>
+                  <div className="flex items-baseline justify-center gap-2">
+                    <span className="text-3xl md:text-4xl font-extrabold text-amber-300 tabular-nums">
+                      +{joinResult.points.bonus.toLocaleString()}
+                    </span>
+                    <span className="text-sm text-amber-200/80">积分</span>
+                  </div>
+                  <div className="text-[11px] text-slate-400 mt-1">
+                    当前余额：
+                    <span className="text-amber-300 font-bold">
+                      {joinResult.points.currentBalance.toLocaleString()}
+                    </span>{' '}
+                    · 累计赚取 {joinResult.points.totalEarned.toLocaleString()}
+                  </div>
+                </motion.div>
+
+                {/* 操作路径 */}
+                <motion.ul
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.5 }}
+                  className="text-left text-xs text-slate-300 space-y-1.5 mb-5 bg-slate-900/40 rounded-xl p-3"
+                >
+                  <li>✅ User.role = CITY_MAINTAINER 已生效</li>
+                  <li>✅ subscription_type = CITY_5980 · status = ACTIVE</li>
+                  <li>✅ AssetBalance +{joinResult.points.bonus} 积分（PointsLog 已写入 PURCHASE_BONUS）</li>
+                  <li>📍 订单号：{joinResult.orderId}</li>
+                </motion.ul>
+
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <Link
+                    href="/workspace"
+                    onClick={() => setJoinResult(null)}
+                    className="flex-1 inline-flex items-center justify-center gap-1 bg-gradient-to-r from-amber-500 via-orange-500 to-rose-500 text-white font-bold px-4 py-2.5 rounded-xl text-sm"
+                  >
+                    进入工作台
+                    <ArrowRight size={14} />
+                  </Link>
+                  <Link
+                    href="/member"
+                    onClick={() => setJoinResult(null)}
+                    className="flex-1 inline-flex items-center justify-center gap-1 bg-white/10 border border-white/20 text-white font-bold px-4 py-2.5 rounded-xl text-sm"
+                  >
+                    查看积分流水
+                  </Link>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setJoinResult(null)}
+                  className="mt-3 text-xs text-slate-500 hover:text-slate-300"
+                >
+                  稍后查看
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <footer className="px-4 py-8 border-t border-white/10">
         <div className="max-w-lg mx-auto md:max-w-6xl">

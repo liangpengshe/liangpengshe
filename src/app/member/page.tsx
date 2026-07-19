@@ -140,22 +140,55 @@ export default function MemberPage() {
 
   useEffect(() => {
     const checkAuth = async () => {
-      const supabase = createClient()
-      const { data: { user } } = await supabase.auth.getUser()
-
-      if (!user) {
-        router.push('/auth/login')
+      // 🛡️ 容错：Supabase 凭证缺失时降级到"匿名访客"模式
+      // 这样 /member 页面仍可渲染（基于 localStorage 数据）
+      let supabase: any = null
+      try {
+        supabase = createClient()
+      } catch (envErr) {
+        // 🛡️ 容错降级 → console.info（仅 dev 提示，不算 issue）
+        if (typeof window !== 'undefined' && !(window as any).__supabase_warned) {
+          console.info('[Member] Supabase 客户端初始化失败，使用匿名访客模式')
+          ;(window as any).__supabase_warned = true
+        }
+        setUserData(null)
+        setLoading(false)
         return
       }
 
-      const { data } = await supabase
-        .from('users')
-        .select('*, city:cityId(*)')
-        .eq('id', user.id)
-        .single()
+      // 凭证缺失：supabase 为 null，直接匿名模式
+      if (!supabase) {
+        setUserData(null)
+        setLoading(false)
+        return
+      }
 
-      setUserData(data)
-      setLoading(false)
+      try {
+        const { data: { user } } = await supabase.auth.getUser()
+        if (!user) {
+          // 未登录：也降级到匿名模式（允许游客浏览个人中心结构）
+          setUserData(null)
+          setLoading(false)
+          return
+        }
+
+        const { data } = await supabase
+          .from('users')
+          .select('*, city:cityId(*)')
+          .eq('id', user.id)
+          .single()
+
+        setUserData(data)
+        setLoading(false)
+      } catch (authErr) {
+        // 任何认证错误：降级到匿名模式
+        if (typeof window !== 'undefined' && !(window as any).__supabase_warned) {
+          console.info('[Member] 认证查询失败，使用匿名访客模式:', authErr)
+          ;(window as any).__supabase_warned = true
+        }
+        setUserData(null)
+        setLoading(false)
+      }
     }
 
     checkAuth()
@@ -227,8 +260,14 @@ export default function MemberPage() {
 
   const handleLogout = async () => {
     const supabase = createClient()
-    await supabase.auth.signOut()
-    router.push('/auth/login')
+    if (supabase) {
+      try {
+        await supabase.auth.signOut()
+      } catch (e) {
+        // 静默降级
+      }
+    }
+    router.push('/auth/login', { scroll: false })
   }
 
   const registeredSalons = [
@@ -242,20 +281,6 @@ export default function MemberPage() {
     { id: 3, name: 'AI图像生成工具', status: 'trial', lastUsed: '2026-06-18' },
   ]
 
-  if (loading) {
-    return (
-      <ClientLayout>
-        <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-          <div className="text-blue-600 animate-pulse">加载中...</div>
-        </div>
-      </ClientLayout>
-    )
-  }
-
-  if (!userData) {
-    return null
-  }
-
   const progress = roadmap?.progress || { diagnosis: 0, plan: 0, tool: 0, salon: 0 }
   const timeline: Step[] = roadmap?.timeline || []
   const overallProgress = roadmap?.overallProgress ?? 0
@@ -264,6 +289,17 @@ export default function MemberPage() {
   return (
     <ClientLayout>
       <div className="min-h-screen bg-slate-50">
+        {/* 🎯 学习进度缺口卡 · 独立渲染（不依赖 userData / Supabase） */}
+        <section className="px-4 pt-3 md:px-6">
+          <LearningGapCard />
+        </section>
+
+        {loading ? (
+          <div className="min-h-[60vh] flex items-center justify-center">
+            <div className="text-blue-600 animate-pulse">加载中...</div>
+          </div>
+        ) : !userData ? null : (
+          <>
         {/* ⏰ 任务 4：订阅到期 3 天预警气泡（顶流 SaaS 模式） */}
         {userData && (
           <section className="px-4 pt-3 md:px-6">
@@ -305,7 +341,12 @@ export default function MemberPage() {
           />
         </section>
 
-        {/* 🌅 AI 智富日报（每日 7:00 推送） */}
+        {/* � 学习进度缺口卡 · 距 80 分差多少 */}
+        <section className="px-4 pt-2 md:px-6">
+          <LearningGapCard />
+        </section>
+
+        {/* � AI 智富日报（每日 7:00 推送） */}
         <section className="px-5 mt-4">
           <AIDailyBrief userId={userData.phone} />
         </section>
@@ -464,6 +505,8 @@ export default function MemberPage() {
             </button>
           </div>
         </section>
+          </>
+        )}
 
         <div className="h-20"></div>
       </div>
@@ -521,6 +564,138 @@ function AdaptiveAlertSection() {
   }, [phone])
 
   return <AdaptiveAlertBanner alert={alert} />
+}
+
+/* ============================================
+   🎯 学习进度缺口卡 · 距 80 分差多少
+   - 在学习入门阶段（learning_score < 80 且未解锁）时显示
+   - 联动首页 STEP 02 状态，同源数据
+   - 显示进度条 + 缺口提示 + 一键跳转到 guide 完成任务
+============================================ */
+function LearningGapCard() {
+  const router = useRouter()
+  const [score, setScore] = useState<number>(0)
+  const [level, setLevel] = useState<string>('')
+  const [unlock, setUnlock] = useState<boolean>(false)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const read = () => {
+      const scoreRaw = window.localStorage.getItem('learning_score') || '0'
+      const s = parseInt(scoreRaw, 10)
+      const lv = window.localStorage.getItem('opc_level') || ''
+      const u = window.localStorage.getItem('can_unlock_practice') === 'true'
+      const learningDone = window.localStorage.getItem('step_learning_done') === 'true'
+      setScore(Number.isFinite(s) ? s : 0)
+      setLevel(lv)
+      setUnlock(u || learningDone)
+      setLoading(false)
+    }
+    read()
+    // 跨标签页/重新聚焦时重读
+    const onFocus = () => read()
+    const onStorage = (e: StorageEvent) => {
+      if (
+        e.key === 'learning_score' ||
+        e.key === 'opc_level' ||
+        e.key === 'can_unlock_practice' ||
+        e.key === 'step_learning_done'
+      ) {
+        read()
+      }
+    }
+    window.addEventListener('focus', onFocus)
+    window.addEventListener('storage', onStorage)
+    return () => {
+      window.removeEventListener('focus', onFocus)
+      window.removeEventListener('storage', onStorage)
+    }
+  }, [])
+
+  // 未诊断 / 已完成 / 加载中 → 不显示
+  if (loading) return null
+  if (!level) return null
+  if (score >= 80 || unlock) {
+    // 已达标：显示一个简短的绿色✅ 状态
+    return (
+      <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-gradient-to-r from-green-50 via-emerald-50 to-teal-50 border border-green-200 text-green-700 text-xs font-bold">
+        <CheckCircle2 size={14} className="flex-shrink-0" />
+        <span>学习阶段已达标 · 已解锁运营实操</span>
+      </div>
+    )
+  }
+
+  const gap = 80 - score
+  const pct = Math.min(100, Math.round((score / 80) * 100))
+
+  return (
+    <div className="relative overflow-hidden rounded-2xl border border-amber-200 bg-gradient-to-br from-amber-50 via-orange-50 to-rose-50 p-4 shadow-sm">
+      <div className="absolute -top-8 -right-8 w-28 h-28 rounded-full bg-amber-300/30 blur-2xl pointer-events-none" />
+      <div className="relative">
+        <div className="flex items-start justify-between mb-2">
+          <div className="flex items-center gap-2">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center shadow-sm">
+              <Rocket size={16} className="text-white" />
+            </div>
+            <div>
+              <div className="text-[10px] font-extrabold tracking-widest text-amber-700 uppercase">
+                学习阶段 · 还差 {gap} 分
+              </div>
+              <div className="text-sm font-extrabold text-slate-900 leading-tight">
+                你目前还差 {gap} 分解锁运营实操
+              </div>
+            </div>
+          </div>
+          <span className="text-[10px] font-bold text-amber-700 bg-amber-100 border border-amber-200 px-1.5 py-0.5 rounded-full whitespace-nowrap">
+            任务卡
+          </span>
+        </div>
+
+        {/* 进度条 */}
+        <div className="mt-3 mb-3">
+          <div className="flex items-center justify-between text-[10px] text-slate-600 mb-1">
+            <span>当前进度</span>
+            <span className="font-extrabold text-amber-700">
+              {score} / 80
+            </span>
+          </div>
+          <div className="h-2 w-full rounded-full bg-amber-100 overflow-hidden">
+            <div
+              className="h-full bg-gradient-to-r from-amber-400 via-orange-500 to-rose-500 rounded-full transition-all duration-500"
+              style={{ width: `${pct}%` }}
+            />
+          </div>
+        </div>
+
+        {/* 3 个任务说明 */}
+        <ul className="mt-2 space-y-1 text-[11px] text-slate-600">
+          <li className="flex items-center gap-1.5">
+            <span className="w-1 h-1 rounded-full bg-amber-500 flex-shrink-0" />
+            浏览入门 + 20 分
+          </li>
+          <li className="flex items-center gap-1.5">
+            <span className="w-1 h-1 rounded-full bg-amber-500 flex-shrink-0" />
+            注册先锋 + 40 分
+          </li>
+          <li className="flex items-center gap-1.5">
+            <span className="w-1 h-1 rounded-full bg-amber-500 flex-shrink-0" />
+            下载 SOP + 40 分
+          </li>
+        </ul>
+
+        {/* 一键继续 */}
+        <button
+          type="button"
+          onClick={() => router.push(`/guide/${level.toLowerCase()}`)}
+          className="mt-3 w-full inline-flex items-center justify-center gap-1.5 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white text-xs font-extrabold px-3 py-2 rounded-lg shadow-sm hover:shadow-md active:scale-[0.98] transition-all"
+        >
+          继续学习任务
+          <ArrowRight size={12} />
+        </button>
+      </div>
+    </div>
+  )
 }
 
 /* ============================================

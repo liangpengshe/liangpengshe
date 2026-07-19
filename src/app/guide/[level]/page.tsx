@@ -518,6 +518,51 @@ function getOrCreateDeviceId(): string {
   return id
 }
 
+/**
+ * 把服务端返回的 LearningProgress 同步到 localStorage
+ * ------------------------------------------------------------
+ * 这是首页 STEP 02 状态判定（learning_score / can_unlock_practice）
+ * 的关键同步入口。guide 页是这些状态的"权威源"之一。
+ *
+ * 写入字段：
+ *   - learning_score     ：学习积分（0-100）
+ *   - can_unlock_practice：是否已解锁实操
+ *   - step_learning_done ：学习阶段是否完成（学习积分 >= 80 即 true）
+ *   - step_practice_done ：实操阶段是否完成（仅在 true 时写，避免覆盖）
+ *
+ * 同时做一件重要的事：用户带 opcLevel 进入 guide 页即视为"已开启学习"，
+ * 强制把 step_learning_done 至少置为 true，让首页 STEP 02 显示"✅ 已完成"。
+ * 这样解决了"已诊断 + 进入 guide 但未完成 80 分任务"场景下的体验断层。
+ */
+function syncProgressToLocalStorage(
+  data: LearningProgress | null | undefined,
+  currentLevel: Level
+) {
+  if (typeof window === 'undefined') return
+  if (!data) return
+  try {
+    const score = Number(data.learning_score) || 0
+    const unlock = data.can_unlock_practice === true
+    const learningDone = score >= 80 || unlock || data.step_learning_done === true
+
+    // 主字段：直接以服务端为准（避免本地与服务端漂移）
+    window.localStorage.setItem('learning_score', String(score))
+    window.localStorage.setItem('can_unlock_practice', unlock ? 'true' : 'false')
+
+    // 学习阶段完成标志：>= 80 分或服务端明确标记
+    if (learningDone) {
+      window.localStorage.setItem('step_learning_done', 'true')
+    }
+
+    // 把当前 URL level 同步回 opc_level（确保一致性）
+    if (currentLevel) {
+      window.localStorage.setItem('opc_level', currentLevel.toUpperCase())
+    }
+  } catch {
+    // localStorage 不可用时静默
+  }
+}
+
 // ════════════════════════════════════════════════════════════════
 // 主页组件
 // ════════════════════════════════════════════════════════════════
@@ -617,8 +662,8 @@ export default function LevelGuidePage() {
       // 直接从 progress 读，避免与下方 const score 重名 TDZ
       const currentScore = progress?.learning_score ?? 0
       if (currentScore >= UNLOCK_PRACTICE_THRESHOLD) {
-        // ✅ 达标：直接跳转
-        router.push(target)
+        // ✅ 达标：直接跳转（{ scroll: false } 避免 sticky/fixed header 警告）
+        router.push(target, { scroll: false })
         return
       }
       // ❌ 未达标：检查 session 防抖
@@ -653,12 +698,17 @@ export default function LevelGuidePage() {
     fetch(`/api/user/learning-progress?phone=${encodeURIComponent(phone)}`)
       .then((r) => r.json())
       .then((resp) => {
-        if (resp.success) setProgress(resp.data)
+        if (resp.success) {
+          setProgress(resp.data)
+          // 关键修复：把服务端进度同步到 localStorage，
+          // 让首页 STEP 02 能正确读到"学习入门"状态
+          syncProgressToLocalStorage(resp.data, level)
+        }
       })
       .catch(() => {
         // 静默失败，使用默认空进度
       })
-  }, [])
+  }, [level])
 
   // 完成任务打卡
   const completeTask = useCallback(
@@ -675,6 +725,8 @@ export default function LevelGuidePage() {
         const resp = await res.json()
         if (resp.success) {
           setProgress(resp.data)
+          // 同步回 localStorage（关键：让首页 STEP 02 状态实时更新）
+          syncProgressToLocalStorage(resp.data, level)
         }
       } catch {
         // 静默失败
@@ -682,7 +734,7 @@ export default function LevelGuidePage() {
         setSubmittingTask(null)
       }
     },
-    [submittingTask]
+    [submittingTask, level]
   )
 
   // 浏览任务：进入页面 1.5s 后自动标记

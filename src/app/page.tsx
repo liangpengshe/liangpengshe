@@ -236,18 +236,96 @@ export default function HomePage() {
         }
       })
       .catch(() => {/* 静默降级，保留 fallbackActivities */})
+  }, [])
 
-    // 客户端读取用户学习状态（仅在浏览器中执行）
-    if (typeof window !== 'undefined') {
+  // ──────────────────────────────────────────────────────────
+  // 学习路径状态读取（localStorage → state）
+  //   - 初次挂载：读取一次
+  //   - focus / visibilitychange / storage 事件触发：重新读取并 forceUpdate
+  //   - 依赖项 [learningScore]：状态变化即重新计算（与渲染同步）
+  // ──────────────────────────────────────────────────────────
+  const readLearningStateFromStorage = () => {
+    if (typeof window === 'undefined') return
+    try {
       const level = localStorage.getItem('opc_level')
       const scoreRaw = localStorage.getItem('learning_score') || '0'
       const score = parseInt(scoreRaw, 10)
       const unlock = localStorage.getItem('can_unlock_practice') === 'true'
+      // 兼容：guide 页写入的 step_learning_done 标志
+      const stepLearningDone = localStorage.getItem('step_learning_done') === 'true'
       setOpcLevel(level)
       setLearningScore(Number.isFinite(score) ? score : 0)
-      setCanUnlockPractice(unlock)
+      setCanUnlockPractice(unlock || stepLearningDone)
+    } catch {}
+  }
+
+  useEffect(() => {
+    // 初次挂载
+    readLearningStateFromStorage()
+
+    // 权威源：拉服务端 LearningProgress（覆盖本地可能的脏数据）
+    try {
+      const phone =
+        (typeof window !== 'undefined' && localStorage.getItem('opc_device_id')) || ''
+      if (phone) {
+        fetch(`/api/user/learning-progress?phone=${encodeURIComponent(phone)}`)
+          .then((r) => r.json())
+          .then((resp) => {
+            if (resp?.success && resp.data) {
+              const d = resp.data
+              const score = Number(d.learning_score) || 0
+              const unlock = d.can_unlock_practice === true
+              const learningDone = score >= 80 || unlock || d.step_learning_done === true
+              // 同步回 localStorage（兜底）
+              // 注意：只有 API 返回非空 opcLevel 时才覆盖 localStorage，
+              //      避免"新 phone 但 localStorage 已有 opcLevel"被 API 默认值 null 覆盖
+              try {
+                if (d.opcLevel) {
+                  localStorage.setItem('opc_level', d.opcLevel)
+                  setOpcLevel(d.opcLevel)
+                }
+                localStorage.setItem('learning_score', String(score))
+                localStorage.setItem('can_unlock_practice', unlock ? 'true' : 'false')
+                if (learningDone) localStorage.setItem('step_learning_done', 'true')
+              } catch {}
+              // 学习分数始终以 API 为准（score 是关键指标）
+              setLearningScore(score)
+              setCanUnlockPractice(unlock || learningDone)
+            }
+          })
+          .catch(() => {/* 静默降级 */})
+      }
+    } catch {}
+
+    // 监听：跨标签页 storage 事件
+    const onStorage = (e: StorageEvent) => {
+      if (
+        e.key === 'opc_level' ||
+        e.key === 'learning_score' ||
+        e.key === 'can_unlock_practice' ||
+        e.key === 'step_learning_done'
+      ) {
+        readLearningStateFromStorage()
+      }
     }
-  }, [])
+    // 监听：回到当前标签 / 页面重新可见
+    const onFocus = () => readLearningStateFromStorage()
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        readLearningStateFromStorage()
+      }
+    }
+
+    window.addEventListener('storage', onStorage)
+    window.addEventListener('focus', onFocus)
+    document.addEventListener('visibilitychange', onVisibility)
+    return () => {
+      window.removeEventListener('storage', onStorage)
+      window.removeEventListener('focus', onFocus)
+      document.removeEventListener('visibilitychange', onVisibility)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []) // 故意空依赖：事件订阅一次，state 更新由事件回调触发
 
   // ──────────────────────────────────────────────────────────
   // 学习路径 · 四个步骤的精准分流与拦截逻辑
@@ -258,13 +336,31 @@ export default function HomePage() {
   }
 
   const handleStep2 = () => {
-    // STEP 02 学习入门：基于 opc_level 动态分流
-    const level = typeof window !== 'undefined' ? localStorage.getItem('opc_level') : opcLevel
-    if (level) {
-      router.push(`/guide/${level}`)
+    // STEP 02 学习入门：基于 localStorage 多源状态动态分流
+    if (typeof window === 'undefined') return
+    const level = (localStorage.getItem('opc_level') || opcLevel || '').toLowerCase()
+    const scoreRaw = localStorage.getItem('learning_score') || '0'
+    const score = parseInt(scoreRaw, 10)
+    const unlock =
+      localStorage.getItem('can_unlock_practice') === 'true' || canUnlockPractice
+    const stepLearningDone = localStorage.getItem('step_learning_done') === 'true'
+    const step2Done =
+      (Number.isFinite(score) && score >= 80) || unlock || stepLearningDone
+
+    // 🛡️ { scroll: false } 避免 Next.js 在 sticky/fixed header 页面上的
+    //   "Skipping auto-scroll behavior" 警告（dev 模式会累计计入错误数）
+    const noScroll = { scroll: false } as const
+
+    if (step2Done) {
+      // ✅ 已完成：直接进入运营实操的项目库（带 recommend 透传用户类型）
+      const recommend = level || 'trader'
+      router.push(`/market/projects?recommend=${recommend}`, noScroll)
+    } else if (level) {
+      // 进行中：去学习页
+      router.push(`/guide/${level}`, noScroll)
     } else {
       // 未诊断：先引导到 /market 浏览
-      router.push('/market')
+      router.push('/market', noScroll)
     }
   }
 
@@ -506,7 +602,12 @@ export default function HomePage() {
                 if (item.step === '01') {
                   status = hasAnyProgress ? 'done' : 'active'
                 } else if (item.step === '02') {
-                  if (learningScore > 0 || canUnlockPractice) status = 'done'
+                  // ✅ 已完成判定（多源融合，按权威性递减）：
+                  //   1. learning_score >= 80
+                  //   2. can_unlock_practice === true（useEffect 已将 step_learning_done 合并到此 state）
+                  // 🛡️ SSR 安全：不再直接读 window.localStorage，避免 hydration mismatch
+                  //    （step_learning_done 在 useEffect 中已合并到 canUnlockPractice）
+                  if (learningScore >= 80 || canUnlockPractice) status = 'done'
                   else status = opcLevel ? 'active' : 'locked'
                 } else if (item.step === '03') {
                   if (canUnlockPractice) status = 'done'
@@ -517,9 +618,9 @@ export default function HomePage() {
                 }
 
                 const badgeConfig = {
-                  done:   { bg: 'bg-emerald-100', text: 'text-emerald-700', label: '✅ 已完成' },
-                  active: { bg: 'bg-blue-100',    text: 'text-blue-700',    label: '⏳ 进行中' },
-                  locked: { bg: 'bg-slate-100',   text: 'text-slate-500',   label: '🔒 待解锁' },
+                  done:   { bg: 'bg-green-100', text: 'text-green-700', border: 'border border-green-200', label: '✅ 已完成' },
+                  active: { bg: 'bg-blue-100',  text: 'text-blue-700',  border: '',                              label: '⏳ 进行中' },
+                  locked: { bg: 'bg-slate-100', text: 'text-slate-500', border: '',                              label: '🔒 待解锁' },
                 }[status]
 
                 // 当前步骤对应点击处理
@@ -542,6 +643,7 @@ export default function HomePage() {
                         'absolute top-2 right-2 text-[9px] font-bold px-1.5 py-0.5 rounded-full whitespace-nowrap',
                         badgeConfig.bg,
                         badgeConfig.text,
+                        badgeConfig.border,
                         status === 'active' && 'animate-pulse'
                       )}
                     >

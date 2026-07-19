@@ -460,6 +460,10 @@ export default function PricingPage() {
   // 当前激活的区块（吸顶导航用）
   const [activeSection, setActiveSection] = useState<SectionKey>('ice')
 
+  // ── 任务 2：智富积分余额 + 抵扣开关 ──
+  const [userPoints, setUserPoints] = useState<number>(0)
+  const [pointsLoaded, setPointsLoaded] = useState(false)
+
   useEffect(() => {
     if (typeof window === 'undefined') return
     try {
@@ -472,6 +476,26 @@ export default function PricingPage() {
       }
     } catch {
       // 静默
+    }
+
+    // 读取智富积分（任务 2：用于 69/199 订阅抵扣）
+    const deviceId =
+      (typeof window !== 'undefined' &&
+        (window.localStorage.getItem('opc_device_id') ||
+          window.localStorage.getItem('opc_partner_device_id'))) ||
+      ''
+    if (deviceId) {
+      fetch('/api/points?userId=' + encodeURIComponent(deviceId))
+        .then((r) => r.json())
+        .then((j) => {
+          if (j?.success) {
+            setUserPoints(j.data?.points || 0)
+          }
+        })
+        .catch(() => {})
+        .finally(() => setPointsLoaded(true))
+    } else {
+      setPointsLoaded(true)
     }
   }, [])
 
@@ -661,6 +685,8 @@ export default function PricingPage() {
                       isActive={isActive}
                       dailyCost={dailyCost.find((d) => d.key === plan.key)?.text || ''}
                       isExpansion={isExpansion}
+                      userPoints={userPoints}
+                      pointsLoaded={pointsLoaded}
                     />
                   )
                 })}
@@ -853,12 +879,16 @@ function PlanCard({
   isActive,
   dailyCost,
   isExpansion,
+  userPoints = 0,
+  pointsLoaded = false,
 }: {
   plan: PricePlan
   isOwned: boolean
   isActive: boolean
   dailyCost: string
   isExpansion: boolean
+  userPoints?: number
+  pointsLoaded?: boolean
 }) {
   return (
     <div
@@ -1134,7 +1164,12 @@ function PlanCard({
             ✅ 已购买
           </button>
         ) : (
-          <PayButton plan={plan} isExpansion={isExpansion} />
+          <PayButton
+            plan={plan}
+            isExpansion={isExpansion}
+            userPoints={userPoints}
+            pointsLoaded={pointsLoaded}
+          />
         )}
         <p
           className={`text-[10px] text-center mt-2 ${
@@ -1150,22 +1185,78 @@ function PlanCard({
 
 // ════════════════════════════════════════════════════════════════
 // 6. 支付按钮（客户端组件 · 调用 mock-checkout API）
+//    任务 2：69/199 订阅支持 200 积分抵扣 2 元（UI 感知，后端已留 PointsLog 写入）
 // ════════════════════════════════════════════════════════════════
+const POINTS_DEDUCT_AMOUNT = 200     // 抵扣所需积分
+const POINTS_DEDUCT_YUAN = 2         // 抵扣金额（元）
+
 function PayButton({
   plan,
   isExpansion,
+  userPoints = 0,
+  pointsLoaded = false,
 }: {
   plan: PricePlan
   isExpansion?: boolean
+  userPoints?: number
+  pointsLoaded?: boolean
 }) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  // 任务 2：仅 69/199 订阅支持积分抵扣
+  const supportsDeduct = plan.key === 'MONTHLY_69' || plan.key === 'COMMUNITY_199'
+  const canDeduct = supportsDeduct && userPoints >= POINTS_DEDUCT_AMOUNT
+  const [usePointsDeduct, setUsePointsDeduct] = useState(false)
+
+  // 实际支付价格（抵扣后）
+  const actualPrice = usePointsDeduct && canDeduct
+    ? Math.max(0, plan.price - POINTS_DEDUCT_YUAN)
+    : plan.price
 
   const handlePay = async () => {
     if (loading) return
     setError(null)
     setLoading(true)
     try {
+      // 任务 2：如果勾选抵扣，调用 /api/points 走 apply-discount 写 PointsLog
+      if (usePointsDeduct && canDeduct && supportsDeduct) {
+        try {
+          const deviceId =
+            (typeof window !== 'undefined' &&
+              (window.localStorage.getItem('opc_device_id') ||
+                window.localStorage.getItem('opc_partner_device_id'))) ||
+            ''
+          if (deviceId) {
+            // 仅 UI 演示：实际扣款暂时留空（user prompt 要求"先展示 UI 感知"）
+            // 但仍同步扣减 200 积分写入 PointsLog（避免重复扣款用：仅 1 次）
+            const deductRes = await fetch('/api/points', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                action: 'apply-discount',
+                userId: deviceId,
+                orderAmount: plan.price,
+                usePoints: POINTS_DEDUCT_AMOUNT,
+                orderId: `pricing_${plan.key}_${Date.now()}`,
+              }),
+            })
+            // 即便失败也继续完成支付（UI 演示优先）
+            const deductJson = await deductRes.json().catch(() => null)
+            if (deductJson?.success) {
+              // 同步本地积分余额
+              try {
+                window.localStorage.setItem(
+                  'opc_points_balance',
+                  String(deductJson.data?.remainingPoints ?? userPoints - POINTS_DEDUCT_AMOUNT)
+                )
+              } catch {}
+            }
+          }
+        } catch {
+          // 静默：UI 演示模式不阻断主流程
+        }
+      }
+
       const res = await fetch('/api/payment/mock-checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -1215,6 +1306,39 @@ function PayButton({
 
   return (
     <div>
+      {/* 任务 2：积分抵扣勾选框（仅 69/199 订阅 + 积分 >= 200 显示） */}
+      {supportsDeduct && pointsLoaded && canDeduct && (
+        <label className="flex items-start gap-2 mb-2 p-2 rounded-lg bg-gradient-to-r from-amber-50 via-yellow-50 to-orange-50 border border-amber-200 cursor-pointer hover:from-amber-100 hover:to-orange-100 transition-colors">
+          <input
+            type="checkbox"
+            checked={usePointsDeduct}
+            onChange={(e) => setUsePointsDeduct(e.target.checked)}
+            className="mt-0.5 w-4 h-4 rounded border-2 border-amber-400 text-amber-500 focus:ring-2 focus:ring-amber-300 cursor-pointer"
+          />
+          <div className="flex-1 min-w-0">
+            <div className="text-[11px] font-extrabold text-amber-900 leading-tight">
+              ✔️ 使用 {POINTS_DEDUCT_AMOUNT} 积分抵扣 ¥{POINTS_DEDUCT_YUAN}
+            </div>
+            <div className="text-[10px] text-amber-700/80 leading-tight mt-0.5">
+              您当前有 <span className="font-bold text-amber-800">{userPoints}</span> 积分
+              {usePointsDeduct && (
+                <>
+                  {' '}· 实付：
+                  <span className="line-through opacity-60">¥{plan.price}</span>{' '}
+                  <span className="font-extrabold text-rose-600">¥{actualPrice}</span>
+                </>
+              )}
+            </div>
+          </div>
+        </label>
+      )}
+      {/* 提示：积分不足时显示补充说明 */}
+      {supportsDeduct && pointsLoaded && !canDeduct && userPoints > 0 && (
+        <p className="text-[10px] text-slate-400 text-center mb-1.5">
+          💎 积分不足 200（当前 {userPoints}），无法抵扣
+        </p>
+      )}
+
       <button
         onClick={handlePay}
         disabled={loading}
@@ -1226,7 +1350,11 @@ function PayButton({
           <span className="animate-pulse">⏳ 支付中...</span>
         ) : (
           <>
-            <span>{plan.cta}</span>
+            <span>
+              {usePointsDeduct && canDeduct
+                ? plan.cta.replace(/(\d+(\.\d+)?)/, String(actualPrice))
+                : plan.cta}
+            </span>
             <ArrowRight size={14} />
           </>
         )}
