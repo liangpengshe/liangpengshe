@@ -50,6 +50,7 @@ import {
   Zap,
   Circle,
   Check,
+  MessageSquare,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -73,6 +74,12 @@ interface SubStep {
   desc: string
   actionUrl?: string
   actionLabel?: string
+  /**
+   * 多行胶囊按钮列表（任务升级：单 subStep 携带多个外部工具跳转）
+   * - 仅作为"一键打开外部工具"快捷通道，无打卡功能
+   * - 圆形打卡圈仍由外层 subStep 卡片独立控制
+   */
+  extraLinks?: { label: string; href: string }[]
 }
 
 interface SOPTask {
@@ -90,6 +97,11 @@ interface PaywallState {
   stepIndex: number
 }
 
+/** [Task 2] 第 3 步完成时的"精准选品"付费解锁拦截 */
+interface UnlockStepModalState {
+  open: boolean
+}
+
 interface AICoachState {
   open: boolean
   loading: boolean
@@ -105,6 +117,8 @@ const SUB_STORAGE_PREFIX = 'opc_sop_subprogress::'
 const MEMBER_LEVEL_KEY = 'membership_level'
 /** 沉浸式 SOP：免费用户可看到的主步骤上限（前面这 N 步完全免费） */
 const FREE_MAIN_STEPS = 2
+// 测试模式开关：设为 true 时可强制解锁第 4-9 步（idx >= 3）进行开发测试，上线前请设为 false
+const UNLOCK_ALL_STEPS_FOR_TESTING = true
 
 function readProgress(slug: string): number {
   if (typeof window === 'undefined') return 0
@@ -262,44 +276,155 @@ function buildSOPTasks(project: ProjectItem): SOPTask[] {
   const cat = project.category
   const slug = project.slug
 
-  // 三大网店项目 · 8 步
-  if (slug === 'ai-digital-shop') {
+  // ════════════════════════════════════════════════════════════════
+  // 四大网店项目 · 9 步 SOP（数字店群 / 无货源 / 有货源 / 跨境电商）
+  // ════════════════════════════════════════════════════════════════
+
+  // 步骤 3-9 共享描述（项目间差异化：开店申请 + 开店工具）
+  const SHARED_E_COMMERCE_STEPS: Omit<SOPTask, 'subSteps'>[] = [
+    { id: 3, title: '第 3 步 · 基础设置', desc: '完善店铺基础信息：头像、简介、绑定支付通道（支付宝/微信），配置发货模板与店铺公告。', actionUrl: 'https://www.agiso.com', actionLabel: '⚡ 配置支付与发货' },
+    { id: 4, title: '第 4 步 · 精准选品', desc: '利用 AI 工具（灵犀 AI / 店侦探 / 蝉妈妈）锁定 3-5 个高复购候选品类，输出选品对比表。', actionUrl: 'https://www.lingxixai.com', actionLabel: '🦊 打开灵犀 AI 选品' },
+    { id: 5, title: '第 5 步 · 货品上架', desc: 'AI 批量生成商品图片、标题与详情，完成首批 10-20 个 SKU 上架。', actionUrl: 'https://www.baowenplus.com', actionLabel: '🐆 打开豹纹工坊（豹纹+）批量出图' },
+    { id: 6, title: '第 6 步 · 网店运营', desc: '开始日常运营：优化主图/标题/详情页转化率，设置优惠券与首单礼，建立复购路径。', actionUrl: MIDJOURNEY, actionLabel: '🎨 打开 Midjourney 优化主图' },
+    { id: 7, title: '第 7 步 · 客服物流', desc: '配置自动化客服话术 + 自动发货脚本，7×24 小时即时交付，订单全流程自动化。', actionUrl: 'https://www.agiso.com', actionLabel: '⚡ 配置自动发货' },
+    { id: 8, title: '第 8 步 · 数据分析', desc: '分析店铺 UV、转化率、客单价、复购率，定位爆款与待优化项，调整选品 + 投放策略。', actionUrl: 'https://www.dianzhentan.com', actionLabel: '🕵️ 打开店侦探分析数据' },
+    { id: 9, title: '第 9 步 · 矩阵放大', desc: '将跑通的 SOP 复制到 3-10 个店铺 / 多平台账号矩阵铺货裂变，构建可复用的运营手册。', actionUrl: DOUYIN_REGISTER, actionLabel: '🎵 打开抖店后台复制矩阵' },
+  ]
+
+  // 项目 1：AI数字店群项目 (slug: ai-digital-shop-group)
+  if (slug === 'ai-digital-shop-group') {
+    const tasks = buildWithSubs(project, [
+      { id: 1, title: '第 1 步 · 开店申请', desc: '完成淘宝数字店铺入驻，提交资质并激活商品类目。', actionUrl: 'https://ishop.taobao.com/', actionLabel: '🛒 打开淘宝商家后台' },
+      { id: 2, title: '第 2 步 · 开店工具', desc: '配置阿奇索自动发货、千牛工作台等首批运营工具。', actionUrl: 'https://www.aqisuo.com/', actionLabel: '⚡ 打开阿奇索自动发货' },
+      ...SHARED_E_COMMERCE_STEPS,
+    ])
+    // 精准覆盖：仅替换第 1 步 subSteps 为开店申请专属 3 项
+    // （其他项目走各自的 if 分支，此处改动不影响 ai-no-stock-shop-group / ai-stock-shop-group / ai-cross-border）
+    if (tasks[0]) {
+      tasks[0].subSteps = [
+        {
+          id: '1-1',
+          title: '开通支付宝',
+          desc: '注册并实名认证支付宝账号，用于店铺收款与资金流转。',
+          actionUrl: 'https://www.alipay.com/',
+          actionLabel: '🅰️ 打开支付宝',
+        },
+        {
+          id: '1-2',
+          title: '开通淘宝店铺',
+          desc: '注册并开通淘宝个人店铺，提交身份验证资料。',
+          actionUrl: 'https://ishop.taobao.com/',
+          actionLabel: '🛒 打开淘宝开店',
+        },
+        {
+          id: '1-3',
+          title: '开店须知',
+          desc: '保证金：2000元（可退）；运营资金：1000-3000元（用于首单、推广及基础销量）。1张身份证可开3个支付宝，对应开3家个人店。',
+          // actionUrl 留空：纯文字须知，渲染时不显示跳转按钮
+        },
+      ]
+    }
+    // 精准覆盖：仅替换第 2 步 subSteps 为开店工具专属 3 项
+    if (tasks[1]) {
+      tasks[1].subSteps = [
+        {
+          id: '2-1',
+          title: '下载淘宝千牛工作台',
+          desc: '下载并安装淘宝官方店铺管理客户端，用于后台管理、订单处理与客服响应。',
+          actionUrl: 'https://work.taobao.com/download.html?spm=a21dvs.24173238.0.0.26381544cFkHdz',
+          actionLabel: '⬇️ 下载千牛工作台',
+        },
+        {
+          id: '2-2',
+          title: '安装店群运营插件包',
+          desc: '下载并安装哈士奇、至尊宝电商插件；配置阿奇索自动发货与抖羚羊裂变工具。',
+          actionUrl: 'https://hsq.dangxun.com/',
+          actionLabel: '🦊 打开哈士奇插件',
+          extraLinks: [
+            { label: '哈士奇', href: 'https://hsq.dangxun.com/' },
+            { label: '至尊宝', href: 'https://zzb.zzbtool.com' },
+            { label: '阿奇索', href: 'https://www.agiso.com/' },
+            { label: '抖羚羊', href: 'https://doulingyang.cn' },
+          ],
+        },
+        {
+          id: '2-3',
+          title: '开通版权检测与AI辅助',
+          desc: '开通天眼查版权检测，将百度网盘、夸克网盘接入 AI 辅助工作流。',
+          actionUrl: 'https://banquan.tianyancha.com/zp',
+          actionLabel: '🛡️ 打开天眼查版权检测',
+          extraLinks: [
+            { label: '天眼查', href: 'https://banquan.tianyancha.com/zp' },
+            { label: '百度网盘', href: 'https://pan.baidu.com/' },
+            { label: '夸克网盘', href: 'https://pan.quark.cn/' },
+            { label: '任推邦', href: 'https://dtbd.cn/#/pages/login/register?invite_code=0389221&qd=self_fans_h5' },
+          ],
+        },
+      ]
+    }
+    // 精准覆盖：仅替换第 3 步 subSteps 为基础设置专属 4 项（千牛工作台 4 大配置）
+    // 4 个子任务的统一跳转入口在页面下方独立展示（📍 前往千牛工作台），子任务卡片内不再重复
+    if (tasks[2]) {
+      tasks[2].subSteps = [
+        {
+          id: '3-1',
+          title: '设置物流模板',
+          desc: '在千牛工作台 - 交易 - 物流服务中，设置运费模板，配置新疆西藏邮费，并设置售后地址。',
+        },
+        {
+          id: '3-2',
+          title: '设置客服电话与接待',
+          desc: '在千牛工作台配置欢迎语、自动应答、自动催拍、自动核单等客服工具，并设置机器人接待。',
+        },
+        {
+          id: '3-3',
+          title: '缴纳保证金与资金管理',
+          desc: '在千牛工作台 - 财务板块，缴纳 2000 元保证金（可免付），并设置聚合结算账户。',
+        },
+        {
+          id: '3-4',
+          title: '设置自动发货',
+          desc: '在千牛工作台 - 服务 - 服务中心中，搜索并配置阿奇索自动发货工具。',
+        },
+      ]
+    }
+    // 精准覆盖：仅 ai-digital-shop-group 第 3 步的 desc 为千牛工作台 4 大配置专属描述
+    if (tasks[2]) {
+      tasks[2].desc = '在千牛工作台完成物流模板与售后地址设置、客服接待与自动跟单配置、保证金与资金管理，并接入阿奇索自动发货工具。'
+    }
+    return tasks
+  }
+
+  // 项目 2：AI无货源实物店群项目 (slug: ai-no-stock-shop-group)
+  if (slug === 'ai-no-stock-shop-group') {
     return buildWithSubs(project, [
-      { id: 1, title: '第 1 步 · 开店申请', desc: '完成淘宝/小红书数字店铺平台入驻，提交资质并激活数字商品类目。', actionUrl: TAOBAO_REGISTER, actionLabel: '🛒 打开淘宝商家后台' },
-      { id: 2, title: '第 2 步 · 基础设置', desc: '完善店铺基础信息，绑定支付通道（支付宝 / 微信）与数字商品自动发货配置。', actionUrl: 'https://www.agiso.com', actionLabel: '⚡ 打开阿奇索自动发货' },
-      { id: 3, title: '第 3 步 · 精准选品', desc: '利用 AI 工具（灵犀 AI）+ 平台榜单，锁定 3-5 个高复购数字商品方向。', actionUrl: 'https://www.lingxixai.com', actionLabel: '🦊 打开灵犀 AI 选品' },
-      { id: 4, title: '第 4 步 · 货品上架', desc: 'AI 批量生成商品图片、标题与详情，完成首批 10-20 款数字商品上架。', actionUrl: 'https://www.baowenplus.com', actionLabel: '🐆 打开豹纹工坊（豹纹+）批量出图' },
-      { id: 5, title: '第 5 步 · 网店运营', desc: '开始运营动作：优化主图 / 标题 / 详情页转化率，建立客户复购路径。', actionUrl: MIDJOURNEY, actionLabel: '🎨 打开 Midjourney 优化主图' },
-      { id: 6, title: '第 6 步 · 客服发货', desc: '配置自动化客服话术与自动发货脚本，7×24 小时即时交付数字商品。', actionUrl: 'https://www.agiso.com', actionLabel: '⚡ 配置自动发货' },
-      { id: 7, title: '第 7 步 · 数据分析', desc: '分析店铺 UV、转化率、客单价与复购率，定位爆款与滞销款。', actionUrl: 'https://www.dianzhentan.com', actionLabel: '🕵️ 打开店侦探分析数据' },
-      { id: 8, title: '第 8 步 · 多店复制', desc: '将跑通的数字店铺 SOP 复制到淘宝 / 小红书 / 抖店多平台账号矩阵。', actionUrl: DOUYIN_REGISTER, actionLabel: '🎵 打开抖店后台复制矩阵' },
+      { id: 1, title: '第 1 步 · 开店申请', desc: '完成拼多多/抖音小店商家入驻，提交资质并激活商品类目。', actionUrl: 'https://mms.pinduoduo.com/', actionLabel: '🍎 打开拼多多商家后台' },
+      { id: 2, title: '第 2 步 · 开店工具', desc: '配置阿奇索 1688 代发工具、店侦探等无货源选品工具。', actionUrl: 'https://www.aqisuo.com/', actionLabel: '⚡ 打开阿奇索 1688 代发' },
+      ...SHARED_E_COMMERCE_STEPS,
     ])
   }
 
-  if (slug === 'ai-no-stock-physical-shop') {
+  // 项目 3：AI有货源实物店群项目 (slug: ai-stock-shop-group)
+  if (slug === 'ai-stock-shop-group') {
     return buildWithSubs(project, [
-      { id: 1, title: '第 1 步 · 开店申请', desc: '完成拼多多/淘宝一件代发小店入驻，提交身份证 + 银行卡即可激活。', actionUrl: PINDUODUO_REGISTER, actionLabel: '🍎 打开拼多多商家后台' },
-      { id: 2, title: '第 2 步 · 基础设置', desc: '完善店铺基础信息，绑定支付与一件代发物流模板（无需囤货）。', actionUrl: 'https://www.agiso.com', actionLabel: '⚡ 配置代发物流模板' },
-      { id: 3, title: '第 3 步 · 精准选品', desc: '用店侦探 / 蝉妈妈 AI 抓取 1688 爆款数据，筛选 3-5 个稳定无货源蓝海品。', actionUrl: 'https://www.dianzhentan.com', actionLabel: '🕵️ 打开店侦探选品' },
-      { id: 4, title: '第 4 步 · 货品上架', desc: 'AI 批量生成 50 个 SKU 主图 + 详情页文案，零设计也能日更。', actionUrl: DEEPSEEK, actionLabel: '🐋 打开 Deepseek 生成详情页' },
-      { id: 5, title: '第 5 步 · 网店运营', desc: '优化转化率与客户留存：设置优惠券、限时折扣、首单礼，提升自然流量。', actionUrl: PINDUODUO_REGISTER, actionLabel: '🍎 打开拼多多营销中心' },
-      { id: 6, title: '第 6 步 · 客服发货', desc: '配置自动客服话术 + 1688 一键代发，订单全流程自动化（24h 内发货）。', actionUrl: 'https://www.agiso.com', actionLabel: '⚡ 打开阿奇索自动发货' },
-      { id: 7, title: '第 7 步 · 数据分析', desc: '分析店铺流量、转化与 ROI，筛选出爆品主推，砍掉滞销品。', actionUrl: 'https://www.dianzhentan.com', actionLabel: '🕵️ 打开店侦探分析数据' },
-      { id: 8, title: '第 8 步 · 多店复制', desc: '将跑通的一件代发 SOP 复制到 5-10 个店铺 / 平台账号矩阵铺货。', actionUrl: DOUYIN_REGISTER, actionLabel: '🎵 打开抖店复制矩阵' },
+      { id: 1, title: '第 1 步 · 开店申请', desc: '完成天猫企业旗舰店或抖店品牌入驻，提交资质并激活商品类目。', actionUrl: 'https://www.tmall.com/', actionLabel: '🛒 打开天猫商家后台' },
+      { id: 2, title: '第 2 步 · 开店工具', desc: '配置阿奇索企业 ERP、抖店品牌营销工具等运营系统。', actionUrl: 'https://www.aqisuo.com/', actionLabel: '⚡ 配置阿奇索企业 ERP' },
+      ...SHARED_E_COMMERCE_STEPS,
     ])
   }
 
-  if (slug === 'ai-branded-physical-shop') {
+  // 项目 4：AI跨境电商项目 (slug: ai-cross-border)
+  if (slug === 'ai-cross-border') {
     return buildWithSubs(project, [
-      { id: 1, title: '第 1 步 · 开店申请', desc: '完成天猫/京东企业主体旗舰店入驻，提交营业执照 + 品牌资质。', actionUrl: TAOBAO_REGISTER, actionLabel: '🛒 打开淘宝/天猫商家后台' },
-      { id: 2, title: '第 2 步 · 基础设置', desc: '完善品牌店铺信息，绑定企业支付、ERP 库存与顺丰/京东物流配置。', actionUrl: 'https://www.agiso.com', actionLabel: '⚡ 配置企业 ERP 物流' },
-      { id: 3, title: '第 3 步 · 精准选品', desc: '用 AI 提炼品牌核心差异化卖点，锁定 5-8 个高溢价 SKU 主推方向。', actionUrl: 'https://www.lingxixai.com', actionLabel: '🦊 打开灵犀 AI 卖点提炼' },
-      { id: 4, title: '第 4 步 · 货品上架', desc: 'AI 批量生成品牌主图、详情页与短视频素材，强化品牌调性。', actionUrl: 'https://www.baowenplus.com', actionLabel: '🐆 打开豹纹工坊（豹纹+）' },
-      { id: 5, title: '第 5 步 · 网店运营', desc: '品牌内容矩阵 + 私域沉淀：小红书 / 抖音 / 视频号三平台账号同步搭建。', actionUrl: XHS_CREATOR, actionLabel: '📕 打开小红书品牌号' },
-      { id: 6, title: '第 6 步 · 客服发货', desc: '配置品牌专属客服话术 + 自动化履约，48h 内完成质检发货。', actionUrl: 'https://www.agiso.com', actionLabel: '⚡ 配置品牌客服与发货' },
-      { id: 7, title: '第 7 步 · 数据分析', desc: '分析品牌搜索词、复购率与 LTV，优化后续产品线与广告投放策略。', actionUrl: 'https://www.dianzhentan.com', actionLabel: '🕵️ 打开店侦探品牌分析' },
-      { id: 8, title: '第 8 步 · 多店复制', desc: '将品牌店铺 SOP 复制到天猫 + 京东 + 抖店多平台旗舰店矩阵。', actionUrl: DOUYIN_REGISTER, actionLabel: '🎵 打开抖店品牌店' },
+      { id: 1, title: '第 1 步 · 开店申请', desc: '完成亚马逊/Shopify全球店铺入驻，提交资质并激活商品类目。', actionUrl: 'https://sellercentral.amazon.com/', actionLabel: '� 打开亚马逊全球开店' },
+      { id: 2, title: '第 2 步 · 开店工具', desc: '配置 Dify 自动翻译、多语言生成工具和跨境物流对接系统。', actionUrl: 'https://www.dify.ai/', actionLabel: '🤖 打开 Dify 自动翻译' },
+      ...SHARED_E_COMMERCE_STEPS,
     ])
+  }
+
+  // 旧版兜底（已废弃 · 保留以防未知 slug）
+  if (slug === 'ai-digital-shop' || slug === 'ai-no-stock-physical-shop' || slug === 'ai-branded-physical-shop') {
+    return buildWithSubs(project, SHARED_E_COMMERCE_STEPS.filter((_, idx) => idx > 0).map((s) => ({ ...s, id: idx + 1 })))
   }
 
   // AI 自媒体运营项目 · 8 步
@@ -440,6 +565,10 @@ export default function ProjectSOPPage() {
   const [isPaidMember, setIsPaidMember] = useState(false)
   const [expandedStep, setExpandedStep] = useState<number>(0) // 专注模式：只展开一个主步骤
   const [paywall, setPaywall] = useState<PaywallState>({ open: false, stepIndex: 0 })
+  // [Task 2] ai-digital-shop-group 第 3 步完成时的"精准选品"付费解锁拦截
+  const [unlockStepModal, setUnlockStepModal] = useState<UnlockStepModalState>({ open: false })
+  // [Task 3] ai-digital-shop-group 第 3 步：4 个子任务全部打卡后，弹出橙黄色"解锁实操会员"横幅
+  const [showUnlockBanner, setShowUnlockBanner] = useState(false)
   const [aiCoach, setAICoach] = useState<AICoachState>({
     open: false,
     loading: false,
@@ -478,9 +607,14 @@ export default function ProjectSOPPage() {
   const isCompleted = totalSteps > 0 && currentStep >= totalSteps
 
   // 自动展开当前主步骤（仅在 mounted 后设置一次）
+  // [测试模式] 默认展开第 4 步（idx=3），便于编辑与全流程测试
   useEffect(() => {
     if (mounted && !isCompleted) {
-      setExpandedStep(Math.min(currentStep, totalSteps - 1))
+      if (UNLOCK_ALL_STEPS_FOR_TESTING) {
+        setExpandedStep(3)
+      } else {
+        setExpandedStep(Math.min(currentStep, totalSteps - 1))
+      }
     }
   }, [mounted]) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -565,6 +699,27 @@ export default function ProjectSOPPage() {
           const allKeys = task.subSteps.map((s) => `step${stepIdx}-${s.id}`)
           const allDone = allKeys.every((k) => next.has(k))
           if (allDone) {
+            // [Task 2] ai-digital-shop-group 第 3 步完成时拦截：阻止进入第 4 步精准选品
+            // 条件：1) 当前是 ai-digital-shop-group；2) 完成的是第 3 步（stepIdx=2）；3) 用户未付费
+            // [测试模式] UNLOCK_ALL_STEPS_FOR_TESTING 为 true 时跳过拦截
+            // 已完成所有子步骤的 subDone 仍会写入 localStorage，仅阻止 currentStep 推进
+            if (
+              !UNLOCK_ALL_STEPS_FOR_TESTING &&
+              slug === 'ai-digital-shop-group' &&
+              stepIdx === 2 &&
+              !isPaidMember
+            ) {
+              triggerCheer('main-step-done')
+              setUnlockStepModal({ open: true })
+              // [Task 3] 同时显示第 3 步底部的"解锁实操会员"橙黄色横幅
+              setShowUnlockBanner(true)
+              return next
+            }
+            // [Task 3] ai-digital-shop-group 第 3 步（已付费用户）：子步骤全完成时也展示横幅
+            // （即便已付费，横幅仍可作为"已解锁享受完整 SOP"的正向激励）
+            if (slug === 'ai-digital-shop-group' && stepIdx === 2) {
+              setShowUnlockBanner(true)
+            }
             // 推进到下一个主步骤
             const nextMain = Math.max(currentStep, stepIdx + 1)
             if (nextMain > currentStep) {
@@ -580,7 +735,7 @@ export default function ProjectSOPPage() {
         return next
       })
     },
-    [slug, tasks, currentStep, totalSteps, triggerCheer]
+    [slug, tasks, currentStep, totalSteps, triggerCheer, isPaidMember]
   )
 
   // 重置进度
@@ -636,6 +791,45 @@ export default function ProjectSOPPage() {
       }
     },
     [tasks, project?.title]
+  )
+
+  /**
+   * 任务 3：一键召唤 AI 私教（项目 SOP 上下文）
+   * - 写入 localStorage（opc_ai_assistant_step::slug）供 AIAssistant 读取
+   * - 写入 sessionStorage 项目标题缓存（避免闪烁）
+   * - 派发 lps:open-ai-assistant 自定义事件，AIAssistant 展开面板
+   */
+  const openAIAssistantForTask = useCallback(
+    (stepIdx: number) => {
+      if (typeof window === 'undefined') return
+      const task = tasks[stepIdx]
+      if (!task) return
+      try {
+        // 1. 写入当前步骤到 localStorage（任务 1 在 AIAssistant 中读取）
+        window.localStorage.setItem(`opc_ai_assistant_step::${slug}`, String(stepIdx))
+        // 2. 写入主步骤进度（确保 AIAssistant 读取到正确的 currentStep）
+        if (typeof currentStep === 'number' && currentStep > 0) {
+          window.localStorage.setItem(`opc_sop_progress::${slug}`, String(currentStep))
+        }
+        // 3. 缓存项目标题到 sessionStorage
+        if (project?.title) {
+          window.sessionStorage.setItem(`opc_project_title::${slug}`, project.title)
+        }
+        // 4. 派发自定义事件
+        window.dispatchEvent(
+          new CustomEvent('lps:open-ai-assistant', {
+            detail: {
+              slug,
+              stepId: stepIdx,
+              stepTitle: task.title,
+            },
+          })
+        )
+      } catch {
+        // 静默
+      }
+    },
+    [slug, project?.title, tasks, currentStep]
   )
 
   // 404 兜底
@@ -801,7 +995,8 @@ export default function ProjectSOPPage() {
             {tasks.map((task, idx) => {
               const isDone = idx < currentStep
               const isActive = idx === currentStep
-              const isLocked = idx > currentStep
+              // 测试模式：idx >= 3 的步骤直接视为已解锁
+              const isLocked = UNLOCK_ALL_STEPS_FOR_TESTING && idx >= 3 ? false : idx > currentStep
               const isExpanded = expandedStep === idx
               const isFree = idx < FREE_MAIN_STEPS
               const allSubsDone = task.subSteps.every((s) => subDone.has(`step${idx}-${s.id}`))
@@ -924,7 +1119,13 @@ export default function ProjectSOPPage() {
                       const subKey = `step${idx}-${sub.id}`
                       const subChecked = subDone.has(subKey)
                       // 付费门控：未付费 + 超出免费配额 = 锁定
-                      const isSubLocked = !isPaidMember && idx >= FREE_MAIN_STEPS
+                      // [Task 2] 例外：ai-digital-shop-group 第 3 步（idx=2）允许打卡
+                      // [测试模式] 例外：idx >= 3 的步骤强制解锁
+                      const isSubLocked =
+                        !UNLOCK_ALL_STEPS_FOR_TESTING &&
+                        !isPaidMember &&
+                        idx >= FREE_MAIN_STEPS &&
+                        !(slug === 'ai-digital-shop-group' && idx === 2)
                       return (
                         <div
                           key={sub.id}
@@ -984,6 +1185,23 @@ export default function ProjectSOPPage() {
                             >
                               {sub.desc}
                             </div>
+                            {/* 多行胶囊按钮（任务升级：仅作快捷通道，无打卡功能） */}
+                            {sub.extraLinks && sub.extraLinks.length > 0 && !subChecked && !isSubLocked && (
+                              <div className="flex flex-wrap gap-2 mt-2">
+                                {sub.extraLinks.map((lk, lkIdx) => (
+                                  <a
+                                    key={`${sub.id}-lk-${lkIdx}`}
+                                    href={lk.href}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="bg-slate-50 border border-slate-200 rounded-full px-3 py-1.5 text-xs text-slate-700 hover:bg-slate-100 hover:border-slate-300 transition min-h-[28px] inline-flex items-center gap-1"
+                                  >
+                                    <ExternalLink size={10} className="text-slate-400" />
+                                    {lk.label}
+                                  </a>
+                                ))}
+                              </div>
+                            )}
                             {/* 操作链接 */}
                             {sub.actionUrl && !subChecked && !isSubLocked && (
                               <a
@@ -1013,38 +1231,132 @@ export default function ProjectSOPPage() {
                       )
                     })}
 
-                    {/* [Task 3] 付费解锁·欲望钩子：未付费且非免费步骤 */}
-                    {!isPaidMember && idx >= FREE_MAIN_STEPS && (
-                      <div className="mt-2 relative overflow-hidden rounded-xl bg-gradient-to-br from-amber-50 via-orange-50 to-rose-50 border border-amber-200 p-4">
-                        <div className="absolute -top-6 -right-6 w-20 h-20 bg-amber-300/30 rounded-full blur-2xl" />
-                        <div className="relative flex items-start gap-3">
-                          <div className="flex-shrink-0 w-10 h-10 rounded-xl bg-gradient-to-br from-amber-400 to-orange-500 text-white flex items-center justify-center shadow-md">
-                            <Crown size={18} />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="text-sm font-extrabold text-amber-900 leading-tight">
-                              🔒 完成该步骤需要加入实操会员
+                    {/* [Task 新增] ai-digital-shop-group 第 3 步：4 个子任务共用统一的"前往千牛工作台"全局跳转入口
+                        - 位置：subSteps 列表下方、付费解锁横幅上方
+                        - 仅当 slug === 'ai-digital-shop-group' 且 idx === 2 时渲染
+                        - 子任务卡片内的重复按钮已在数据层移除 */}
+                    {slug === 'ai-digital-shop-group' && idx === 2 && (
+                      <a
+                        href="https://work.taobao.com/"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="mt-3 inline-flex items-center gap-2 bg-blue-50/50 hover:bg-blue-100 border border-blue-200/50 text-blue-700 rounded-lg px-4 py-2.5 text-sm font-bold transition-colors w-fit min-h-[40px] shadow-sm hover:shadow-md active:scale-[0.98]"
+                      >
+                        <span aria-hidden="true">📍</span>
+                        <span>前往千牛工作台</span>
+                        <ExternalLink size={12} className="text-blue-500" />
+                        <span aria-hidden="true">→</span>
+                      </a>
+                    )}
+
+                    {/* [Task 3] 付费解锁·欲望钩子：
+                          - ai-digital-shop-group 第 3 步（idx=2）：受 showUnlockBanner 控制，默认隐藏，子任务全完成时弹出
+                          - 其他项目/步骤：保持原逻辑（!isPaidMember && idx >= FREE_MAIN_STEPS）
+                          - [测试模式] idx >= 3 不显示付费横幅 */}
+                    {(() => {
+                      if (UNLOCK_ALL_STEPS_FOR_TESTING && idx >= 3) return null
+                      const isAiShopStep3 = slug === 'ai-digital-shop-group' && idx === 2
+                      const shouldShow = isAiShopStep3
+                        ? showUnlockBanner && !isPaidMember
+                        : !isPaidMember && idx >= FREE_MAIN_STEPS
+                      if (!shouldShow) return null
+                      return (
+                        <motion.div
+                          key="unlock-banner"
+                          initial={{ opacity: 0, y: 24, scale: 0.96 }}
+                          animate={{ opacity: 1, y: 0, scale: 1 }}
+                          exit={{ opacity: 0, y: 12, scale: 0.98 }}
+                          transition={{ type: 'spring', stiffness: 280, damping: 22 }}
+                          className="mt-2 relative overflow-hidden rounded-xl bg-gradient-to-br from-amber-50 via-orange-50 to-rose-50 border border-amber-200 p-4"
+                        >
+                          <div className="absolute -top-6 -right-6 w-20 h-20 bg-amber-300/30 rounded-full blur-2xl" />
+                          <div className="relative flex items-start gap-3">
+                            <div className="flex-shrink-0 w-10 h-10 rounded-xl bg-gradient-to-br from-amber-400 to-orange-500 text-white flex items-center justify-center shadow-md">
+                              <Crown size={18} />
                             </div>
-                            <p className="mt-1 text-xs text-amber-800/80 leading-relaxed">
-                              您当前已完成前 {currentStep} 步，离这个进阶玩法只差一步之遥。加入会员，您不仅能看到详细清单，还能获得 AI 随行教练的实时反馈。
-                            </p>
+                            <div className="flex-1 min-w-0">
+                              <div className="text-sm font-extrabold text-amber-900 leading-tight">
+                                🔒 完成该步骤需要加入实操会员
+                              </div>
+                              <p className="mt-1 text-xs text-amber-800/80 leading-relaxed">
+                                您当前已完成前 {currentStep} 步，离这个进阶玩法只差一步之遥。加入会员，您不仅能看到详细清单，还能获得 AI 随行教练的实时反馈。
+                              </p>
+                              <Link
+                                href="/pricing#plan-monthly-69"
+                                onClick={() => setPaywall({ open: false, stepIndex: 0 })}
+                                className="mt-3 inline-flex items-center gap-1 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white text-xs font-extrabold px-4 py-2 rounded-lg shadow-sm hover:shadow-md active:scale-95 transition-all min-h-[36px]"
+                              >
+                                <Zap size={12} />
+                                解锁并开启陪跑 →
+                              </Link>
+                            </div>
+                          </div>
+                        </motion.div>
+                      )
+                    })()}
+
+                    {/* [Task 2] 继续至精准选品按钮：仅 ai-digital-shop-group 第 3 步 + 已付费 + 子步骤全完成时显示 */}
+                    {slug === 'ai-digital-shop-group' &&
+                      idx === 2 &&
+                      isPaidMember &&
+                      (() => {
+                        const allSubs = task.subSteps.map((s) => `step${idx}-${s.id}`)
+                        const allSubDone = allSubs.every((k) => subDone.has(k))
+                        if (!allSubDone) return null
+                        const nextMain = idx + 1
+                        const alreadyAdvanced = currentStep > idx
+                        return (
+                          <div className="mt-3 flex flex-col sm:flex-row items-stretch sm:items-center gap-2 p-3 rounded-xl bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200">
+                            <div className="flex-1 min-w-0">
+                              <div className="text-sm font-extrabold text-emerald-900">
+                                🎉 千牛工作台 4 大配置已完成
+                              </div>
+                              <p className="mt-0.5 text-xs text-emerald-800/80 leading-relaxed">
+                                基础设置已就位，下一步进入"精准选品"——用 AI 锁定 3-5 个高复购候选品类。
+                              </p>
+                            </div>
                             <button
                               type="button"
-                              onClick={() => setPaywall({ open: true, stepIndex: idx })}
-                              className="mt-3 inline-flex items-center gap-1 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white text-xs font-extrabold px-4 py-2 rounded-lg shadow-sm hover:shadow-md active:scale-95 transition-all min-h-[36px]"
+                              disabled={alreadyAdvanced}
+                              onClick={() => {
+                                if (alreadyAdvanced) return
+                                const nm = Math.max(currentStep, nextMain)
+                                setCurrentStep(nm)
+                                persistStep(nm)
+                                setExpandedStep(Math.min(nm, totalSteps - 1))
+                                triggerCheer('main-step-done')
+                              }}
+                              className={cn(
+                                'inline-flex items-center justify-center gap-1.5 text-xs font-extrabold px-4 py-2.5 rounded-lg shadow-sm transition-all min-h-[44px] whitespace-nowrap',
+                                alreadyAdvanced
+                                  ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
+                                  : 'bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white hover:shadow-md active:scale-95'
+                              )}
                             >
-                              <Zap size={12} />
-                              解锁并开启指导 →
+                              {alreadyAdvanced ? '已进入下一步' : '继续至精准选品 →'}
                             </button>
                           </div>
-                        </div>
-                      </div>
-                    )}
+                        )
+                      })()}
+                  </div>
+
+                  {/* 任务 3：一键召唤 AI 私教入口（任务卡片底部 · 右侧） */}
+                  <div className="mt-4 flex items-center justify-end">
+                    <button
+                      type="button"
+                      onClick={() => openAIAssistantForTask(idx)}
+                      className="inline-flex items-center gap-1.5 text-[11px] md:text-xs font-bold text-violet-700 hover:text-white bg-violet-50 hover:bg-gradient-to-r hover:from-violet-500 hover:to-purple-600 border border-violet-200 hover:border-transparent px-2.5 py-1.5 rounded-full transition-all min-h-[32px] shadow-sm hover:shadow-md active:scale-95"
+                      aria-label="咨询AI教练"
+                      title="召唤 AI 私教，针对此步骤给你实操答疑"
+                    >
+                      <MessageSquare size={12} />
+                      <span>咨询AI教练</span>
+                    </button>
                   </div>
 
                   {/* 主步骤完成时的反馈条 */}
                   {isDone && allSubsDone && (
-                    <div className="mt-4 inline-flex items-center gap-1.5 text-[11px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-full">
+                    <div className="mt-3 inline-flex items-center gap-1.5 text-[11px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-full">
                       <Sparkles size={11} />
                       已完成本关所有子任务
                     </div>
@@ -1213,7 +1525,7 @@ export default function ProjectSOPPage() {
 
                 <div className="mt-5 space-y-2 text-left">
                   {[
-                    { emoji: '🎯', label: '解锁全 8 步 + 24 个子任务 SOP' },
+                    { emoji: '🎯', label: `解锁全 ${tasks.length} 步 + ${tasks.reduce((sum, t) => sum + t.subSteps.length, 0)} 个子任务 SOP` },
                     { emoji: '🧠', label: 'AI 随行教练 7×24 实时指引' },
                     { emoji: '📚', label: '良朋社 OPC 智富社群每日资源对接' },
                   ].map((b) => (
@@ -1239,6 +1551,114 @@ export default function ProjectSOPPage() {
                     className="text-xs text-slate-500 hover:text-slate-700 min-h-[44px]"
                   >
                     稍后再说
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ════════ [Task 2] 第 3 步完成时的"精准选品"付费解锁拦截（仅 ai-digital-shop-group）══════ */}
+      <AnimatePresence>
+        {unlockStepModal.open && slug === 'ai-digital-shop-group' && (
+          <motion.div
+            key="unlock-step-modal"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.25 }}
+            className="fixed inset-0 z-[56] flex items-center justify-center px-4 bg-black/55 backdrop-blur-sm"
+            onClick={() => setUnlockStepModal({ open: false })}
+          >
+            <motion.div
+              onClick={(e) => e.stopPropagation()}
+              initial={{ scale: 0.85, y: 30 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.9, y: 20 }}
+              transition={{ type: 'spring', stiffness: 320, damping: 24 }}
+              className="relative w-full max-w-md bg-white rounded-3xl p-6 md:p-7 shadow-2xl border border-slate-200 overflow-hidden"
+            >
+              <div className="absolute -top-16 -right-16 w-40 h-40 bg-gradient-to-br from-blue-300/30 to-violet-300/30 rounded-full blur-3xl pointer-events-none" />
+              <div className="absolute -bottom-16 -left-16 w-40 h-40 bg-gradient-to-br from-amber-200/30 to-rose-200/30 rounded-full blur-3xl pointer-events-none" />
+
+              <button
+                type="button"
+                onClick={() => setUnlockStepModal({ open: false })}
+                className="absolute top-3 right-3 w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-500 min-h-[36px]"
+                aria-label="关闭"
+              >
+                <X size={16} />
+              </button>
+
+              <div className="relative text-center">
+                <div className="mx-auto w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500 via-indigo-500 to-violet-600 flex items-center justify-center shadow-lg mb-4">
+                  <Lock size={26} className="text-white" />
+                </div>
+                <h3 className="text-lg md:text-xl font-extrabold text-slate-900 leading-tight">
+                  🔓 解锁核心选品权限
+                </h3>
+                <p className="mt-3 text-sm text-slate-600 leading-relaxed text-left">
+                  精准选品是店群项目的核心。要解锁后续步骤与完整 AI 选品支持，请加入<strong className="text-slate-900">实操会员</strong>或<strong className="text-slate-900">陪跑计划</strong>。
+                </p>
+
+                <div className="mt-5 space-y-2.5 text-left">
+                  {[
+                    { emoji: '🎯', label: '解锁 4-8 步精准选品 SOP + AI 选品工具栈' },
+                    { emoji: '🧠', label: 'AI 随行教练 7×24 实操答疑' },
+                    { emoji: '📈', label: '精准选品后 100% 复购方向 + 客单提升' },
+                  ].map((b) => (
+                    <div key={b.label} className="flex items-start gap-2 text-xs text-slate-700">
+                      <span>{b.emoji}</span>
+                      <span className="leading-relaxed">{b.label}</span>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="mt-6 flex flex-col gap-2">
+                  {/* 按钮 A：69 元/月 */}
+                  <Link
+                    href="/pricing#plan-monthly-69"
+                    onClick={() => setUnlockStepModal({ open: false })}
+                    className="w-full inline-flex items-center justify-center gap-1.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white text-sm font-extrabold px-5 py-3 rounded-xl shadow-md hover:shadow-lg active:scale-[0.98] transition-all min-h-[48px]"
+                  >
+                    <Sparkles size={14} />
+                    【69元/月 解锁】 →
+                  </Link>
+                  {/* 按钮 B：199 元/年 */}
+                  <Link
+                    href="/pricing#plan-annual-199"
+                    onClick={() => setUnlockStepModal({ open: false })}
+                    className="w-full inline-flex items-center justify-center gap-1.5 bg-gradient-to-r from-violet-500 to-purple-600 hover:from-violet-600 hover:to-purple-700 text-white text-sm font-extrabold px-5 py-3 rounded-xl shadow-md hover:shadow-lg active:scale-[0.98] transition-all min-h-[48px]"
+                  >
+                    <Crown size={14} />
+                    【199元/年 会员】 →
+                  </Link>
+                  {/* 按钮 C：598/1980 陪跑（双选项） */}
+                  <div className="grid grid-cols-2 gap-2">
+                    <Link
+                      href="/pricing#plan-light-598"
+                      onClick={() => setUnlockStepModal({ open: false })}
+                      className="inline-flex items-center justify-center gap-1 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white text-xs font-extrabold px-3 py-3 rounded-xl shadow-sm hover:shadow-md active:scale-[0.98] transition-all min-h-[48px]"
+                    >
+                      <Zap size={12} />
+                      598 轻陪跑
+                    </Link>
+                    <Link
+                      href="/pricing#plan-deep-1980"
+                      onClick={() => setUnlockStepModal({ open: false })}
+                      className="inline-flex items-center justify-center gap-1 bg-gradient-to-r from-rose-500 to-pink-600 hover:from-rose-600 hover:to-pink-700 text-white text-xs font-extrabold px-3 py-3 rounded-xl shadow-sm hover:shadow-md active:scale-[0.98] transition-all min-h-[48px]"
+                    >
+                      <Target size={12} />
+                      1980 深度陪跑
+                    </Link>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setUnlockStepModal({ open: false })}
+                    className="text-xs text-slate-500 hover:text-slate-700 min-h-[44px]"
+                  >
+                    稍后再说，继续逛逛
                   </button>
                 </div>
               </div>

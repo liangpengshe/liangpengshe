@@ -31,6 +31,7 @@ import {
   Briefcase,
   Compass,
   Target,
+  Phone,
 } from 'lucide-react'
 import { useAudio } from '@/hooks/useAudio'
 import { useDwellTime } from '@/hooks/useDwellTime'
@@ -43,6 +44,7 @@ import {
   recordFeedback,
   shouldSuppressBubble,
 } from '@/lib/ai-copilot-feedback'
+import ExpertConsultationModal from '@/components/ExpertConsultationModal'
 
 interface Message {
   id: string
@@ -124,6 +126,48 @@ export default function AIAssistant() {
     sessionKey: string
   } | null>(null)
 
+  // ════════ 任务 1：项目 SOP 上下文（projectSlug + currentStep）══════
+  const [projectContext, setProjectContext] = useState<{
+    slug: string
+    currentStep: number
+    projectTitle: string
+  } | null>(null)
+
+  // ════════ 任务 1："找专家"预约弹窗状态 ═══════
+  const [isExpertModalOpen, setIsExpertModalOpen] = useState(false)
+
+  // 监听路由：/projects/[slug] → 读取进度 + 项目标题
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const p = pathname || ''
+    if (p.startsWith('/projects/') && p !== '/projects') {
+      const slug = p.split('/projects/')[1]?.split('/')[0] || ''
+      if (!slug) {
+        setProjectContext(null)
+        return
+      }
+      try {
+        // 读取主步骤进度
+        const progress = window.localStorage.getItem(`opc_sop_progress::${slug}`)
+        const step = progress ? Math.max(0, parseInt(progress, 10) || 0) : 0
+        // 也读取卡片写入的 stepId（任务 3 写入）
+        const cardStepId = window.localStorage.getItem(`opc_ai_assistant_step::${slug}`)
+        const finalStep = cardStepId ? Math.max(step, parseInt(cardStepId, 10) || 0) : step
+        // 读取项目标题（懒加载：通过 fetch 标题）
+        const titleCache = window.sessionStorage.getItem(`opc_project_title::${slug}`)
+        if (titleCache) {
+          setProjectContext({ slug, currentStep: finalStep, projectTitle: titleCache })
+        } else {
+          setProjectContext({ slug, currentStep: finalStep, projectTitle: slug })
+        }
+      } catch {
+        setProjectContext(null)
+      }
+    } else {
+      setProjectContext(null)
+    }
+  }, [pathname])
+
   // ════════ 任务 1：场景化感知 useEffect（监听 pathname + searchParams）══════
   // 触发条件：
   //   1. /market/projects?recommend=trader
@@ -186,6 +230,31 @@ export default function AIAssistant() {
     setSceneHint(null)
   }, [pathname, searchParams, dwellSec])
 
+  // 监听自定义事件：任务卡片"咨询 AI 教练"按钮（任务 3 触发）
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const handler = (e: Event) => {
+      const ce = e as CustomEvent<{ slug: string; stepId: number; stepTitle?: string }>
+      const { slug, stepId, stepTitle } = ce.detail || {}
+      if (slug) {
+        // 更新项目上下文
+        const titleCache = window.sessionStorage.getItem(`opc_project_title::${slug}`) || slug
+        setProjectContext({ slug, currentStep: stepId, projectTitle: titleCache })
+      }
+      // 展开 AI 助手
+      setIsOpen(true)
+      setShowBubble(false)
+      // 自动填充欢迎问题
+      if (stepTitle) {
+        setInputValue(`我正在做第 ${stepId} 步：${stepTitle}，需要一些实操指导。`)
+      } else if (stepId) {
+        setInputValue(`我正在做第 ${stepId} 步，需要一些实操指导。`)
+      }
+    }
+    window.addEventListener('lps:open-ai-assistant', handler)
+    return () => window.removeEventListener('lps:open-ai-assistant', handler)
+  }, [])
+
   // 路由变化时重置"已显示过的档位"标记
   useEffect(() => {
     lastDwellTierRef.current = 0
@@ -246,24 +315,53 @@ export default function AIAssistant() {
   useEffect(() => {
     if (isOpen && messages.length === 0) {
       setTimeout(() => {
-        const welcome =
-          ctx.kind === 'market-projects'
-            ? '你正在看项目库，告诉我你的预算和擅长领域，我帮你筛出 3 个最匹配的 SOP 案例。'
-            : ctx.kind === 'market-tools'
-              ? '你正在看工具库，告诉我你现在的痛点（降本/引流/客户运营），我帮你匹配最合适的 3 个工具。'
-              : ctx.kind === 'market-resources'
-                ? '你正在看资源库，要我帮你找出"👍 实用指数"最高的 3 个资源吗？'
-                : ctx.kind === 'market-services'
-                  ? '你正在看服务库，告诉我你需要什么类型的服务（智能体定制 / GEO / 企业内训），我帮你精准匹配。'
-                  : ctx.kind === 'project-detail'
-                    ? '你正在看这个项目的 SOP，我可以告诉你它底层依赖的工具栈、投入产出比、7 天拆解。需要哪个？'
-                    : ctx.kind.startsWith('guide-')
-                      ? '你正在学习 OPC 路径，告诉我你卡在哪一步，我帮你突破。'
-                      : ctx.kind === 'member'
-                        ? '你正在个人中心，要不要我帮你梳理今天最该做的 3 件事？'
-                        : ctx.kind === 'workspace'
-                          ? '你正在工作台，告诉我你卡在哪项任务，我帮你拆解。'
-                          : '你好，老板！我是良朋社AI助手，你想了解降本工具、还是线下沙龙？'
+        let welcome: string
+        // 任务 1 优先级：在 /projects/[slug] 页面，显示项目专属欢迎语
+        if (projectContext) {
+          const { projectTitle, currentStep } = projectContext
+          if (currentStep > 0) {
+            welcome = `我看到你正在做「${projectTitle}」第 ${currentStep + 1} 步。有什么卡点或具体问题？告诉我细节（比如平台差异、预算、进度），我直接给你可执行的步骤和工具。`
+          } else {
+            welcome = `欢迎回来！你正在启动「${projectTitle}」项目，要我帮你从第 1 步开始拆解吗？或者告诉我你目前的资源（预算 / 时间 / 技能），我帮你定制 7 天计划。`
+          }
+        } else {
+          // 任务 4 兜底：当前在 /projects/[slug] 但 localStorage 进度为空 → 通用商业顾问 + 项目前缀
+          let inProjectSlug: string | null = null
+          try {
+            const p = pathname || ''
+            if (p.startsWith('/projects/') && p !== '/projects') {
+              inProjectSlug = p.split('/projects/')[1]?.split('/')[0] || null
+            }
+          } catch {
+            // 静默
+          }
+          if (inProjectSlug) {
+            const cachedTitle =
+              typeof window !== 'undefined'
+                ? window.sessionStorage.getItem(`opc_project_title::${inProjectSlug}`) || inProjectSlug
+                : inProjectSlug
+            welcome = `你在操作「${cachedTitle}」项目，目前还没有开始实操进度。没关系——告诉我你目前卡在哪（开店？选品？内容？）或者想从哪一步开始，我直接给你带项目前缀的可执行方案。`
+          } else {
+            welcome =
+              ctx.kind === 'market-projects'
+                ? '你正在看项目库，告诉我你的预算和擅长领域，我帮你筛出 3 个最匹配的 SOP 案例。'
+                : ctx.kind === 'market-tools'
+                  ? '你正在看工具库，告诉我你现在的痛点（降本/引流/客户运营），我帮你匹配最合适的 3 个工具。'
+                  : ctx.kind === 'market-resources'
+                    ? '你正在看资源库，要我帮你找出"👍 实用指数"最高的 3 个资源吗？'
+                    : ctx.kind === 'market-services'
+                      ? '你正在看服务库，告诉我你需要什么类型的服务（智能体定制 / GEO / 企业内训），我帮你精准匹配。'
+                      : ctx.kind === 'project-detail'
+                        ? '你正在看这个项目的 SOP，我可以告诉你它底层依赖的工具栈、投入产出比、7 天拆解。需要哪个？'
+                        : ctx.kind.startsWith('guide-')
+                          ? '你正在学习 OPC 路径，告诉我你卡在哪一步，我帮你突破。'
+                          : ctx.kind === 'member'
+                            ? '你正在个人中心，要不要我帮你梳理今天最该做的 3 件事？'
+                            : ctx.kind === 'workspace'
+                              ? '你正在工作台，告诉我你卡在哪项任务，我帮你拆解。'
+                              : '你好，老板！我是良朋社AI助手，你想了解降本工具、还是线下沙龙？'
+          }
+        }
         const welcomeMessage: Message = {
           id: Date.now().toString(),
           content: welcome,
@@ -273,7 +371,7 @@ export default function AIAssistant() {
         setMessages([welcomeMessage])
       }, 300)
     }
-  }, [isOpen, messages.length, ctx.kind])
+  }, [isOpen, messages.length, ctx.kind, projectContext])
 
   const handleSendMessage = async () => {
     if (!inputValue.trim() || loading) return
@@ -286,6 +384,24 @@ export default function AIAssistant() {
     setMessages((prev) => [...prev, userMessage])
     setInputValue('')
     setLoading(true)
+    // 任务 1：组装 SOP 上下文（项目 + 当前步骤）
+    const sopContext = projectContext
+      ? {
+          projectSlug: projectContext.slug,
+          projectTitle: projectContext.projectTitle,
+          currentStep: projectContext.currentStep, // 0-indexed（前端从 0 算），后端展示为 currentStep + 1
+        }
+      : null
+    // 任务 4 兜底：即使不在 /projects/[slug]，若有路径前缀也透传 slug
+    let fallbackSlug: string | null = null
+    try {
+      const p = pathname || ''
+      if (p.startsWith('/projects/') && p !== '/projects') {
+        fallbackSlug = p.split('/projects/')[1]?.split('/')[0] || null
+      }
+    } catch {
+      // 静默
+    }
     try {
       const response = await fetch('/api/ai/chat', {
         method: 'POST',
@@ -298,6 +414,10 @@ export default function AIAssistant() {
           currentRoute: pathname + (searchParams?.toString() ? `?${searchParams.toString()}` : ''),
           contextKind: ctx.kind,
           systemHint: ctx.systemHint,
+          // 任务 1：SOP 上下文（直接传给后端）
+          context: sopContext,
+          // 任务 4：路由兜底 slug
+          projectSlugFallback: fallbackSlug,
         }),
       })
       const data = await response.json()
@@ -518,6 +638,19 @@ export default function AIAssistant() {
           </div>
 
           <div className="p-4 bg-white border-t border-gray-100">
+            {/* ════════ 任务 1：找专家入口（与输入框保持明显间距）═══════ */}
+            <button
+              type="button"
+              onClick={() => setIsExpertModalOpen(true)}
+              className="mb-3 w-full inline-flex items-center justify-center gap-1.5 text-xs md:text-sm font-bold text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200 hover:border-amber-300 px-3 py-2.5 rounded-xl transition-all shadow-sm hover:shadow-md active:scale-[0.98] min-h-[40px]"
+              aria-label="找专家诊断"
+            >
+              <Phone size={13} className="text-amber-600" />
+              <span>📞 找专家诊断</span>
+              <span className="ml-1 text-[10px] font-normal text-amber-600/80 hidden sm:inline">
+                1 小时内微信回复
+              </span>
+            </button>
             <div className="flex items-center gap-2">
               <input
                 type="text"
@@ -547,6 +680,21 @@ export default function AIAssistant() {
           </div>
         </div>
       )}
+
+      {/* ════════ 任务 1：找专家预约模态框（全局可触发）═══════ */}
+      <ExpertConsultationModal
+        open={isExpertModalOpen}
+        onClose={() => setIsExpertModalOpen(false)}
+        projectSlug={
+          projectContext?.slug ||
+          (pathname?.startsWith('/projects/')
+            ? pathname.split('/projects/')[1]?.split('/')[0] || null
+            : null)
+        }
+        projectTitle={projectContext?.projectTitle || null}
+        currentStep={projectContext?.currentStep ?? null}
+        stepTitle={null}
+      />
     </>
   )
 }

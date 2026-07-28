@@ -170,6 +170,36 @@ model CommissionRecord {
   updatedAt      DateTime @updatedAt
 }
 
+// ════════════════════════════════════════════════════════════════
+// 统一订单表 (订单生成器 + 履约引擎 共用)
+// 重构说明: 解耦"订单生成"与"履约执行", 引入经典三段式
+//   前端 → POST /api/order/create (生成器) → 支付网关
+//   支付网关 → POST /api/order/fulfill (履约引擎) → 业务动作
+// ════════════════════════════════════════════════════════════════
+model Order {
+  id              String    @id @default(cuid())
+  tenantId        String?   // 多租户预留 (未来可按租户分库分表)
+  userId          String    // 关联 User.id (演示版用 opc_device_id)
+  planKey         String    // 关联 PLAN_REGISTRY.key
+  amount          Float     // 应付金额 (元)
+  pointsUsed      Int       @default(0) // 使用的智富积分
+  pointsDiscount  Float     @default(0) // 积分抵扣金额
+  status          String    @default("pending") // pending / paid / refunded / failed / canceled
+  provider        String    @default("mock")   // mock / stripe / polar / wechat / alipay
+  providerOrderId String?   // 外部网关订单号 (Stripe/Polar 的 charge id, 方便对账)
+  paidAt          DateTime? // 履约完成时间
+  refundedAt      DateTime? // 退款时间
+  // 业务参数透传 (如 cityCode 用于城市主理人)
+  metadata        String?   @db.Text // JSON 字符串 (e.g. {"cityCode":"shenzhen","email":"x@y.com"})
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([userId, status])
+  @@index([planKey, status])
+  @@index([provider, providerOrderId])
+  @@index([createdAt])
+}
+
 // 智富积分资产账户（按手机号关联）
 model AssetBalance {
   id          String   @id @default(cuid())
@@ -292,5 +322,31 @@ model ResourceInteraction {
 
   @@index([resourceId, type])
   @@index([userId])
+  @@index([createdAt])
+}
+
+// ════════════════════════════════════════════════════════════════
+// 专家咨询线索池（任务 4：AI 助手"找专家"入口）
+// 当用户在 /projects/[slug] SOP 流程中点击"📞 找专家"，
+// 表单提交后写入本表，城市主理人 / 项目主理人可在后台跟进。
+// ════════════════════════════════════════════════════════════════
+model ConsultationRecord {
+  id          String   @id @default(cuid())
+  name        String                              // 客户姓名
+  phone       String                              // 客户手机号
+  projectSlug String                              // 当前项目 slug（路由 /projects/<slug>）
+  projectTitle String?                            // 项目标题（冗余展示用）
+  step        Int      @default(0)                // 当前步骤（1-indexed，0 表示未指明）
+  stepTitle   String?                             // 当前步骤标题（可选）
+  issue       String?  @db.Text                   // 用户填写的卡点描述
+  source      String   @default("ai_assistant")   // 来源：ai_assistant / sop_card / manual 等
+  status      String   @default("PENDING")        // PENDING / CONTACTED / CLOSED / INVALID
+  city        String?                             // 城市（可选）
+  userId      String?                             // 关联用户 ID（登录态）
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([projectSlug])
+  @@index([status])
   @@index([createdAt])
 }
