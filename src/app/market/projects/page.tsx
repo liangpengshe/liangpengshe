@@ -130,36 +130,36 @@ function ProjectsPageInner() {
   const recommendMeta = recommend && LEVEL_DISPLAY[recommend]
 
   /**
-   * 交易型推荐语料（按需求文档）
+   * 精准推荐语料（基于新思维导图 9 大项目）
    */
   const bannerCopy = useMemo(() => {
     if (!recommendMeta) return null
     if (recommend === 'trader') {
       return {
         title: `${recommendMeta.emoji} ${recommendMeta.label} · 精准推荐`,
-        body: '根据您【交易型 OPC】的诊断与学习阶段，系统优先为您推荐 AI 数字网店项目 或 AI 无货源实物网店项目 开始实操。请选择您的起点。',
-        suggestedNames: ['AI数字网店项目', 'AI无货源实物网店项目'],
+        body: '根据您【交易型 OPC】的诊断与学习阶段，系统优先为您推荐 AI 数字店群项目 或 AI 无货源店群项目 开始实操。请选择您的起点。',
+        suggestedNames: ['AI数字店群项目', 'AI无货源店群项目'],
       }
     }
     if (recommend === 'flow') {
       return {
         title: `${recommendMeta.emoji} ${recommendMeta.label} · 精准推荐`,
-        body: '根据您【流量型 OPC】的诊断与学习阶段，系统优先为您推荐 AI 自媒体运营 或 AI 跨境电商项目 开始实操。请选择您的起点。',
-        suggestedNames: ['AI自媒体运营项目', 'AI跨境电商项目'],
+        body: '根据您【流量型 OPC】的诊断与学习阶段，系统优先为您推荐 AI 自媒体群项目 或 AI 跨境电商项目 开始实操。请选择您的起点。',
+        suggestedNames: ['AI自媒体群项目', 'AI跨境电商项目'],
       }
     }
     if (recommend === 'system') {
       return {
         title: `${recommendMeta.emoji} ${recommendMeta.label} · 精准推荐`,
-        body: '根据您【系统型 OPC】的诊断与学习阶段，系统优先为您推荐 AI 编程系统开发 或 AI 企业 GEO 项目 开始实操。请选择您的起点。',
-        suggestedNames: ['AI编程系统开发项目', 'AI企业GEO项目'],
+        body: '根据您【系统型 OPC】的诊断与学习阶段，系统优先为您推荐 AI 编程开发 或 AI 企业 GEO 项目 开始实操。请选择您的起点。',
+        suggestedNames: ['AI编程开发项目', 'AI企业GEO项目'],
       }
     }
     if (recommend === 'asset') {
       return {
         title: `${recommendMeta.emoji} ${recommendMeta.label} · 精准推荐`,
-        body: '根据您【资产型 OPC】的诊断与学习阶段，系统优先为您推荐 AI 数字资产 或 AI 工具代理分销项目 开始实操。请选择您的起点。',
-        suggestedNames: ['AI数字网店项目', 'AI工具销售推广项目'],
+        body: '根据您【资产型 OPC】的诊断与学习阶段，系统优先为您推荐 AI 数字产品 或 AI 工具推广项目 开始实操。请选择您的起点。',
+        suggestedNames: ['AI数字产品项目', 'AI工具推广项目'],
       }
     }
     return null
@@ -276,6 +276,24 @@ function ProjectsPageInner() {
         standalone={false}
         recommendLevel={recommend || undefined}
       />
+
+      {/* ════════ 价格引导横幅（任务 3：projects 页统一引导至轻陪跑档）══════ */}
+      <div className="mt-4">
+        <div
+          data-testid="projects-pricing-cta"
+          className="bg-white/80 backdrop-blur-sm border border-slate-200 rounded-2xl p-4 flex flex-col md:flex-row justify-between items-center gap-4"
+        >
+          <div className="flex-1 min-w-0 text-xs md:text-sm text-slate-700 leading-relaxed">
+            💡 想跑通完整 SOP？<span className="font-bold text-slate-900">先看【轻陪跑】的具体权益与价格</span>。
+          </div>
+          <Link
+            href="/pricing#plan-light-598"
+            className="flex-shrink-0 inline-flex items-center justify-center bg-blue-600 hover:bg-blue-700 text-white font-medium px-4 py-2 rounded-full transition text-xs md:text-sm whitespace-nowrap"
+          >
+            查看 598 元轻陪跑 →
+          </Link>
+        </div>
+      </div>
     </div>
   )
 }

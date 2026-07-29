@@ -300,7 +300,7 @@ export function getStageDetail(
             meta: `累计 ${metrics.learning.checkins} 次`,
           },
           {
-            title: '通哥 SOP 同步',
+            title: '良朋社 SOP 同步',
             desc: '从智富研报中同步过来的关键打法。',
             meta: status === 'completed' ? '已同步' : '待同步',
           },

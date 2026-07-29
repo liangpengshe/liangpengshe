@@ -1,262 +1,202 @@
-import { NextResponse } from 'next/server'
-import { projectItems, getProjectById } from '@/data/project-items'
-
 /**
- * 项目库 · 寻找资深 OPC 主理人 接口
+ * 项目库 · 寻找资深 OPC 主理人 接口（演进项 3.4 重构）
  * ------------------------------------------------------------
+ * 任务：withFallback 迁移 projects/find-opc（W3.3）
+ *
  * POST /api/projects/find-opc
+ * Body: { projectId: string, projectCategory?: string }
  *
- * Body:
- *   {
- *     projectId: string,        // 项目 id（与 data/project-items.ts 一致）
- *     projectCategory?: string  // 可选：项目分类（用于匹配主理人 expertise_tags）
- *   }
+ * 数据流：
+ *   1. Supabase users 表 role='CITY_MAINTAINER' + is_active=true + expertise_tags 包含 category
+ *   2. 失败 → 降级到 city-maintainers.ts mock 池
+ *   3. 计算 matchScore 并排序，取前 3
+ *   4. 脱敏微信，返回展示字段
  *
- * 业务逻辑：
- *   1. 解析传入的项目，定位 category
- *   2. 从城市主理人池（CITY_MAINTAINERS）中筛选
- *        - role === 'CITY_MAINTAINER'
- *        - expertise_tags 包含项目 category 关键词
- *        - is_active === true
- *   3. 按 score 降序排，取前 3 名
- *   4. 返回 JSON 格式的主理人列表（包含姓名/城市/手机号/微信/擅长领域/已操盘同类项目数）
- *
- * 当前实现：纯 mock（演示用）
- * 接入真实后端时：
- *   - 替换为 Supabase: supabase.from('users').select('*').eq('role','CITY_MAINTAINER').contains('expertise_tags', [category])
- *   - 写入对接日志:  supabase.from('opc_match_logs').insert({...})
+ * 真实接入时把 throw 替换为生产 Supabase 查询即可。
  * ------------------------------------------------------------
  */
+import { withSmartFallback } from '@/lib/api-handler'
+import { createClient } from '@/lib/supabase/server'
+import { getProjectById } from '@/data/project-items'
+import {
+  rankMaintainers,
+  scoreMatch,
+  toDisplay,
+  type DisplayMaintainer,
+  type MatchedMaintainer,
+} from './_lib/find-opc-helpers'
+import { CITY_MAINTAINERS, type CityMaintainer } from './_data/city-maintainers'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
+// ════════════════════════════════════════════════════════════════
+// 入参 / 出参
+// ════════════════════════════════════════════════════════════════
 interface FindOPCBody {
   projectId?: string
   projectCategory?: string
 }
 
-interface SeniorOPCMaintainer {
-  id: string
-  name: string
-  city: string
-  phone: string
-  wechat: string
-  /** 擅长领域标签（与 project.category 模糊匹配） */
-  expertise_tags: string[]
-  /** 已操盘同类项目数 */
-  handledProjectCount: number
-  /** 主理人简介 */
-  bio: string
-  /** 评分（用于排序） */
-  score: number
+interface FindOPCResult {
+  projectId: string
+  projectTitle: string
+  projectCategory: string
+  maintainers: DisplayMaintainer[]
+  total: number
+  source: 'supabase' | 'mock'
 }
 
 // ════════════════════════════════════════════════════════════════
-// Mock 城市主理人池
-// role: 'CITY_MAINTAINER' | expertise_tags: 城市主理人专长标签
-// 与 User 表对齐（生产环境替换为 Supabase 查询）
+// 数据源：Supabase users 表
+// role='CITY_MAINTAINER' + is_active=true + expertise_tags @> [category]
+// 失败 → throw，由 withSmartFallback 兜底到 mockBuilder
 // ════════════════════════════════════════════════════════════════
-const CITY_MAINTAINERS: SeniorOPCMaintainer[] = [
-  {
-    id: 'opc-sz-001',
-    name: '弓老师',
-    city: '深圳',
-    phone: '138-0011-8801',
-    wechat: 'opc_gong_sz',
-    expertise_tags: ['数字产品', 'AI数字网店', '实物电商', '无货源'],
-    handledProjectCount: 5,
-    bio: '前阿里 P7，连续创业者，主攻数字产品变现，孵化 50+ 数字店铺。',
-    score: 98,
-  },
-  {
-    id: 'opc-sz-002',
-    name: '陈主理人',
-    city: '深圳',
-    phone: '138-0011-8802',
-    wechat: 'opc_chen_sz',
-    expertise_tags: ['实物电商', '无货源', '品牌实物', '1688 选品'],
-    handledProjectCount: 3,
-    bio: '深耕 1688 一件代发 3 年，实战操盘 30+ 实物店铺，首月出单率 95%。',
-    score: 95,
-  },
-  {
-    id: 'opc-sz-003',
-    name: '林主理人',
-    city: '深圳',
-    phone: '138-0011-8803',
-    wechat: 'opc_lin_sz',
-    expertise_tags: ['技术研发', 'SaaS 工具', '系统开发'],
-    handledProjectCount: 4,
-    bio: '前腾讯高级工程师，独立开发 3 款 SaaS 工具 ARR 累计破 500 万。',
-    score: 93,
-  },
-  {
-    id: 'opc-bj-001',
-    name: '王主理人',
-    city: '北京',
-    phone: '138-0011-8804',
-    wechat: 'opc_wang_bj',
-    expertise_tags: ['内容赛道', 'AI自媒体', '短视频', '抖音'],
-    handledProjectCount: 6,
-    bio: '抖音 / 视频号双平台万粉操盘手，擅长 0 粉冷启动。',
-    score: 96,
-  },
-  {
-    id: 'opc-bj-002',
-    name: '周主理人',
-    city: '北京',
-    phone: '138-0011-8805',
-    wechat: 'opc_zhou_bj',
-    expertise_tags: ['企业服务', '企业 GEO', '本地化', 'BD'],
-    handledProjectCount: 2,
-    bio: '前 4A 广告策略总监，专注本地企业 GEO 项目交付。',
-    score: 89,
-  },
-  {
-    id: 'opc-sh-001',
-    name: '李主理人',
-    city: '上海',
-    phone: '138-0011-8806',
-    wechat: 'opc_li_sh',
-    expertise_tags: ['全球电商', 'TikTok Shop', '亚马逊', '跨境电商'],
-    handledProjectCount: 4,
-    bio: '跨境电商老兵，TikTok Shop 美区单月 GMV 破 10 万美金。',
-    score: 94,
-  },
-  {
-    id: 'opc-gz-001',
-    name: '黄主理人',
-    city: '广州',
-    phone: '138-0011-8807',
-    wechat: 'opc_huang_gz',
-    expertise_tags: ['实物电商', '无货源', '淘宝', '拼多多'],
-    handledProjectCount: 3,
-    bio: '广州 13 行女装供应链资源，擅长无货源女装起店。',
-    score: 91,
-  },
-  {
-    id: 'opc-hz-001',
-    name: '张主理人',
-    city: '杭州',
-    phone: '138-0011-8808',
-    wechat: 'opc_zhang_hz',
-    expertise_tags: ['内容赛道', '小红书', '种草', '私域'],
-    handledProjectCount: 5,
-    bio: '小红书万粉 KOC 矩阵操盘手，单月最高 50 万 GMV。',
-    score: 92,
-  },
-  {
-    id: 'opc-cd-001',
-    name: '何主理人',
-    city: '成都',
-    phone: '138-0011-8809',
-    wechat: 'opc_he_cd',
-    expertise_tags: ['渠道销售', '工具销售', 'SaaS 分销'],
-    handledProjectCount: 3,
-    bio: 'AI 工具代理分销冠军，单月最高签约 200+ 客户。',
-    score: 90,
-  },
-]
-
-/**
- * 关键词与 expertise_tags 的命中度评分
- */
-function scoreMatch(maintainer: SeniorOPCMaintainer, category: string): number {
-  if (!category) return 0
-  const cat = category.toLowerCase()
-  let hit = 0
-  for (const tag of maintainer.expertise_tags) {
-    if (cat.includes(tag.toLowerCase()) || tag.toLowerCase().includes(cat)) {
-      hit += 1
-    }
+async function fetchMaintainersFromDB(category: string): Promise<CityMaintainer[]> {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  if (!supabaseUrl || !supabaseKey || supabaseUrl.includes('your_supabase')) {
+    throw new Error('Supabase not configured')
   }
-  return hit
+  const supabase = await createClient()
+  if (!supabase) {
+    throw new Error('Supabase client is null')
+  }
+
+  let query = supabase
+    .from('users')
+    .select('*')
+    .eq('role', 'CITY_MAINTAINER')
+    .eq('is_active', true)
+
+  if (category) {
+    // PG 数组包含：expertise_tags @> [category]
+    query = query.contains('expertise_tags', [category])
+  }
+
+  const { data, error } = await query
+  if (error) {
+    throw new Error(`users query failed: ${error.message}`)
+  }
+  if (!data || data.length === 0) {
+    throw new Error('No active city maintainers matched')
+  }
+
+  return data.map((u: any) => ({
+    id: u.id,
+    name: u.name || '匿名主理人',
+    city: u.city || '',
+    phone: u.phone || '',
+    wechat: u.wechat || '',
+    expertise_tags: Array.isArray(u.expertise_tags) ? u.expertise_tags : [],
+    handledProjectCount: u.handled_project_count ?? 0,
+    bio: u.bio || u.description || '该主理人暂未填写简介',
+    score: u.score ?? 80,
+  }))
 }
 
-export async function POST(request: Request) {
+// ════════════════════════════════════════════════════════════════
+// 主 handler
+// ════════════════════════════════════════════════════════════════
+async function findOPCHandler(body: FindOPCBody): Promise<FindOPCResult> {
+  const { projectId, projectCategory } = body
+
+  if (!projectId) {
+    throw new Error('缺少 projectId')
+  }
+
+  const project = getProjectById(projectId)
+  if (!project) {
+    throw new Error('项目不存在')
+  }
+
+  const category = projectCategory || project.category
+
+  // 数据源：Supabase（失败 → mock）
+  let maintainers: CityMaintainer[]
+  let source: 'supabase' | 'mock'
   try {
-    const body = (await request.json().catch(() => ({}))) as FindOPCBody
-    const { projectId, projectCategory } = body
+    maintainers = await fetchMaintainersFromDB(category)
+    source = 'supabase'
+  } catch (sbErr) {
+    console.info('[projects/find-opc] Supabase 失败，降级 mock:', sbErr)
+    maintainers = [...CITY_MAINTAINERS]
+    source = 'mock'
+  }
 
-    if (!projectId) {
-      return NextResponse.json(
-        { success: false, message: '缺少 projectId' },
-        { status: 400 }
-      )
-    }
+  // 计算匹配 + 脱敏展示
+  // 统一对所有数据源应用 scoreMatch，保证 matchScore 字段始终存在
+  const pool: MatchedMaintainer[] = maintainers.map((m) => ({
+    ...m,
+    matchScore: scoreMatch(m, category),
+  }))
+  const ranked = pool
+    .filter((m) => m.matchScore > 0)
+    .sort((a, b) => {
+      if (b.matchScore !== a.matchScore) return b.matchScore - a.matchScore
+      return b.score - a.score
+    })
+    .slice(0, 3)
 
-    const project = getProjectById(projectId)
-    if (!project) {
-      return NextResponse.json(
-        { success: false, message: '项目不存在' },
-        { status: 404 }
-      )
-    }
-
-    const category = projectCategory || project.category
-
-    // 模拟网络延迟
-    await new Promise((r) => setTimeout(r, 400))
-
-    // 计算匹配分并排序
-    const matched = CITY_MAINTAINERS.map((m) => ({
-      ...m,
-      matchScore: scoreMatch(m, category),
-    }))
-      .filter((m) => m.matchScore > 0) // 没有任何标签命中则排除
-      .sort((a, b) => {
-        if (b.matchScore !== a.matchScore) return b.matchScore - a.matchScore
-        return b.score - a.score
-      })
-      .slice(0, 3)
-
-    // 若没有任何匹配 → 返回默认兜底（保留头部 3 名资深主理人）
-    const final = matched.length > 0
-      ? matched
-      : CITY_MAINTAINERS
+  // 无任何命中时按 score 降序兜底
+  const finalPool: MatchedMaintainer[] =
+    ranked.length > 0
+      ? ranked
+      : pool
           .sort((a, b) => b.score - a.score)
           .slice(0, 3)
-          .map((m) => ({ ...m, matchScore: 0, fallback: true }))
+          .map((m) => ({ ...m, fallback: true }))
 
-    // 为前端展示脱敏微信（保留 6 位）
-    const safeForDisplay = final.map((m) => ({
-      id: m.id,
-      name: m.name,
-      city: m.city,
-      phone: m.phone,
-      wechatMasked: m.wechat.length > 4
-        ? m.wechat.slice(0, 3) + '***' + m.wechat.slice(-1)
-        : m.wechat,
-      expertise_tags: m.expertise_tags,
-      handledProjectCount: m.handledProjectCount,
-      bio: m.bio,
-      matchScore: m.matchScore,
-      fallback: (m as { fallback?: boolean }).fallback ?? false,
-    }))
+  const display = finalPool.map(toDisplay)
 
-    return NextResponse.json({
-      success: true,
-      projectId,
-      projectTitle: project.title,
-      projectCategory: category,
-      maintainers: safeForDisplay,
-      total: safeForDisplay.length,
-    })
-  } catch (err) {
-    console.error('[projects/find-opc] error:', err)
-    return NextResponse.json(
-      { success: false, message: '服务异常，请稍后再试' },
-      { status: 500 }
-    )
+  return {
+    projectId,
+    projectTitle: project.title,
+    projectCategory: category,
+    maintainers: display,
+    total: display.length,
+    source,
   }
 }
 
+// ════════════════════════════════════════════════════════════════
+// 兜底 mockBuilder（项目不存在 / 主流程异常时使用）
+// ════════════════════════════════════════════════════════════════
+function buildMockFindOPC(body: FindOPCBody): FindOPCResult {
+  const projectId = body.projectId || 'unknown'
+  const project = getProjectById(projectId)
+  const projectTitle = project?.title || projectId
+  const projectCategory = body.projectCategory || project?.category || ''
+
+  const display = rankMaintainers(projectCategory).slice(0, 3).map(toDisplay)
+  return {
+    projectId,
+    projectTitle,
+    projectCategory,
+    maintainers: display,
+    total: display.length,
+    source: 'mock',
+  }
+}
+
+// ════════════════════════════════════════════════════════════════
+// 出口
+// ════════════════════════════════════════════════════════════════
+export const POST = withSmartFallback<FindOPCBody, FindOPCResult>({
+  tag: 'projects-find-opc',
+  handler: findOPCHandler,
+  mockBuilder: buildMockFindOPC,
+})
+
+// 保留 GET 端点（与原版一致，用于接口说明）
 export async function GET() {
-  return NextResponse.json({
-    endpoint: '/api/projects/find-opc',
-    method: 'POST',
-    description: '寻找资深 OPC 主理人（按项目 category 匹配 expertise_tags）',
-    bodyExample: { projectId: 'digital-shop' },
-  })
+  return new Response(
+    JSON.stringify({
+      endpoint: '/api/projects/find-opc',
+      method: 'POST',
+      description: '寻找资深 OPC 主理人（按项目 category 匹配 expertise_tags）',
+      bodyExample: { projectId: 'digital-shop' },
+    }),
+    { headers: { 'Content-Type': 'application/json' } }
+  )
 }

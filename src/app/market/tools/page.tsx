@@ -20,38 +20,39 @@ import { MarketContent } from '@/components/market/MarketContent'
  */
 
 type TypeParam = 'trader' | 'flow' | null
+/**
+ * 4 大核心分类（思维导图新版本）
+ * 移动端横向滚动，桌面端单行展示
+ * 锚点 slug 与 MarketContent 内部 toolCategories.title 一一对应
+ */
 type SceneSlug =
-  | 'self-tools'
-  | 'shop-workspace'
-  | 'media-login'
-  | 'scene-writing'
-  | 'scene-image'
-  | 'scene-video'
+  | 'shop-group'
+  | 'self-media-tools'
+  | 'self-research'
+  | 'curated-tools'
+  | 'ai-auxiliary'
 
 const TYPE_TO_ANCHOR: Record<Exclude<TypeParam, null>, string> = {
-  trader: 'tools-category-shop-workspace',
-  flow: 'tools-category-media-login',
+  // 向后兼容旧 URL：?type=trader → 跳转网店群；?type=flow → 跳转自媒体
+  trader: 'tools-category-shop-group',
+  flow: 'tools-category-self-media-tools',
 }
 
 const TYPE_TO_HIGHLIGHT: Record<
   Exclude<TypeParam, null>,
-  'shop-workspace' | 'media-login'
+  'shop-group' | 'self-media-tools'
 > = {
-  trader: 'shop-workspace',
-  flow: 'media-login',
+  trader: 'shop-group',
+  flow: 'self-media-tools',
 }
 
-/**
- * 6 大核心分类（精简后的工具库导航）
- * 移动端横向滚动，桌面端单行展示
- */
-const SCENE_FILTERS: { slug: SceneSlug; label: string }[] = [
-  { slug: 'self-tools',     label: '自研工具' },
-  { slug: 'shop-workspace', label: '网店工作台' },
-  { slug: 'media-login',    label: '自媒体登录' },
-  { slug: 'scene-writing',  label: 'AI文案写作' },
-  { slug: 'scene-image',    label: 'AI图片创作' },
-  { slug: 'scene-video',    label: 'AI音频视频' },
+const SCENE_FILTERS: { slug: SceneSlug; label: string; anchorId?: string; useScrollIntoView?: boolean }[] = [
+  { slug: 'shop-group',       label: 'AI网店群工具' },
+  { slug: 'self-media-tools', label: 'AI自媒体工具' },
+  { slug: 'self-research',    label: 'AI自研工具' },
+  { slug: 'curated-tools',    label: 'AI严选工具' },
+  // AI 辅助工具：使用专门的 #ai-auxiliary 锚点 + scrollIntoView 平滑滚动
+  { slug: 'ai-auxiliary',     label: 'AI辅助工具', anchorId: 'ai-auxiliary', useScrollIntoView: true },
 ]
 
 const HEADER_OFFSET = 140
@@ -92,9 +93,20 @@ export default function MarketToolsPage() {
 
   /**
    * 场景胶囊点击：滚动 + 1.5s 闪烁高亮（首张卡片 ring-2）
+   * - 默认走 scrollToCategory（#tools-category-{slug}）
+   * - AI 辅助工具走专用锚点 #ai-auxiliary + scrollIntoView 平滑滚动
    */
   const handleSceneClick = useCallback(
     (slug: SceneSlug) => {
+      // AI 辅助工具 → 走专用锚点
+      if (slug === 'ai-auxiliary') {
+        const el = document.getElementById('ai-auxiliary')
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+        }
+        // 不触发高亮闪烁（子分类独立区块，没有 1.5s ring 效果）
+        return
+      }
       scrollToCategory(slug)
       setBriefHighlight(slug)
       window.setTimeout(() => setBriefHighlight(null), 1500)
@@ -169,13 +181,13 @@ export default function MarketToolsPage() {
         </section>
       )}
 
-      {/* ════════ 6 大核心分类（横向滚动 · 移动端友好）══════ */}
+      {/* ════════ 4 大核心分类（横向滚动 · 移动端友好）══════ */}
       <section className="mb-4 -mx-4">
         <div className="flex overflow-x-auto whitespace-nowrap scrollbar-hide gap-3 px-4 pb-2">
           {SCENE_FILTERS.map((s) => {
             const isActive =
               briefHighlight === s.slug ||
-              (s.slug === 'self-tools' && tabParam === 'self_tools')
+              (s.slug === 'self-research' && tabParam === 'self_tools')
             return (
               <button
                 key={s.slug}
@@ -191,16 +203,6 @@ export default function MarketToolsPage() {
               </button>
             )
           })}
-        </div>
-      </section>
-
-      {/* ════════ 数据统计胶囊（保留）══════ */}
-      <section className="mb-5 flex justify-center">
-        <div className="bg-white/80 backdrop-blur-sm px-4 py-2 rounded-full shadow-sm border border-slate-200 text-xs flex items-center gap-2 text-slate-700">
-          <span>📚</span>
-          <span className="font-medium">已收录 50+ 平台与工具</span>
-          <span className="text-slate-300">|</span>
-          <span>覆盖 4 大 OPC 赛道</span>
         </div>
       </section>
 

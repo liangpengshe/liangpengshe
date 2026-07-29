@@ -638,13 +638,13 @@ function ServiceDetail({ s }: { s: ServiceProvider }) {
 }
 
 function ResourceDetail({ r }: { r: ResourceSubmission }) {
-  const isValidCategory = ['physical-prod', 'ai-software', 'ai-hardware', 'ai-courses'].includes(r.category)
+  const isValidCategory = ['physical-prod', 'ai-self-tools', 'ai-hardware', 'opc-ecology'].includes(r.category)
   return (
     <>
       <Section title="资源简介" content={r.description} />
       <div className="grid grid-cols-2 gap-3">
         <Field
-          icon={r.category === 'physical-prod' ? Package : r.category === 'ai-hardware' ? Cpu : r.category === 'ai-courses' ? NotebookPen : BookOpen}
+          icon={r.category === 'physical-prod' ? Package : r.category === 'ai-hardware' ? Cpu : r.category === 'opc-ecology' ? NotebookPen : BookOpen}
           label="资源类别"
           value={isValidCategory ? CATEGORY_LABELS[r.category as ResourceCategory] || r.category : r.category}
         />

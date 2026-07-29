@@ -58,7 +58,7 @@ interface Props {
 
 export function ResourceSubmissionModal({ author, onClose, onSuccess }: Props) {
   const [title, setTitle] = useState('')
-  const [category, setCategory] = useState<ResourceCategory>('ai-software')
+  const [category, setCategory] = useState<ResourceCategory>('ai-self-tools')
   const [description, setDescription] = useState('')
   const [fileUrl, setFileUrl] = useState('')
   const [submitting, setSubmitting] = useState(false)
@@ -186,7 +186,7 @@ export function ResourceSubmissionModal({ author, onClose, onSuccess }: Props) {
               <ShieldCheck size={16} className="text-blue-600 mt-0.5 flex-shrink-0" />
               <div className="text-[11px] text-blue-800 leading-relaxed">
                 <strong>投稿须知：</strong>
-                仅允许投稿 4 大分类（实物产品库 / AI 自研软件库 / AI 智能硬件库 / AI 精品教程库）。
+                仅允许投稿 4 大分类（实物产品库 / AI自研工具库 / AI智能硬件库 / OPC生态资源库）。
                 数字产品库、主理人招募为系统专营，禁止投稿。
               </div>
             </div>

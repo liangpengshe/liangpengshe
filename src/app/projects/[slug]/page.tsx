@@ -20,9 +20,10 @@
  */
 'use client'
 
-import { useEffect, useMemo, useState, useRef, useCallback } from 'react'
+import { useEffect, useMemo, useState, useRef, useCallback, Suspense } from 'react'
 import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
+import AIAssistant from '@/components/AIAssistant'
 import {
   ArrowLeft,
   CheckCircle2,
@@ -117,8 +118,11 @@ const SUB_STORAGE_PREFIX = 'opc_sop_subprogress::'
 const MEMBER_LEVEL_KEY = 'membership_level'
 /** 沉浸式 SOP：免费用户可看到的主步骤上限（前面这 N 步完全免费） */
 const FREE_MAIN_STEPS = 2
-// 测试模式开关：设为 true 时可强制解锁第 4-9 步（idx >= 3）进行开发测试，上线前请设为 false
-const UNLOCK_ALL_STEPS_FOR_TESTING = true
+// 全局测试模式开关（仅开发期间调试使用）
+// - true: 所有步骤强制解锁（绕过付费拦截、isSubLocked、横幅显示）
+// - false: 走真实付费逻辑（默认生产配置）
+// - 其他店群项目（无货源/有货源/跨境/AI自媒体）不受此开关影响，由各自的 stepIdx 拦截判断
+const UNLOCK_ALL_STEPS_FOR_TESTING = false
 
 function readProgress(slug: string): number {
   if (typeof window === 'undefined') return 0
@@ -163,13 +167,31 @@ function writeSubProgress(slug: string, set: Set<string>) {
   }
 }
 
-/** 判断用户是否付费会员（69 元实操会员及以上） */
+/** 判断用户是否付费会员（69 元实操会员及以上）
+ * - 兼容旧版 key `membership_level`: paid / 69 / 599 / 1980 / 5980 / practice
+ * - 兼容新版 key `subscription_type`: MONTHLY_69 / ANNUAL_199 / LIGHT_598 / DEEP_1980 / CITY_5980
+ * - 任何已付费档位 → 第 4-9 步全部自动解锁完整 SOP
+ */
 function readIsPaidMember(): boolean {
   if (typeof window === 'undefined') return false
   try {
-    const v = (window.localStorage.getItem(MEMBER_LEVEL_KEY) || '').toLowerCase()
-    // 任意付费档位（> 0）即视为已解锁完整 SOP
-    return v === 'paid' || v === '69' || v === '599' || v === '1980' || v === '5980' || v === 'practice'
+    const memberLevel = (window.localStorage.getItem(MEMBER_LEVEL_KEY) || '').toLowerCase()
+    const subscriptionType = (window.localStorage.getItem('subscription_type') || '').toUpperCase()
+    // 旧版 membership_level 兼容
+    if (
+      memberLevel === 'paid' ||
+      memberLevel === '69' ||
+      memberLevel === '599' ||
+      memberLevel === '1980' ||
+      memberLevel === '5980' ||
+      memberLevel === 'practice'
+    ) {
+      return true
+    }
+    // 新版 subscription_type: 任何付费档位都算已解锁完整 SOP
+    const paidTypes = ['MONTHLY_69', 'ANNUAL_199', 'LIGHT_598', 'DEEP_1980', 'CITY_5980']
+    if (paidTypes.includes(subscriptionType)) return true
+    return false
   } catch {
     return false
   }
@@ -293,11 +315,14 @@ function buildSOPTasks(project: ProjectItem): SOPTask[] {
 
   // 项目 1：AI数字店群项目 (slug: ai-digital-shop-group)
   if (slug === 'ai-digital-shop-group') {
+    // [重构] 清除顶层 actionUrl/actionLabel：ai-digital-shop-group 9 步的 subSteps 全部自定义
+    // 不继承父级 actionUrl，所以父级 actionUrl/label 字段是死代码，统一清掉
+    // 避免代码维护混淆（如：第 9 步原 actionUrl=DOUYIN_REGISTER 抖店，但 UI 按钮是千牛工作台）
     const tasks = buildWithSubs(project, [
-      { id: 1, title: '第 1 步 · 开店申请', desc: '完成淘宝数字店铺入驻，提交资质并激活商品类目。', actionUrl: 'https://ishop.taobao.com/', actionLabel: '🛒 打开淘宝商家后台' },
-      { id: 2, title: '第 2 步 · 开店工具', desc: '配置阿奇索自动发货、千牛工作台等首批运营工具。', actionUrl: 'https://www.aqisuo.com/', actionLabel: '⚡ 打开阿奇索自动发货' },
+      { id: 1, title: '第 1 步 · 开店申请', desc: '完成淘宝数字店铺入驻，提交资质并激活商品类目。' },
+      { id: 2, title: '第 2 步 · 开店工具', desc: '配置阿奇索自动发货、千牛工作台等首批运营工具。' },
       ...SHARED_E_COMMERCE_STEPS,
-    ])
+    ]).map((t) => ({ ...t, actionUrl: undefined, actionLabel: undefined }))
     // 精准覆盖：仅替换第 1 步 subSteps 为开店申请专属 3 项
     // （其他项目走各自的 if 分支，此处改动不影响 ai-no-stock-shop-group / ai-stock-shop-group / ai-cross-border）
     if (tasks[0]) {
@@ -338,8 +363,7 @@ function buildSOPTasks(project: ProjectItem): SOPTask[] {
           id: '2-2',
           title: '安装店群运营插件包',
           desc: '下载并安装哈士奇、至尊宝电商插件；配置阿奇索自动发货与抖羚羊裂变工具。',
-          actionUrl: 'https://hsq.dangxun.com/',
-          actionLabel: '🦊 打开哈士奇插件',
+          // 不再单独配置主按钮：所有跳转统一由下方 extraLinks 胶囊按钮承载
           extraLinks: [
             { label: '哈士奇', href: 'https://hsq.dangxun.com/' },
             { label: '至尊宝', href: 'https://zzb.zzbtool.com' },
@@ -351,8 +375,7 @@ function buildSOPTasks(project: ProjectItem): SOPTask[] {
           id: '2-3',
           title: '开通版权检测与AI辅助',
           desc: '开通天眼查版权检测，将百度网盘、夸克网盘接入 AI 辅助工作流。',
-          actionUrl: 'https://banquan.tianyancha.com/zp',
-          actionLabel: '🛡️ 打开天眼查版权检测',
+          // 不再单独配置主按钮：所有跳转统一由下方 extraLinks 胶囊按钮承载
           extraLinks: [
             { label: '天眼查', href: 'https://banquan.tianyancha.com/zp' },
             { label: '百度网盘', href: 'https://pan.baidu.com/' },
@@ -392,6 +415,147 @@ function buildSOPTasks(project: ProjectItem): SOPTask[] {
     if (tasks[2]) {
       tasks[2].desc = '在千牛工作台完成物流模板与售后地址设置、客服接待与自动跟单配置、保证金与资金管理，并接入阿奇索自动发货工具。'
     }
+    // 精准覆盖：ai-digital-shop-group 第 4 步（精准选品）改为"3 大区块 + 1 个整体打卡"结构
+    // - subSteps 简化为 1 个虚拟打卡入口（id: 4-1），用于驱动进度推进（allDone = true）
+    // - 3 大区块（货品类型 / 选品方法 / 货品风控）+ 统一引导横幅 + 整体打卡按钮均由 JSX 专属渲染
+    // - 不再保留 3 个 subStep 列表（避免与 JSX 区块视觉重复）
+    if (tasks[3]) {
+      tasks[3].subSteps = [
+        {
+          id: '4-1',
+          title: '已完成本步所有任务（货品类型 / 选品方法 / 货品风控）',
+          desc: '点击右侧圆形选择框或下方"我已完成精准选品"按钮推进进度',
+        },
+      ]
+    }
+    // 精准覆盖：ai-digital-shop-group 第 5 步（货品上架）改为"3 大区块 + 1 个整体打卡"结构
+    // - subSteps 保留 1 个虚拟打卡入口（id: 5-1），用于驱动进度推进（allDone = true）
+    // - 3 大区块 + 整体打卡按钮由 JSX 专属渲染
+    if (tasks[4]) {
+      tasks[4].subSteps = [
+        {
+          id: '5-1',
+          title: '货品上架（已完成主图/详情/视频/价格全设置）',
+          desc: '类目已确定 · AI 内容已生成 · 公益宝贝已开启',
+        },
+      ]
+    }
+    // 精准覆盖：ai-digital-shop-group 第 7 步（客服物流）subSteps
+    // - 4 项结构：7-1 配置客服话术 / 7-2 设置自动发货（带双链接：百度网盘 + 阿奇索）/
+    //   7-3 设置售后闭环 / 7-4 商品获取渠道
+    // - 7-2 使用 extraLinks 字段复用第 2 步的"多行胶囊按钮"渲染逻辑
+    // - 其余 3 项纯文字描述，无 actionUrl/extraLinks
+    if (tasks[6]) {
+      tasks[6].subSteps = [
+        {
+          id: '7-1',
+          title: '配置客服话术',
+          desc: 'AI 智能客服 7×24 小时自动应答',
+        },
+        {
+          id: '7-2',
+          title: '设置自动发货',
+          desc: '订单全程自动化，24H 内发货。请点击下方链接配置发货工具：',
+          // 移除冗余 actionUrl/actionLabel：原"配置自动发货"主按钮已由下方
+          // extraLinks 双胶囊（百度网盘 + 阿奇索）替代，避免功能重复
+          extraLinks: [
+            { label: '百度网盘', href: 'https://pan.baidu.com/' },
+            { label: '阿奇索', href: 'https://www.agiso.com/' },
+          ],
+        },
+        {
+          id: '7-3',
+          title: '设置售后闭环',
+          desc: '退换货流程标准化，提升复购',
+        },
+        {
+          id: '7-4',
+          title: '商品获取渠道',
+          desc: '淘宝或拼多多同行店铺（现卖 / 购买会员）/ 网赚论坛（购买会员）',
+        },
+      ]
+    }
+    // 精准覆盖：ai-digital-shop-group 第 6 步（网店运营）subSteps
+    // - 4 项结构：6-1/6-2 营销设置（优惠券 + 淘金币），6-3/6-4 推广设置（全站推广 + 淘宝联盟）
+    // - 全部为纯文字描述，无 actionUrl/extraLinks
+    // - 统一外部跳转入口"📍 前往千牛工作台"在 JSX 专属渲染块中（见下方 idx === 5 守卫）
+    if (tasks[5]) {
+      tasks[5].subSteps = [
+        {
+          id: '6-1',
+          title: '营销设置 - 优惠券',
+          desc: '在千牛工作台中点击"营销"，使用营销工具设置优惠券与评价有礼。',
+        },
+        {
+          id: '6-2',
+          title: '营销设置 - 淘金币',
+          desc: '设置店铺全域折扣，使用淘金币抵扣，建议基础折扣 3%。',
+        },
+        {
+          id: '6-3',
+          title: '推广设置 - 全站推广',
+          desc: '在千牛工作台中点击"推广"，配置货品全站推广，目标全店 ROI 1:5。',
+        },
+        {
+          id: '6-4',
+          title: '推广设置 - 淘宝联盟',
+          desc: '配置淘宝联盟佣金计划，建议基础佣金 3%。',
+        },
+      ]
+    }
+    // 精准覆盖：ai-digital-shop-group 第 8 步（数据分析）subSteps
+    // - 内容取自旧 buildSubSteps 中 idx=6 的"UV/转化/爆款复盘/运营策略"模板
+    // - 8-1 携带 actionUrl 指向千牛工作台（沿用第 7 步 actionUrl="https://www.agiso.com" 之外的扩展，绑定为千牛工作台）
+    if (tasks[7]) {
+      tasks[7].subSteps = [
+        {
+          id: '8-1',
+          title: 'UV / 转化分析',
+          desc: '分析流量结构与转化漏斗',
+          actionUrl: 'https://work.taobao.com/',
+          actionLabel: '🛠️ 打开千牛工作台',
+        },
+        {
+          id: '8-2',
+          title: '爆款复盘',
+          desc: '识别 Top 20% 爆品规律',
+        },
+        {
+          id: '8-3',
+          title: '运营策略调整',
+          desc: '基于数据调整选品 + 投放 + 客服策略',
+        },
+      ]
+    }
+    // 精准覆盖：ai-digital-shop-group 第 9 步（矩阵放大）subSteps（精简版 4 项）
+    // - 4 项结构：9-1 整理 SOP 与招募成员 / 9-2 批量上架与基础配置 /
+    //   9-3 验证首店数据 / 9-4 复盘归档
+    // - 全部为纯文字描述，无 actionUrl/extraLinks
+    // - 统一外部跳转入口"📍 前往店铺后台执行配置 →"在 JSX 专属渲染块中
+    if (tasks[8]) {
+      tasks[8].subSteps = [
+        {
+          id: '9-1',
+          title: '整理 SOP 与招募成员',
+          desc: '把跑通的 SOP 整理成可复制手册，招募 1-3 位兼职或学徒，明确操作分工。',
+        },
+        {
+          id: '9-2',
+          title: '批量上架与基础配置',
+          desc: '将 SOP 复制到 3-10 个新店铺，完成店铺基础配置与选品上架。',
+        },
+        {
+          id: '9-3',
+          title: '验证首店数据',
+          desc: '收集首店数据，单店稳定收益 2000-5000 元，验证复制效果，确认 SOP 是否可规模化复制。',
+        },
+        {
+          id: '9-4',
+          title: '复盘归档',
+          desc: '将执行结果与数据记录到个人复盘库，作为后续持续复用的手册。',
+        },
+      ]
+    }
     return tasks
   }
 
@@ -424,7 +588,8 @@ function buildSOPTasks(project: ProjectItem): SOPTask[] {
 
   // 旧版兜底（已废弃 · 保留以防未知 slug）
   if (slug === 'ai-digital-shop' || slug === 'ai-no-stock-physical-shop' || slug === 'ai-branded-physical-shop') {
-    return buildWithSubs(project, SHARED_E_COMMERCE_STEPS.filter((_, idx) => idx > 0).map((s) => ({ ...s, id: idx + 1 })))
+    const filtered = SHARED_E_COMMERCE_STEPS.filter((_, idx) => idx > 0)
+    return buildWithSubs(project, filtered.map((s, idx) => ({ ...s, id: idx + 1 })))
   }
 
   // AI 自媒体运营项目 · 8 步
@@ -569,6 +734,10 @@ export default function ProjectSOPPage() {
   const [unlockStepModal, setUnlockStepModal] = useState<UnlockStepModalState>({ open: false })
   // [Task 3] ai-digital-shop-group 第 3 步：4 个子任务全部打卡后，弹出橙黄色"解锁实操会员"横幅
   const [showUnlockBanner, setShowUnlockBanner] = useState(false)
+  // [任务 2·第 9 步通关] ai-digital-shop-group 第 9 步全部完成时弹出庆祝弹窗
+  // - 与 showCelebration 分离，避免影响其他项目
+  // - localStorage 标记 'celebrated_9' 防止重复弹窗
+  const [showAiShopCelebration, setShowAiShopCelebration] = useState(false)
   const [aiCoach, setAICoach] = useState<AICoachState>({
     open: false,
     loading: false,
@@ -596,6 +765,30 @@ export default function ProjectSOPPage() {
     setIsPaidMember(readIsPaidMember())
     setMounted(true)
   }, [slug])
+
+  // [Task 2·付费状态实时同步] mounted 后异步从 /api/user/status 拉取最新订阅状态
+  // 覆盖 localStorage 的初始值，确保多端登录/支付后状态一致
+  useEffect(() => {
+    if (!mounted) return
+    let cancelled = false
+    fetch('/api/user/status', { credentials: 'include' })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (cancelled || !data) return
+        const subType: string | undefined = data?.subscriptionType || data?.subscription_type
+        if (subType) {
+          window.localStorage.setItem('subscription_type', subType)
+          // 重新计算付费状态
+          setIsPaidMember(readIsPaidMember())
+        }
+      })
+      .catch(() => {
+        // 静默失败，保持 localStorage 初始值
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [mounted])
 
   const tasks = useMemo<SOPTask[]>(() => {
     if (!project) return []
@@ -645,6 +838,22 @@ export default function ProjectSOPPage() {
       }
     }
   }, [mounted, isCompleted, slug, project?.title])
+
+  // [任务 2·第 9 步通关] ai-digital-shop-group 第 9 步全部完成时弹出专属模态框
+  // - 仅在首次完成时弹窗（localStorage 'celebrated_9' 标记）
+  // - currentStep === 9 即视为完成（与 isCompleted 等价，但更精确）
+  useEffect(() => {
+    if (!mounted) return
+    if (slug !== 'ai-digital-shop-group') return
+    if (currentStep < 9) return
+    try {
+      if (window.localStorage.getItem('celebrated_9') === '1') return
+      window.localStorage.setItem('celebrated_9', '1')
+      setShowAiShopCelebration(true)
+    } catch {
+      // 静默
+    }
+  }, [mounted, slug, currentStep])
 
   // 步骤完成后同步到后端
   const persistStep = async (completedCount: number) => {
@@ -998,7 +1207,10 @@ export default function ProjectSOPPage() {
               // 测试模式：idx >= 3 的步骤直接视为已解锁
               const isLocked = UNLOCK_ALL_STEPS_FOR_TESTING && idx >= 3 ? false : idx > currentStep
               const isExpanded = expandedStep === idx
-              const isFree = idx < FREE_MAIN_STEPS
+              // [阶段一·两段式付费闭环] ai-digital-shop-group 前 3 步全部免费可解锁
+              // - 其他项目保持原 FREE_MAIN_STEPS=2 逻辑（前 2 步免费）
+              const isFree =
+                (slug === 'ai-digital-shop-group' && idx < 3) || idx < FREE_MAIN_STEPS
               const allSubsDone = task.subSteps.every((s) => subDone.has(`step${idx}-${s.id}`))
               const completedSubsCount = task.subSteps.filter((s) => subDone.has(`step${idx}-${s.id}`)).length
 
@@ -1113,19 +1325,382 @@ export default function ProjectSOPPage() {
                     )}
                   </div>
 
-                  {/* 子步骤列表 */}
+                  {/* [Task 新增] ai-digital-shop-group 第 4 步（精准选品）专属 3 大区块渲染
+                      - 仅当 slug === 'ai-digital-shop-group' && idx === 3 时显示
+                      - 区块 A：货品类型（7 标签云 + AI 提示）
+                      - 区块 B：选品方法（4 策略 + 淘宝链接 + 付费引导横幅）
+                      - 区块 C：货品风控（企查查查商标 + 查版权 + 付费引导横幅） */}
+                  {slug === 'ai-digital-shop-group' && idx === 3 && (
+                    <div className="mb-4 flex flex-col gap-4">
+                      {/* 区块 A：货品类型（知识科普） */}
+                      <div className="rounded-xl border border-slate-200 bg-white p-4">
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="text-base">📦</span>
+                          <h4 className="text-sm font-bold text-slate-800">货品类型（知识普及）</h4>
+                        </div>
+                        <div className="flex flex-wrap gap-2 mb-3">
+                          {['学习考试', '老师教务', '网盘资料', '软件工具', '设计制作', '服务创意', '游戏卡券'].map((tag) => (
+                            <span
+                              key={tag}
+                              className="bg-slate-50/50 border border-slate-200 rounded-full px-2.5 py-1 text-xs text-slate-700"
+                            >
+                              {tag}
+                            </span>
+                          ))}
+                        </div>
+                        <div className="text-xs text-slate-500 leading-relaxed">
+                          💡 想知道每类产品具体怎么卖？可以随时点击右下角 AI 助手深入聊聊。
+                        </div>
+                      </div>
+
+                      {/* 区块 B：选品方法（策略 + 淘宝链接 + 付费引导） */}
+                      <div className="rounded-xl border border-slate-200 bg-white p-4">
+                        <div className="flex items-center gap-2 mb-3">
+                          <span className="text-base">🎯</span>
+                          <h4 className="text-sm font-bold text-slate-800">选品方法（4 大策略）</h4>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2 mb-3">
+                          {['关键词选品法', '店铺选品法', '热点选品法', '节日选品法'].map((strategy) => (
+                            <div
+                              key={strategy}
+                              className="bg-slate-50 rounded-lg p-2 text-sm text-slate-600 border border-slate-100"
+                            >
+                              {strategy}
+                            </div>
+                          ))}
+                        </div>
+                        <a
+                          href="https://www.taobao.com/"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="bg-blue-50/80 hover:bg-blue-100 border border-blue-200/50 text-blue-700 rounded-full px-4 py-1.5 text-sm flex items-center gap-2 transition-colors w-fit min-h-[36px] mb-3"
+                        >
+                          <span aria-hidden="true">🔗</span>
+                          <span>选品链接（用于实地调研）</span>
+                          <ExternalLink size={12} className="text-blue-500" />
+                        </a>
+                        {/* 统一引导横幅（合并后的"解锁完整选品与风控指南"）已移至下方"货品风控"区块之外、3 大区块容器底部 */}
+                      </div>
+
+                      {/* 区块 C：货品风控（工具 + 付费引导） */}
+                      <div className="rounded-xl border border-slate-200 bg-white p-4">
+                        <div className="flex items-center gap-2 mb-3">
+                          <span className="text-base">🛡️</span>
+                          <h4 className="text-sm font-bold text-slate-800">货品风控</h4>
+                        </div>
+                        <div className="flex flex-col gap-2 mb-3">
+                          <div className="rounded-lg border border-slate-200 p-3 bg-slate-50/50">
+                            <div className="text-sm font-medium text-slate-800 mb-1">
+                              <span className="mr-1.5" aria-hidden="true">🔗</span>查商标
+                            </div>
+                            <p className="text-xs text-slate-600 leading-relaxed mb-2">
+                              在企查查查询商品主图、详情页、标题是否被注册商标。
+                            </p>
+                            <a
+                              href="https://www.qcc.com/web_search?back=%2Fweb_searchBrand"
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1.5 bg-blue-50 hover:bg-blue-100 border border-blue-200 text-blue-700 text-xs rounded-full px-3 py-1.5 transition-colors min-h-[32px] w-fit"
+                            >
+                              <span>去企查查查商标</span>
+                              <span aria-hidden="true">→</span>
+                            </a>
+                          </div>
+                          <div className="rounded-lg border border-slate-200 p-3 bg-slate-50/50">
+                            <div className="text-sm font-medium text-slate-800 mb-1">
+                              <span className="mr-1.5" aria-hidden="true">🔗</span>查版权
+                            </div>
+                            <p className="text-xs text-slate-600 leading-relaxed mb-2">
+                              在企查查查询版权，需分段落查询。
+                            </p>
+                            <a
+                              href="https://www.qcc.com/web_searchCopyright"
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1.5 bg-blue-50 hover:bg-blue-100 border border-blue-200 text-blue-700 text-xs rounded-full px-3 py-1.5 transition-colors min-h-[32px] w-fit"
+                            >
+                              <span>去企查查查版权</span>
+                              <span aria-hidden="true">→</span>
+                            </a>
+                          </div>
+                        </div>
+                        {/* 原货品风控区块底部的琥珀色付费引导横幅（【联系导师解锁风控清单】→ /partner）已合并到下方"统一引导横幅" */}
+                      </div>
+                      {/* [重构] 第 4 步统一付费引导横幅
+                          - 位置：货品风控区块（区块 C）正下方、绿色完成按钮上方
+                          - 样式：bg-gradient-to-r from-purple-50/80 to-blue-50/80 + backdrop-blur-sm
+                          - 合并了原"蓝色前置横幅"+"黄色/紫色风控横幅"两个入口，避免视觉重复
+                          - 主按钮 69 元/月 + 副按钮 199 付费群（双排）
+                          - [Task·已付费时隐藏] 已付费用户（subscription_type 任意档位）享受完整 SOP，不再展示付费引导 */}
+                      {!isPaidMember && (
+                      <div className="bg-gradient-to-r from-purple-50/80 to-blue-50/80 border border-purple-200/50 rounded-2xl p-5 flex flex-col gap-3 mb-4 backdrop-blur-sm">
+                        <div className="text-purple-800 font-medium text-sm">
+                          🔒 进阶权益解锁区
+                        </div>
+                        <p className="text-slate-700 text-sm md:text-base leading-relaxed">
+                          具体的选品 SOP、完整选品标准清单、禁售产品库与弱版权对照表，均已整合为【良朋社完整实操包】。加入会员，带走全套选品武器。
+                        </p>
+                        <div className="flex flex-wrap gap-2 mt-1">
+                          <Link
+                            href="/pricing#plan-monthly-69"
+                            className="inline-flex items-center gap-1.5 bg-purple-600 hover:bg-purple-700 text-white px-5 py-2.5 rounded-full font-medium transition-colors min-h-[44px]"
+                          >
+                            <span aria-hidden="true">🔓</span>
+                            <span>69 元/月 解锁完整实操包</span>
+                            <span aria-hidden="true">→</span>
+                          </Link>
+                          <Link
+                            href="/pricing#plan-annual-199"
+                            className="inline-flex items-center gap-1.5 bg-white hover:bg-slate-50 border border-slate-200 text-slate-600 px-5 py-2.5 rounded-full font-medium transition-colors min-h-[44px]"
+                          >
+                            <span>了解 199 付费群权益</span>
+                            <span aria-hidden="true">→</span>
+                          </Link>
+                        </div>
+                      </div>
+                      )}
+                      {/* [Task 新增] 第 4 步整体打卡按钮（与第 5 步一致）
+                          - 替代原 3 个子任务打卡，避免与上方 3 大区块内容视觉重复
+                          - 复用 handleToggleSubStep(3, '4-1') 推进 currentStep = 4
+                          - 动态从 task.subSteps[0].id 计算 key，避免硬编码字符串 */}
+                      {(() => {
+                        const subKey = `step${idx}-${task.subSteps[0].id}`
+                        const isDone = subDone.has(subKey)
+                        return (
+                          <button
+                            type="button"
+                            onClick={() => handleToggleSubStep(idx, task.subSteps[0].id)}
+                            disabled={isDone}
+                            className={`w-full rounded-xl py-3 text-base font-medium transition-colors min-h-[48px] ${
+                              isDone
+                                ? 'bg-emerald-100 text-emerald-700 cursor-not-allowed border-2 border-emerald-300'
+                                : 'bg-emerald-500 hover:bg-emerald-600 text-white shadow-sm hover:shadow-md active:scale-[0.99]'
+                            }`}
+                          >
+                            {isDone ? '✅ 已完成精准选品 · 继续货品上架' : '我已完成精准选品'}
+                          </button>
+                        )
+                      })()}
+                    </div>
+                  )}
+
+                  {/* [Task 新增] ai-digital-shop-group 第 5 步（货品上架）专属 3 区块 + 整体打卡渲染
+                      - 仅当 slug === 'ai-digital-shop-group' && idx === 4 时显示
+                      - 区块 A：货品上架概述与类目确定（含 5 类目标签云 + 可点击复制）
+                      - 区块 B：货品参数设置（3 个 AI 工具跳转胶囊）
+                      - 区块 C：货品设置（公益宝贝 · 纯文字）
+                      - 底部："我已根据指南完成上架"整体打卡按钮（w-full emerald） */}
+                  {slug === 'ai-digital-shop-group' && idx === 4 && (
+                    <div className="mb-4 flex flex-col gap-4">
+                      {/* 区块 A：货品上架概述与类目确定 */}
+                      <div className="rounded-xl border border-slate-200 bg-white p-4">
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="text-base">📚</span>
+                          <h4 className="text-sm font-bold text-slate-800">货品上架概述与类目确定</h4>
+                        </div>
+                        <p className="text-xs text-slate-600 leading-relaxed mb-2">
+                          产品发布阶段包括确认商品类目、完善商品信息、上传商品主图等步骤。
+                        </p>
+                        <div className="text-xs text-slate-600 leading-relaxed mb-3 bg-slate-50/50 border border-slate-200 rounded-lg p-3">
+                          <div className="font-medium text-slate-700 mb-1.5">确定商品类目的两个方法：</div>
+                          <ol className="list-decimal pl-5 space-y-1">
+                            <li>使用<span className="font-bold text-blue-700">店侦探 / 电商插件</span>查看同行产品的类目</li>
+                            <li>通过搜索关键词并按销量排序，可以找到销量高的同行产品并复制其类目</li>
+                          </ol>
+                        </div>
+                        <div className="text-xs text-slate-500 mb-2 font-medium">常用类目（点击复制）：</div>
+                        <div className="flex flex-wrap gap-2">
+                          {[
+                            '教育培训',
+                            '商务/设计服务',
+                            '书籍/杂志/报纸',
+                            '个性定制/设计服务/DIY',
+                            '办公设备/耗材/相关服务',
+                          ].map((cat) => (
+                            <button
+                              key={cat}
+                              type="button"
+                              onClick={() => {
+                                try {
+                                  if (typeof navigator !== 'undefined' && navigator.clipboard) {
+                                    navigator.clipboard.writeText(cat)
+                                  }
+                                } catch {
+                                  // 静默
+                                }
+                              }}
+                              className="bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-full px-3 py-1 text-xs text-slate-700 transition-colors min-h-[28px] cursor-pointer"
+                              title="点击复制类目"
+                            >
+                              {cat}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* 区块 B：货品参数设置（用到 AI 内容工具） */}
+                      <div className="rounded-xl border border-slate-200 bg-white p-4">
+                        <div className="flex items-center gap-2 mb-3">
+                          <span className="text-base">🛠️</span>
+                          <h4 className="text-sm font-bold text-slate-800">货品参数设置（用到 AI 内容工具 ⚡️）</h4>
+                        </div>
+                        <div className="text-xs text-slate-600 leading-relaxed mb-3">
+                          需要完成的参数：<span className="font-medium text-slate-800">货品标题、货品主图、货品详情、货品视频、货品价格</span>。
+                        </div>
+                        <div className="text-xs text-slate-500 leading-relaxed mb-2 bg-amber-50 border border-amber-200/60 rounded-lg p-2.5">
+                          🤖 AI 辅助生成以上所有内容，建议跳转工具库完成：
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          <a
+                            href="https://www.baowenplus.com/"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="bg-blue-50/80 hover:bg-blue-100 border border-blue-200/50 text-blue-700 rounded-full px-4 py-1.5 text-sm flex items-center gap-2 transition-colors w-fit min-h-[36px]"
+                          >
+                            <span aria-hidden="true">🔗</span>
+                            <span>豹纹工坊（生成主图/视频）</span>
+                            <ExternalLink size={12} className="text-blue-500" />
+                          </a>
+                          <a
+                            href="https://www.lingxixai.com/"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="bg-blue-50/80 hover:bg-blue-100 border border-blue-200/50 text-blue-700 rounded-full px-4 py-1.5 text-sm flex items-center gap-2 transition-colors w-fit min-h-[36px]"
+                          >
+                            <span aria-hidden="true">🔗</span>
+                            <span>灵犀AI（写标题/详情）</span>
+                            <ExternalLink size={12} className="text-blue-500" />
+                          </a>
+                          <Link
+                            href="/market/tools"
+                            className="bg-blue-50/80 hover:bg-blue-100 border border-blue-200/50 text-blue-700 rounded-full px-4 py-1.5 text-sm flex items-center gap-2 transition-colors w-fit min-h-[36px]"
+                          >
+                            <span aria-hidden="true">📂</span>
+                            <span>前往工具库批量生成</span>
+                            <span aria-hidden="true">→</span>
+                          </Link>
+                        </div>
+                      </div>
+
+                      {/* 区块 C：货品设置（公益宝贝） */}
+                      <div className="rounded-xl border border-rose-200/60 bg-gradient-to-br from-rose-50/50 to-pink-50/50 p-4">
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="text-base">❤️</span>
+                          <h4 className="text-sm font-bold text-slate-800">货品设置（公益宝贝）</h4>
+                        </div>
+                        <p className="text-xs text-slate-700 leading-relaxed">
+                          在<span className="font-bold text-blue-700">千牛工作台</span>设置所有货品为"公益宝贝"，每单捐款 <span className="font-bold text-rose-600">0.02 元</span>。
+                          这不仅是平台权重加分项，也能为店铺积累正向口碑。
+                        </p>
+                      </div>
+
+                      {/* 整体打卡按钮：通过调用 handleToggleSubStep(idx, task.subSteps[0].id) 复用现有推进逻辑
+                          - 打卡后 subSteps 全部完成 → 触发 allDone → 推进 currentStep
+                          - 卡片外层在 isDone 时已渲染为绿色边框
+                          - 动态计算 subKey（避免硬编码 'step4-5-1'）*/}
+                      {(() => {
+                        const subKey = `step${idx}-${task.subSteps[0].id}`
+                        const isDone = subDone.has(subKey)
+                        return (
+                          <button
+                            type="button"
+                            onClick={() => handleToggleSubStep(idx, task.subSteps[0].id)}
+                            disabled={isDone}
+                            className={`w-full rounded-xl py-3 text-base font-medium transition-colors min-h-[48px] ${
+                              isDone
+                                ? 'bg-emerald-100 text-emerald-700 cursor-not-allowed border-2 border-emerald-300'
+                                : 'bg-emerald-500 hover:bg-emerald-600 text-white shadow-sm hover:shadow-md active:scale-[0.99]'
+                            }`}
+                          >
+                            {isDone ? '✅ 已完成货品上架 · 继续下一步' : '我已根据指南完成上架'}
+                          </button>
+                        )
+                      })()}
+                    </div>
+                  )}
+
+                  {/* [Task 新增] ai-digital-shop-group 第 6 步（网店运营）专属统一跳转入口
+                      - 仅当 slug === 'ai-digital-shop-group' && idx === 5 时显示
+                      - 4 个子任务全部为纯文字描述（6-1/6-2 营销 + 6-3/6-4 推广）
+                      - 子任务卡片内不再重复跳转按钮，统一在底部提供"📍 前往千牛工作台"入口
+                      - target="_blank" 新标签页打开 */}
+                  {slug === 'ai-digital-shop-group' && idx === 5 && (
+                    <div className="mt-3 mb-2">
+                      <a
+                        href="https://work.taobao.com/"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-2 bg-blue-50/80 hover:bg-blue-100 border border-blue-200/50 text-blue-700 rounded-lg px-4 py-2.5 text-sm font-bold transition-colors w-fit min-h-[40px] shadow-sm hover:shadow-md active:scale-[0.98]"
+                      >
+                        <span aria-hidden="true">📍</span>
+                        <span>前往千牛工作台</span>
+                        <ExternalLink size={12} className="text-blue-500" />
+                        <span aria-hidden="true">→</span>
+                      </a>
+                    </div>
+                  )}
+
+                  {/* [阶段三·两段式付费闭环] ai-digital-shop-group 第 9 步（矩阵放大）高阶转化引导
+                      - 位置：第 9 步卡片标题下方、子任务列表上方
+                      - 触发条件：slug === 'ai-digital-shop-group' && idx === 8
+                      - 已付费用户保留显示（鼓励升级至 1980 深度陪跑 / 5980 城市主理人） */}
+                  {slug === 'ai-digital-shop-group' && idx === 8 && (
+                    <div className="mb-4 bg-amber-50/80 border border-amber-300/50 rounded-2xl p-5 flex flex-col md:flex-row items-center justify-between gap-4">
+                      <div className="flex items-start gap-3 flex-1 min-w-0">
+                        <span className="text-2xl flex-shrink-0" aria-hidden="true">🎉</span>
+                        <p className="text-slate-700 text-sm md:text-base leading-relaxed flex-1">
+                          单店/单号闭环已跑通。现在，是时候把它变成一套可复制的 <span className="font-bold text-amber-700">SOP</span>，并把利润放大 10 倍了。
+                        </p>
+                      </div>
+                      <Link
+                        href="/pricing#plan-deep-1980"
+                        className="inline-flex items-center gap-1.5 bg-amber-500 hover:bg-amber-600 text-white text-sm font-extrabold px-5 py-2.5 rounded-lg shadow-sm hover:shadow-md active:scale-95 transition-all min-h-[44px] whitespace-nowrap shrink-0"
+                      >
+                        <span>了解深度陪跑计划</span>
+                        <span aria-hidden="true">→</span>
+                      </Link>
+                    </div>
+                  )}
+
+                  {/* [Task 新增] ai-digital-shop-group 第 9 步（矩阵放大）专属统一跳转入口
+                      - 仅当 slug === 'ai-digital-shop-group' && idx === 8 时显示
+                      - 4 个子任务全部为纯文字描述（9-1 整理 SOP/9-2 批量上架/9-3 验证首店/9-4 复盘归档）
+                      - 子任务卡片内不再重复跳转按钮，统一在底部提供"📍 前往店铺后台执行配置"入口
+                      - target="_blank" 新标签页打开 */}
+                  {slug === 'ai-digital-shop-group' && idx === 8 && (
+                    <div className="mt-3 mb-2">
+                      <a
+                        href="https://work.taobao.com/"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-2 bg-blue-50/80 hover:bg-blue-100 border border-blue-200/50 text-blue-700 rounded-lg px-4 py-2.5 text-sm font-bold transition-colors w-fit min-h-[40px] shadow-sm hover:shadow-md active:scale-[0.98]"
+                      >
+                        <span aria-hidden="true">📍</span>
+                        <span>前往店铺后台执行配置</span>
+                        <ExternalLink size={12} className="text-blue-500" />
+                        <span aria-hidden="true">→</span>
+                      </a>
+                    </div>
+                  )}
+
+                  {/* 子步骤列表
+                      - [重构] ai-digital-shop-group 第 4 步（idx=3）和第 5 步（idx=4）已通过 JSX 整体打卡按钮推进进度
+                        不再渲染 subSteps 列表，避免与上方 3 大区块 / 整体打卡按钮视觉重复
+                      - 其他步骤（1/2/3/6/7/8/9）保留 subSteps 列表渲染 */}
+                  {!(slug === 'ai-digital-shop-group' && (idx === 3 || idx === 4)) && (
                   <div className="mt-5 flex flex-col gap-2">
                     {task.subSteps.map((sub, subIdx) => {
                       const subKey = `step${idx}-${sub.id}`
                       const subChecked = subDone.has(subKey)
                       // 付费门控：未付费 + 超出免费配额 = 锁定
                       // [Task 2] 例外：ai-digital-shop-group 第 3 步（idx=2）允许打卡
+                      // [阶段一·两段式付费闭环] 扩展为 ai-digital-shop-group 前 3 步（idx<3）均不锁
                       // [测试模式] 例外：idx >= 3 的步骤强制解锁
                       const isSubLocked =
                         !UNLOCK_ALL_STEPS_FOR_TESTING &&
                         !isPaidMember &&
                         idx >= FREE_MAIN_STEPS &&
-                        !(slug === 'ai-digital-shop-group' && idx === 2)
+                        !(slug === 'ai-digital-shop-group' && idx < 3)
                       return (
                         <div
                           key={sub.id}
@@ -1339,20 +1914,11 @@ export default function ProjectSOPPage() {
                         )
                       })()}
                   </div>
+                  )}
 
-                  {/* 任务 3：一键召唤 AI 私教入口（任务卡片底部 · 右侧） */}
-                  <div className="mt-4 flex items-center justify-end">
-                    <button
-                      type="button"
-                      onClick={() => openAIAssistantForTask(idx)}
-                      className="inline-flex items-center gap-1.5 text-[11px] md:text-xs font-bold text-violet-700 hover:text-white bg-violet-50 hover:bg-gradient-to-r hover:from-violet-500 hover:to-purple-600 border border-violet-200 hover:border-transparent px-2.5 py-1.5 rounded-full transition-all min-h-[32px] shadow-sm hover:shadow-md active:scale-95"
-                      aria-label="咨询AI教练"
-                      title="召唤 AI 私教，针对此步骤给你实操答疑"
-                    >
-                      <MessageSquare size={12} />
-                      <span>咨询AI教练</span>
-                    </button>
-                  </div>
+                  {/* 原"咨询AI教练"按钮已移除（任务 1）：
+                      改由右下角 AIAssistant 全局悬浮球统一负责唤起入口。
+                      移除后不再有 per-card 按钮，避免视觉冗余。 */}
 
                   {/* 主步骤完成时的反馈条 */}
                   {isDone && allSubsDone && (
@@ -1554,6 +2120,60 @@ export default function ProjectSOPPage() {
                   </button>
                 </div>
               </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ════════ [任务 2·第 9 步通关] ai-digital-shop-group 通关庆祝模态框 ═══════
+          - 触发：currentStep === 9 && localStorage.celebrated_9 未标记
+          - 样式：半透明遮罩 + 白卡居中 + 阴影 2xl
+          - 跳转：/workspace
+          - 严格隔离：仅 ai-digital-shop-group 渲染 */}
+      <AnimatePresence>
+        {showAiShopCelebration && slug === 'ai-digital-shop-group' && (
+          <motion.div
+            key="ai-shop-celebration"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
+            onClick={() => setShowAiShopCelebration(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.85, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.85, y: 20 }}
+              transition={{ type: 'spring', stiffness: 300, damping: 24 }}
+              className="bg-white rounded-2xl shadow-2xl p-6 max-w-md w-full mx-auto text-center"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="text-5xl mb-3" aria-hidden="true">🏆</div>
+              <h3 className="text-xl md:text-2xl font-extrabold text-slate-900 leading-tight">
+                恭喜你正式完成【AI 数字店群项目】所有 SOP！
+              </h3>
+              <p className="mt-3 text-slate-600 text-sm md:text-base leading-relaxed">
+                你已具备一人公司的 AI 网店群基础操盘能力。
+              </p>
+              <Link
+                href="/workspace"
+                onClick={() => setShowAiShopCelebration(false)}
+                className="mt-5 inline-flex items-center gap-2 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white font-bold text-sm px-5 py-2.5 rounded-full shadow-md hover:shadow-lg active:scale-95 transition-all min-h-[44px] whitespace-nowrap"
+              >
+                <span>前往工作台看收入数据</span>
+                <span aria-hidden="true">→</span>
+              </Link>
+              {/* [重构] 生成 7 天执行清单按钮（仅 ai-digital-shop-group） */}
+              <button
+                type="button"
+                onClick={() => {
+                  setShowAiShopCelebration(false)
+                  router.push('/workspace?project=ai-digital-shop-group')
+                }}
+                className="mt-3 block mx-auto text-xs md:text-sm font-bold text-slate-600 hover:text-blue-700 bg-white hover:bg-blue-50 border border-slate-200 hover:border-blue-200 px-4 py-2 rounded-full transition-colors min-h-[40px]"
+              >
+                <span aria-hidden="true">🗓️</span> 生成我的 7 天执行清单 →
+              </button>
             </motion.div>
           </motion.div>
         )}
@@ -1857,6 +2477,11 @@ export default function ProjectSOPPage() {
           </Link>
         </div>
       </div>
+
+      {/* ════════ AI 专家悬浮球 + 找专家预约模态框（[修复] 之前项目页未引入导致悬浮球不可见）══════ */}
+      <Suspense fallback={null}>
+        <AIAssistant />
+      </Suspense>
     </div>
   )
 }

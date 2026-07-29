@@ -1258,9 +1258,9 @@ export default function LevelGuidePage() {
                 </div>
               </div>
 
-              {/* 199 智富会员快捷入口（任务 2B） */}
+              {/* 智富会员快捷入口（任务 3：统一引导至 /pricing#plan-monthly-69） */}
               <Link
-                href="/join"
+                href="/pricing#plan-monthly-69"
                 className="group block rounded-xl bg-amber-50/50 border border-amber-200 hover:bg-amber-50 hover:border-amber-300 hover:shadow-md transition-all p-4"
               >
                 <div className="flex items-start gap-3">
@@ -1274,7 +1274,7 @@ export default function LevelGuidePage() {
                     </div>
                   </div>
                   <span className="flex-shrink-0 inline-flex items-center gap-1 h-8 px-3 rounded-full bg-amber-500 text-white text-xs font-bold group-hover:bg-amber-600 transition-colors whitespace-nowrap">
-                    了解 199 元/年 会员权益
+                    查看月度会员方案
                     <ArrowRight size={12} className="group-hover:translate-x-0.5 transition-transform" />
                   </span>
                 </div>

@@ -15,12 +15,13 @@ const cities = [
 export const CITY_STORAGE_KEY = 'lps.selectedCity'
 const CITY_CHANGE_EVENT = 'lps:cityChanged'
 
-// 各城市站首页路由映射
+// 各城市站首页路由映射（W4.1 演进：统一收口到 /city/[slug]）
+// 深圳站为主站，/city/shenzhen 同样有效（重定向到 /）
 const CITY_HOMEPAGE: Record<string, string> = {
   shenzhen: '/',
-  wuhai: '/wuhai',
-  dongguan: '/dongguan',
-  liuzhou: '/liuzhou',
+  wuhai: '/city/wuhai',
+  dongguan: '/city/dongguan',
+  liuzhou: '/city/liuzhou',
 }
 
 function readPersistedCity(): typeof cities[number] {

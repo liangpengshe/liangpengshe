@@ -56,7 +56,7 @@ const STAGE_META: Record<UserStageKey, { icon: LucideIcon; href: string }> = {
 
 const STAGE_DESC: Record<UserStageKey, string> = {
   diagnosis: '完成 4 问 AI 对话，定位四层阶梯',
-  learning: '通哥 SOP + AI 智能体矩阵',
+  learning: '良朋社 SOP + AI 智能体矩阵',
   operation: '工具落地 · 跑通首单',
   scaling: '城市分站 · 资产复制',
 }

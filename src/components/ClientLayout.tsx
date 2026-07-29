@@ -1,13 +1,29 @@
 'use client'
 
-import { useState, useEffect, useCallback, Suspense } from 'react'
+import { useState, useEffect, useCallback, useRef, Suspense } from 'react'
 import { useRouter } from 'next/navigation'
 import CitySelector, { CITY_STORAGE_KEY } from '@/components/CitySelector'
 import Link from 'next/link'
-import { Lock, ArrowRight, Target, Wrench, CheckCircle2, Sparkles, UserCircle } from 'lucide-react'
+import {
+  Lock,
+  ArrowRight,
+  Target,
+  Wrench,
+  CheckCircle2,
+  Sparkles,
+  UserCircle,
+  Brain,
+  Rocket,
+  LogIn,
+  UserPlus,
+  Settings,
+  LogOut,
+  ChevronDown,
+} from 'lucide-react'
 import MobileBottomNav from '@/components/MobileBottomNav'
 import AIAssistant from '@/components/AIAssistant'
 import MobileHamburgerMenu from '@/components/MobileHamburgerMenu'
+import { createClient } from '@/lib/supabase/client'
 
 /**
  * 工作台前置条件检查
@@ -31,6 +47,16 @@ function checkWorkspaceAllowed(): boolean {
   return false
 }
 
+/** 头像首字符：从 email / phone 提取 */
+function getAvatarLabel(user: { email?: string | null; phone?: string | null } | null): string {
+  if (!user) return '?'
+  const raw = (user.email || user.phone || '').trim()
+  if (!raw) return 'U'
+  // 取 @ 前第一个字符，或首字符
+  const head = raw.split('@')[0] || raw
+  return head.charAt(0).toUpperCase()
+}
+
 export default function ClientLayout({
   children,
 }: {
@@ -42,6 +68,16 @@ export default function ClientLayout({
 
   // 「工作台前置拦截」模态框状态
   const [workspaceGuardOpen, setWorkspaceGuardOpen] = useState(false)
+
+  // 登录态：null=加载中/未登录，object=已登录
+  const [authUser, setAuthUser] = useState<{
+    id: string
+    email?: string | null
+    phone?: string | null
+  } | null>(null)
+  const [authLoading, setAuthLoading] = useState(true)
+  const [avatarOpen, setAvatarOpen] = useState(false)
+  const avatarRef = useRef<HTMLDivElement | null>(null)
 
   // 从 localStorage 读取当前城市，hydrate 后展示在 logo 旁
   useEffect(() => {
@@ -65,18 +101,114 @@ export default function ClientLayout({
     return () => window.removeEventListener('lps:cityChanged', onChange)
   }, [])
 
+  // 读取 Supabase 登录态
+  useEffect(() => {
+    let mounted = true
+    let unsub: (() => void) | null = null
+    try {
+      const supabase: any = createClient()
+      if (!supabase) {
+        if (mounted) {
+          setAuthUser(null)
+          setAuthLoading(false)
+        }
+        return
+      }
+      // 初次拉取
+      supabase.auth
+        .getUser()
+        .then((resp: { data: { user: any } | null }) => {
+          if (!mounted) return
+          const u = resp?.data?.user
+          if (u) {
+            setAuthUser({
+              id: u.id,
+              email: u.email ?? null,
+              phone: u.phone ?? null,
+            })
+          } else {
+            setAuthUser(null)
+          }
+          setAuthLoading(false)
+        })
+        .catch(() => {
+          if (mounted) {
+            setAuthUser(null)
+            setAuthLoading(false)
+          }
+        })
+      // 订阅 auth 变化（登录/登出/刷新）
+      const sub = supabase.auth.onAuthStateChange(
+        (_event: string, session: { user: any } | null) => {
+          if (!mounted) return
+          const u = session?.user
+          if (u) {
+            setAuthUser({
+              id: u.id,
+              email: u.email ?? null,
+              phone: u.phone ?? null,
+            })
+          } else {
+            setAuthUser(null)
+          }
+        }
+      )
+      unsub = () => sub?.data?.subscription?.unsubscribe?.()
+    } catch (e) {
+      // 容错降级
+      if (mounted) {
+        setAuthUser(null)
+        setAuthLoading(false)
+      }
+    }
+    return () => {
+      mounted = false
+      if (unsub) unsub()
+    }
+  }, [])
+
+  // 点击头像外侧关闭 dropdown
+  useEffect(() => {
+    if (!avatarOpen) return
+    const onClick = (e: MouseEvent) => {
+      if (avatarRef.current && !avatarRef.current.contains(e.target as Node)) {
+        setAvatarOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', onClick)
+    return () => document.removeEventListener('mousedown', onClick)
+  }, [avatarOpen])
+
   /** 工作台点击：前置检查 + 拦截/放行 */
   const handleWorkspaceClick = useCallback(
     (e: React.MouseEvent<HTMLAnchorElement | HTMLButtonElement>) => {
       e.preventDefault()
       if (checkWorkspaceAllowed()) {
-        router.push('/workspace')
+        router.push('/workspace', { scroll: false })
       } else {
         setWorkspaceGuardOpen(true)
       }
     },
     [router]
   )
+
+  /** 退出登录 */
+  const handleSignOut = useCallback(async () => {
+    setAvatarOpen(false)
+    try {
+      const supabase = createClient()
+      if (supabase) {
+        await supabase.auth.signOut()
+      }
+    } catch {
+      // 静默降级
+    }
+    // 清理本地用户态
+    setAuthUser(null)
+    router.push('/auth/login', { scroll: false })
+  }, [router])
+
+  const isAuthenticated = !!authUser
 
   return (
     <div className="max-w-lg mx-auto md:max-w-7xl min-h-screen relative" suppressHydrationWarning>
@@ -101,31 +233,140 @@ export default function ClientLayout({
           </Link>
           <div className="flex items-center gap-2 md:gap-3">
             <CitySelector />
-            {/* 移动端：仅显示汉堡菜单（进化项 2.2） */}
-            <MobileHamburgerMenu onWorkspaceClick={handleWorkspaceClick} />
+            {/* 移动端：仅显示汉堡菜单 */}
+            <MobileHamburgerMenu
+              onWorkspaceClick={handleWorkspaceClick}
+              isAuthenticated={isAuthenticated}
+              authUser={authUser}
+              onSignOut={handleSignOut}
+            />
+
+            {/* ════════ PC 端 · 登录态分支渲染 ════════ */}
             <div className="hidden md:flex items-center gap-3">
+              {/* 🧠 智富思维 · 双引擎 OPC 心法（登录/未登录都显示） */}
               <Link
-                href="/member"
-                className="text-sm font-medium text-slate-600 hover:text-blue-600 transition-colors flex items-center gap-1"
-                data-testid="nav-personal-center"
+                href="/mindset"
+                className="text-sm font-medium text-slate-600 hover:text-amber-600 transition-colors flex items-center gap-1"
+                data-testid="nav-mindset"
               >
-                <UserCircle size={16} className="text-slate-500" />
-                个人中心
+                <Brain size={16} className="text-amber-500" />
+                智富思维
               </Link>
-              <button
-                type="button"
-                onClick={handleWorkspaceClick}
-                className="text-sm font-bold text-blue-700 hover:text-blue-800 transition-colors flex items-center gap-1"
-                data-testid="workspace-link"
-              >
-                🚀 我的工作台
-              </button>
-              <Link href="/auth/login" className="text-sm text-gray-600 hover:text-blue-600 transition-colors">
-                登录
-              </Link>
-              <Link href="/auth/signup" className="text-sm bg-blue-600 text-white px-3 py-1.5 rounded-lg hover:bg-blue-700 transition-colors">
-                注册
-              </Link>
+
+              {!authLoading && isAuthenticated && (
+                <>
+                  {/* 🚀 我的工作台 + 呼吸灯角标（提醒有进展） */}
+                  <button
+                    type="button"
+                    onClick={handleWorkspaceClick}
+                    className="relative text-sm font-bold text-blue-700 hover:text-blue-800 transition-colors flex items-center gap-1"
+                    data-testid="workspace-link"
+                  >
+                    🚀 我的工作台
+                    <span
+                      className="absolute -top-1 -right-2 w-2 h-2 rounded-full bg-green-500 animate-pulse shadow-[0_0_6px_rgba(34,197,94,0.7)]"
+                      aria-label="有新进展"
+                      data-testid="workspace-pulse"
+                    />
+                  </button>
+
+                  {/* 👤 头像 + hover/click 下拉菜单 */}
+                  <div
+                    ref={avatarRef}
+                    className="relative"
+                    data-testid="avatar-menu-wrapper"
+                  >
+                    <button
+                      type="button"
+                      onClick={() => setAvatarOpen((o) => !o)}
+                      className="flex items-center gap-1.5 rounded-full pl-1 pr-2 py-1 hover:bg-slate-100 active:bg-slate-200 transition-colors"
+                      aria-label="用户菜单"
+                      aria-expanded={avatarOpen}
+                      data-testid="avatar-button"
+                    >
+                      <span className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 text-white text-sm font-extrabold flex items-center justify-center shadow-sm border border-white">
+                        {getAvatarLabel(authUser)}
+                      </span>
+                      <ChevronDown
+                        size={14}
+                        className={`text-slate-500 transition-transform ${
+                          avatarOpen ? 'rotate-180' : ''
+                        }`}
+                      />
+                    </button>
+
+                    {/* 下拉菜单 */}
+                    {avatarOpen && (
+                      <div
+                        className="absolute top-full right-0 mt-2 w-48 bg-white rounded-xl shadow-lg border border-slate-200 p-1.5 z-50"
+                        data-testid="avatar-dropdown"
+                        role="menu"
+                      >
+                        {/* 用户信息 */}
+                        <div className="px-3 py-2 border-b border-slate-100 mb-1">
+                          <div className="text-[10px] font-extrabold text-slate-400 tracking-wider uppercase">
+                            当前账号
+                          </div>
+                          <div className="text-xs font-bold text-slate-700 truncate mt-0.5">
+                            {authUser?.email || authUser?.phone || 'OPC 会员'}
+                          </div>
+                        </div>
+
+                        <Link
+                          href="/member"
+                          onClick={() => setAvatarOpen(false)}
+                          className="block px-3 py-2 hover:bg-slate-50 rounded-lg text-sm text-slate-700 flex items-center gap-2"
+                          data-testid="dropdown-member"
+                        >
+                          <UserCircle size={14} className="text-slate-500" />
+                          个人中心
+                        </Link>
+                        <Link
+                          href="/pricing"
+                          onClick={() => setAvatarOpen(false)}
+                          className="block px-3 py-2 hover:bg-slate-50 rounded-lg text-sm text-slate-700 flex items-center gap-2"
+                          data-testid="dropdown-settings"
+                        >
+                          <Settings size={14} className="text-slate-500" />
+                          订阅管理
+                        </Link>
+
+                        <div className="h-px bg-slate-200 my-1" />
+
+                        <button
+                          type="button"
+                          onClick={handleSignOut}
+                          className="block w-full text-left px-3 py-2 hover:bg-rose-50 rounded-lg text-sm text-rose-600 flex items-center gap-2"
+                          data-testid="dropdown-signout"
+                        >
+                          <LogOut size={14} />
+                          退出登录
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
+
+              {!authLoading && !isAuthenticated && (
+                <>
+                  {/* 未登录态：登录（白色描边）+ 注册（蓝紫渐变实体） */}
+                  <Link
+                    href="/auth/login"
+                    className="text-sm font-bold text-slate-700 bg-white border border-slate-300 px-3.5 py-1.5 rounded-lg hover:bg-slate-50 hover:border-slate-400 transition-colors"
+                    data-testid="nav-login"
+                  >
+                    登录
+                  </Link>
+                  <Link
+                    href="/auth/signup"
+                    className="text-sm font-extrabold text-white bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 px-3.5 py-1.5 rounded-lg shadow-sm hover:shadow-md transition-all"
+                    data-testid="nav-signup"
+                  >
+                    注册
+                  </Link>
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -137,17 +378,17 @@ export default function ClientLayout({
         <AIAssistant />
       </Suspense>
 
-      {/* ════════ 工作台前置拦截模态框 ═══════ */}
+      {/* ════════ 工作台前置拦截模态框 ════════ */}
       {workspaceGuardOpen && (
         <WorkspaceGuardModal
           onClose={() => setWorkspaceGuardOpen(false)}
           onGoDiagnosis={() => {
             setWorkspaceGuardOpen(false)
-            router.push('/diagnosis')
+            router.push('/diagnosis', { scroll: false })
           }}
           onBypass={() => {
             setWorkspaceGuardOpen(false)
-            router.push('/workspace?bypass=true')
+            router.push('/workspace?bypass=true', { scroll: false })
           }}
         />
       )}

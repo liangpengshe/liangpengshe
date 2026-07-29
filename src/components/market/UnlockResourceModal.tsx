@@ -11,7 +11,7 @@
  *       内容：此数字产品库专为进入【运营实操】阶段的用户准备
  *       按钮：左侧"去升级会员" + 右侧"去完成学习任务"
  *
- *   - 'member-only'（AI 精品教程库等）：
+ *   - 'member-only'（OPC 生态资源库等）：
  *       标题：🔒 会员专享
  *       内容：此教程库仅限 199 良朋社会员 及 1980 陪跑会员专享
  *       按钮：左侧"去升级会员"
@@ -277,9 +277,9 @@ export function UnlockResourceModal({
                 </button>
               </div>
             ) : (
-              // member-only 单按钮
+              // member-only 单按钮（统一跳 /pricing 收银台）
               <Link
-                href="/member"
+                href="/pricing"
                 onClick={onClose}
                 className="w-full flex items-center justify-center gap-2 py-3 bg-gradient-to-r from-rose-500 via-pink-500 to-fuchsia-600 text-white text-sm font-extrabold rounded-xl shadow-md hover:shadow-lg transition-all"
               >

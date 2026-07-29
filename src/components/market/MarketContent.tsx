@@ -41,7 +41,6 @@ import { resourceItems, type ResourceItem } from '@/data/resource-items'
 import { FindSeniorOPCModal } from '@/components/market/FindSeniorOPCModal'
 import { CollaborationMatchModal } from '@/components/market/CollaborationMatchModal'
 import { UnlockResourceModal } from '@/components/market/UnlockResourceModal'
-import { UGCSubmissionSection } from '@/components/market/UGCSubmissionSection'
 import {
   ResourceSubmissionModal,
   NeedLoginToSubmitModal,
@@ -71,11 +70,11 @@ import { MARKET_SEARCH_STORAGE_KEY, MARKET_SEARCH_EVENT } from '@/lib/market-sea
  *   3. AI智富项目库
  *   4. AI智富资源库
  *
- * 工具库内部分为 4 大子分类：
- *   - AI网店工作台（电商后台入口）
- *   - AI自媒体登录页（内容平台创作者入口）
- *   - AI网店运营工具（数据/物流/裂变）
- *   - AI内容生成工具（AI 创作生产力）
+ * 工具库内部分为 4 大顶级分类（2026-07 新思维导图）：
+ *   1. AI 网店群工具（含子分类：AI 网店工作台 / AI 店群运营工具）
+ *   2. AI 自媒体工具（含子分类：AI 自媒体登录页 / AI 自媒体运营工具）
+ *   3. AI 自研工具（豹纹PLUS / 先锋派数字人 / 灵犀AI · 直接平铺）
+ *   4. AI 严选工具（含 6 大子分类：写作/美工/音视频/智能体/编码/辅助）
  * ------------------------------------------------------------
  */
 
@@ -100,28 +99,22 @@ interface Platform {
   scene?: 'writing' | 'image' | 'video' | 'coding'
 }
 
-/** 8 个 tool 子分类的稳定 slug（用于锚点 + URL 参数） */
+/** 4 个 tool 顶级分类的稳定 slug（用于锚点 + URL 参数） */
 type ToolSlug =
-  | 'self-tools'
-  | 'shop-workspace'
-  | 'media-login'
-  | 'shop-ops'
-  | 'daily-tools'
-  | 'scene-writing'
-  | 'scene-image'
-  | 'scene-video'
-  | 'scene-coding'
+  | 'shop-group'
+  | 'self-media-tools'
+  | 'self-research'
+  | 'curated-tools'
 
 const TOOL_SLUG_MAP: Record<string, ToolSlug> = {
-  '自研工具': 'self-tools',
-  'AI 网店工作台': 'shop-workspace',
-  'AI 自媒体登录页': 'media-login',
-  'AI 网店运营工具': 'shop-ops',
-  '日常工具': 'daily-tools',
-  'AI 文案写作': 'scene-writing',
-  'AI 图片创作': 'scene-image',
-  'AI 音频视频': 'scene-video',
-  'AI 智能体与编程': 'scene-coding',
+  'AI网店群工具': 'shop-group',
+  'AI自媒体工具': 'self-media-tools',
+  'AI自研工具': 'self-research',
+  'AI严选工具': 'curated-tools',
+  // 向后兼容旧 URL：?type=trader → 跳转网店群；?type=flow → 跳转自媒体
+  'AI 网店工作台': 'shop-group',
+  'AI 自媒体登录页': 'self-media-tools',
+  '自研工具': 'self-research',
 }
 
 interface ToolCategory {
@@ -130,125 +123,207 @@ interface ToolCategory {
   emoji: string
   /** 分类副标题 */
   subtitle: string
-  platforms: Platform[]
+  /**
+   * 顶级分类直接平铺的卡片（与 subCategories 二选一）
+   * 适用：AI自研工具（豹纹+ / 先锋派 / 灵犀）、AI严选工具（按 6 大子分类分组展示）
+   */
+  platforms?: Platform[]
+  /**
+   * 子分类列表
+   * 顶级分类为聚合入口（如「AI网店群工具」「AI自媒体工具」）时使用
+   * 内部会渲染小标题 + 卡片网格
+   */
+  subCategories?: Array<{
+    title: string
+    emoji: string
+    subtitle: string
+    platforms: Platform[]
+  }>
 }
 
 const toolCategories: ToolCategory[] = [
+  // ════════ 1. AI 网店群工具（聚合：AI 网店工作台 + AI 店群运营工具）══════
   {
-    title: '自研工具',
-    emoji: '🧬',
-    subtitle: 'OPC 独家自研 · 豹纹工坊（豹纹+） / 灵犀 AI / 先锋派数字人',
-    platforms: [
-      { name: '豹纹工坊（豹纹+）', url: 'https://www.baowenplus.com', description: 'AI 自媒体内容生成 · 豹纹+', icon: '🐆', tag: '独家' },
-      { name: '灵犀 AI', url: 'https://www.lingxixai.com', description: '智能内容创作助手', icon: '🦊', tag: '热门' },
-      { name: '先锋派数字人', url: 'https://www.xianfengpai.com.cn', description: 'AI 数字人视频生成', icon: '🎬', tag: '爆款' },
-    ],
-  },
-  {
-    title: 'AI 网店工作台',
+    title: 'AI网店群工具',
     emoji: '🏪',
-    subtitle: '一站直达各大电商平台商家后台',
-    platforms: [
-      { name: '淘宝商家后台', url: 'https://ishop.taobao.com/openshop/tb_open_shop_landing.htm', description: '国内领先电商开店', icon: '🛒', tag: '开店注册' },
-      { name: '拼多多商家后台', url: 'https://mms.pinduoduo.com/login/register?redirectUrl=https%3A%2F%2Fmms.pinduoduo.com%2Fhome%2F', description: '拼多多商家入驻', icon: '🍎', tag: '开店注册' },
-      { name: '小红书开店', url: 'https://zhaoshang.xiaohongshu.com/merchant/login?settleFrom=login_page_pc', description: '小红书商家入驻', icon: '📕', tag: '开店注册' },
-      { name: '抖店', url: 'https://fxg.jinritemai.com/', description: '抖音电商后台', icon: '🎵', tag: '开店注册' },
-      { name: '视频号小店', url: 'https://channels.weixin.qq.com/login.html', description: '微信视频号小店', icon: '💬', tag: '开店注册' },
-      { name: '亚马逊全球开店', url: 'https://sellercentral.amazon.com', description: '全球开店出海', icon: '📦', tag: '出海' },
+    subtitle: '电商开店 + 店群运营 · 一站直达',
+    subCategories: [
+      {
+        title: 'AI网店工作台',
+        emoji: '🛒',
+        subtitle: '各大电商平台商家后台 · 开店 / 入驻',
+        platforms: [
+          { name: '淘宝商家后台', url: 'https://ishop.taobao.com/openshop/tb_open_shop_landing.htm', description: '国内领先电商开店', icon: '🛒', tag: '开店注册' },
+          { name: '拼多多商家后台', url: 'https://mms.pinduoduo.com/login/register?redirectUrl=https%3A%2F%2Fmms.pinduoduo.com%2Fhome%2F', description: '拼多多商家入驻', icon: '🍎', tag: '开店注册' },
+          { name: '小红书开店', url: 'https://zhaoshang.xiaohongshu.com/merchant/login?settleFrom=login_page_pc', description: '小红书商家入驻', icon: '📕', tag: '开店注册' },
+          { name: '抖店', url: 'https://fxg.jinritemai.com/', description: '抖音电商后台', icon: '🎵', tag: '开店注册' },
+          { name: '视频号小店', url: 'https://channels.weixin.qq.com/login.html', description: '微信视频号小店', icon: '💬', tag: '开店注册' },
+          { name: '亚马逊全球开店', url: 'https://sellercentral.amazon.com', description: '全球开店出海', icon: '📦', tag: '出海' },
+        ],
+      },
+      {
+        title: 'AI店群运营工具',
+        emoji: '🛠️',
+        subtitle: '数据分析 / 自动发货 / 裂变引流',
+        platforms: [
+          { name: '店侦探', url: 'https://www.dianzhentan.com', description: '电商数据分析', icon: '🕵️', tag: '热门' },
+          { name: '阿奇索自动发货', url: 'https://www.agiso.com/', description: '自动发货系统', icon: '⚡' },
+          { name: '抖羚羊', url: 'https://www.doulingyang.com', description: '裂变引流工具', icon: '🚀', tag: '推荐' },
+          { name: '哈士奇电商插件', url: 'https://hsq.dangxun.com/', description: '电商浏览器插件', icon: '🐺' },
+          { name: '至尊宝电商工具', url: 'https://tool.zzbtool.com/index.html#/index', description: '多功能运营工具', icon: '👑' },
+          { name: '版权著作权检测', url: 'https://banquan.tianyancha.com/zp', description: '版权查询', icon: '©️' },
+        ],
+      },
     ],
   },
+  // ════════ 2. AI 自媒体工具（聚合：AI 自媒体登录页 + AI 自媒体运营工具）══════
   {
-    title: 'AI 自媒体登录页',
+    title: 'AI自媒体工具',
     emoji: '📱',
-    subtitle: '主流内容平台创作者中心一键直达',
-    platforms: [
-      { name: '抖音创作者中心', url: 'https://creator.douyin.com', description: '发布短视频', icon: '🎵' },
-      { name: '小红书创作者中心', url: 'https://creator.xiaohongshu.com', description: '图文笔记', icon: '📕' },
-      { name: '头条号', url: 'https://www.toutiao.com/', description: '字节内容分发', icon: '📰' },
-      { name: '百家号', url: 'https://baijiahao.baidu.com/builder/theme/bjh/login', description: '百度创作平台', icon: '🔍' },
-      { name: '知乎', url: 'https://www.zhihu.com/signin?next=%2F', description: '问答社区', icon: '💡' },
-      { name: '微信公众号', url: 'https://mp.weixin.qq.com/cgi-bin/registermidpage?action=index', description: '微信公众平台', icon: '💬' },
-      { name: '快手', url: 'https://www.kuaishou.com/new-reco', description: '快手内容平台', icon: '⚡' },
+    subtitle: '内容平台登录 + 自媒体运营 · 一站直达',
+    subCategories: [
+      {
+        title: 'AI自媒体登录页',
+        emoji: '🔗',
+        subtitle: '主流内容平台创作者中心一键直达',
+        platforms: [
+          { name: '抖音创作者中心', url: 'https://creator.douyin.com', description: '发布短视频', icon: '🎵' },
+          { name: '小红书创作者中心', url: 'https://creator.xiaohongshu.com', description: '图文笔记', icon: '📕' },
+          { name: '头条号', url: 'https://www.toutiao.com/', description: '字节内容分发', icon: '📰' },
+          { name: '百家号', url: 'https://baijiahao.baidu.com/builder/theme/bjh/login', description: '百度创作平台', icon: '🔍' },
+          { name: '知乎', url: 'https://www.zhihu.com/signin?next=%2F', description: '问答社区', icon: '💡' },
+          { name: '微信公众号', url: 'https://mp.weixin.qq.com/cgi-bin/registermidpage?action=index', description: '微信公众平台', icon: '💬' },
+          { name: '快手', url: 'https://www.kuaishou.com/new-reco', description: '快手内容平台', icon: '⚡' },
+        ],
+      },
+      {
+        title: 'AI自媒体运营工具',
+        emoji: '🎬',
+        subtitle: '内容生成 / 选题规划 / 矩阵分发',
+        platforms: [
+          { name: '创客贴', url: 'https://www.chuangkit.com/', description: '封面图/海报模板', icon: '🎨' },
+          { name: '剪映专业版', url: 'https://www.capcut.cn/', description: 'AI 剪辑一键成片', icon: '🎬' },
+          { name: '新榜', url: 'https://www.newrank.cn/', description: '内容数据监测', icon: '📊' },
+          { name: '蝉妈妈', url: 'https://www.chanmama.com/', description: '抖音数据洞察', icon: '📈' },
+          { name: '图文宝盒', url: 'https://www.tubaohe.com/', description: '一键生成图文笔记', icon: '🖼️' },
+          { name: '5118 工具', url: 'https://www.5118.com/', description: 'SEO 关键词挖掘', icon: '🔎' },
+        ],
+      },
     ],
   },
+  // ════════ 3. AI 自研工具（OPC 独家 · 豹纹+ / 先锋派 / 灵犀）══════
   {
-    title: 'AI 网店运营工具',
-    emoji: '🛠️',
-    subtitle: '数据分析 / 自动发货 / 裂变引流',
+    title: 'AI自研工具',
+    emoji: '🧬',
+    subtitle: 'OPC 独家自研 · 豹纹PLUS / 先锋派数字人 / 灵犀AI',
     platforms: [
-      { name: '店侦探', url: 'https://www.dianzhentan.com', description: '电商数据分析', icon: '🕵️', tag: '热门' },
-      { name: '阿奇索自动发货', url: 'https://www.agiso.com/', description: '自动发货系统', icon: '⚡' },
-      { name: '抖羚羊', url: 'https://www.doulingyang.com', description: '裂变引流工具', icon: '🚀', tag: '推荐' },
-      { name: '哈士奇电商插件', url: 'https://hsq.dangxun.com/', description: '电商浏览器插件', icon: '🐺' },
-      { name: '至尊宝电商工具', url: 'https://tool.zzbtool.com/index.html#/index', description: '多功能运营工具', icon: '👑' },
-      { name: '版权著作权检测', url: 'https://banquan.tianyancha.com/zp', description: '版权查询', icon: '©️' },
+      { name: '豹纹PLUS', url: 'https://www.baowenplus.com', description: 'AI 自媒体内容生成 · 豹纹+', icon: '🐆', tag: '独家' },
+      { name: '先锋派数字人', url: 'https://www.xianfengpai.com.cn', description: 'AI 数字人视频生成', icon: '🎬', tag: '爆款' },
+      { name: '灵犀AI', url: 'https://www.lingxixai.com', description: '智能内容创作助手', icon: '🦊', tag: '热门' },
     ],
   },
+  // ════════ 4. AI 严选工具（6 大子分类：写作 / 美工 / 音视频 / 智能体 / 编码 / 辅助）══════
   {
-    title: '日常工具',
-    emoji: '📦',
-    subtitle: '网盘 / 资源管理 / 多创收 · 资源类工具',
-    platforms: [
-      { name: '百度网盘', url: 'https://pan.baidu.com/', description: '文件存储与分享', icon: '☁️' },
-      { name: '夸克网盘', url: 'https://b.quark.cn/', description: '高速云盘', icon: '⚡' },
-      { name: '任推邦', url: 'https://www.rentuibang.com/', description: '多创收工具', icon: '🚀' },
-    ],
-  },
-  {
-    title: 'AI 文案写作',
-    emoji: '✍️',
-    subtitle: 'AI 写作生产力 · 跑通首单必备',
-    platforms: [
-      { name: 'Deepseek', url: 'https://www.deepseek.com', description: '深度求索 AI', icon: '🐋', scene: 'writing' },
-      { name: '豆包', url: 'https://www.doubao.com', description: '字节跳动 AI 助手', icon: '🫘', scene: 'writing' },
-    ],
-  },
-  {
-    title: 'AI 图片创作',
-    emoji: '🎨',
-    subtitle: 'AI 生图工具集合',
-    platforms: [
-      { name: '豆包', url: 'https://www.doubao.com', description: '字节 AI 生图', icon: '🫘', scene: 'image' },
-      { name: '即梦 Dreamina', url: 'https://jimeng.jianying.com', description: '字节 AI 生图', icon: '🌟', scene: 'image' },
-      { name: '文心一格', url: 'https://yige.baidu.com', description: '百度 AI 艺术', icon: '🎭', scene: 'image' },
-      { name: 'Midjourney', url: 'https://www.midjourney.com', description: '顶级 AI 生图', icon: '🎨', scene: 'image' },
-      { name: 'StableDiffusion', url: '#', description: '开源 AI 生图模型（暂无外链）', icon: '🌀', scene: 'image' },
-      { name: 'Bing Image', url: 'https://cn.bing.com', description: 'Bing 图片搜索', icon: '🖼️', scene: 'image' },
-    ],
-  },
-  {
-    title: 'AI 音频视频',
-    emoji: '🎬',
-    subtitle: 'AI 视频 / 音频生成',
-    platforms: [
-      { name: '海绵音乐', url: 'https://www.haimian.com', description: 'AI 音乐生成', icon: '🎵', scene: 'video' },
-      { name: '可灵 AI', url: 'https://kelingai.com/', description: '快手 AI 视频', icon: '⚡', scene: 'video' },
-      { name: '即梦 AI 视频', url: 'https://jimeng.jianying.com', description: '字节 AI 视频', icon: '�', scene: 'video' },
-    ],
-  },
-  {
-    title: 'AI 智能体与编程',
-    emoji: '🤖',
-    subtitle: 'AI 智能体 / 代码生成',
-    platforms: [
-      { name: '扣子 Coze', url: 'https://www.coze.cn/overview', description: '字节 AI 智能体', icon: '🪄', scene: 'coding' },
-      { name: 'TRAE IDE', url: 'https://www.trae.cn/', description: 'AI 原生 IDE', icon: '🛠️', scene: 'coding' },
+    title: 'AI严选工具',
+    emoji: '✨',
+    subtitle: '严选 6 大 AI 生产力工具 · 写作/美工/音视频/智能体/编码/辅助',
+    subCategories: [
+      {
+        title: '写作文案',
+        emoji: '✍️',
+        subtitle: 'AI 文案生产力 · 跑通首单必备',
+        platforms: [
+          { name: 'Deepseek', url: 'https://www.deepseek.com', description: '深度求索 AI', icon: '🐋', scene: 'writing' },
+          { name: '豆包', url: 'https://www.doubao.com', description: '字节跳动 AI 助手', icon: '🫘', scene: 'writing' },
+          { name: 'Kimi', url: 'https://kimi.moonshot.cn', description: '月之暗面长文 AI', icon: '🌙', scene: 'writing' },
+          { name: 'ChatGPT', url: 'https://chat.openai.com', description: 'OpenAI 对话 AI', icon: '💬', scene: 'writing' },
+          { name: '通义千问', url: 'https://tongyi.aliyun.com', description: '阿里通义大模型', icon: '🔮', scene: 'writing' },
+        ],
+      },
+      {
+        title: '美工绘图',
+        emoji: '🎨',
+        subtitle: 'AI 生图工具集合',
+        platforms: [
+          { name: '即梦 Dreamina', url: 'https://jimeng.jianying.com', description: '字节 AI 生图', icon: '🌟', scene: 'image' },
+          { name: '文心一格', url: 'https://yige.baidu.com', description: '百度 AI 艺术', icon: '🎭', scene: 'image' },
+          { name: 'Midjourney', url: 'https://www.midjourney.com', description: '顶级 AI 生图', icon: '🎨', scene: 'image' },
+          { name: 'StableDiffusion', url: 'https://stability.ai', description: '开源 AI 生图模型', icon: '🌀', scene: 'image' },
+          { name: 'Canva AI', url: 'https://www.canva.cn', description: '在线设计 AI 加持', icon: '🖼️', scene: 'image' },
+          { name: 'LiblibAI', url: 'https://www.liblib.art', description: '国内 AI 绘画社区', icon: '🖌️', scene: 'image' },
+        ],
+      },
+      {
+        title: '音频视频',
+        emoji: '🎬',
+        subtitle: 'AI 视频 / 音频生成',
+        platforms: [
+          { name: '海绵音乐', url: 'https://www.haimian.com', description: 'AI 音乐生成', icon: '🎵', scene: 'video' },
+          { name: '可灵 AI', url: 'https://kelingai.com/', description: '快手 AI 视频', icon: '⚡', scene: 'video' },
+          { name: '即梦 AI 视频', url: 'https://jimeng.jianying.com', description: '字节 AI 视频', icon: '🌟', scene: 'video' },
+          { name: 'Sora', url: 'https://openai.com/sora', description: 'OpenAI 视频生成', icon: '🎞️', scene: 'video' },
+          { name: 'ElevenLabs', url: 'https://elevenlabs.io', description: 'AI 配音克隆', icon: '🎙️', scene: 'video' },
+        ],
+      },
+      {
+        title: '智能体工具',
+        emoji: '🤖',
+        subtitle: 'AI 智能体 / 自动化工作流',
+        platforms: [
+          { name: '扣子 Coze', url: 'https://www.coze.cn/overview', description: '字节 AI 智能体', icon: '🪄', scene: 'coding' },
+          { name: 'Dify', url: 'https://dify.ai', description: '开源 AI 工作流', icon: '🧩', scene: 'coding' },
+          { name: '腾讯元器', url: 'https://yuanqi.tencent.com', description: '腾讯智能体平台', icon: '🪶', scene: 'coding' },
+          { name: '百度千帆 AppBuilder', url: 'https://cloud.baidu.com/product/AppBuilder', description: '百度智能体构建', icon: '⛵', scene: 'coding' },
+          { name: '阿里云百炼', url: 'https://bailian.console.aliyun.com', description: '阿里智能体平台', icon: '🔥', scene: 'coding' },
+        ],
+      },
+      {
+        title: '编码及系统',
+        emoji: '💻',
+        subtitle: 'AI 编程 / 系统搭建',
+        platforms: [
+          { name: 'TRAE IDE', url: 'https://www.trae.cn/', description: 'AI 原生 IDE', icon: '🛠️', scene: 'coding' },
+          { name: 'Cursor', url: 'https://www.cursor.com/', description: 'AI 代码编辑器', icon: '🖱️', scene: 'coding' },
+          { name: 'GitHub Copilot', url: 'https://github.com/features/copilot', description: 'AI 配对编程', icon: '🐙', scene: 'coding' },
+          { name: 'V0', url: 'https://v0.dev', description: 'AI 生成 UI 代码', icon: '🅱️', scene: 'coding' },
+          { name: 'Bolt.new', url: 'https://bolt.new', description: 'AI 全栈开发', icon: '⚡', scene: 'coding' },
+        ],
+      },
+      {
+        title: 'AI辅助工具',
+        emoji: '🧰',
+        subtitle: '网盘 / 资源管理 / 日常效率',
+        platforms: [
+          { name: '百度网盘', url: 'https://pan.baidu.com/', description: '文件存储与分享', icon: '☁️' },
+          { name: '夸克网盘', url: 'https://b.quark.cn/', description: '高速云盘', icon: '⚡' },
+          { name: '任推邦', url: 'https://www.rentuibang.com/', description: '多创收工具', icon: '🚀' },
+          { name: '腾讯文档', url: 'https://docs.qq.com', description: '在线协作文档', icon: '📄' },
+          { name: '飞书', url: 'https://www.feishu.cn', description: '高效协同办公', icon: '✈️' },
+        ],
+      },
     ],
   },
 ]
 
 /**
- * 工具库渲染顺序优先级（任务 1）
- * 强制按 自研工具 → 开网店 → 写文案 → 做图片 → 搞视频 → 编代码 顺序渲染
- * 未列入的分类（自媒体登录页 / 网店运营工具 / 日常工具）保持原顺序追加在尾部
+ * 工具库渲染顺序优先级（任务 1 新版）
+ * 按 思维导图 4 大分类顺序：网店群 → 自媒体 → 自研 → 严选
  */
 const CATEGORY_PRIORITY: Record<string, number> = {
-  '自研工具': 0,
-  'AI 网店工作台': 1,
-  'AI 文案写作': 2,
+  'AI网店群工具': 0,
+  'AI自媒体工具': 1,
+  'AI自研工具': 2,
+  'AI严选工具': 3,
+  // 向后兼容旧 title
+  '自研工具': 2,
+  'AI 网店工作台': 0,
+  'AI 自媒体登录页': 1,
+  'AI 网店运营工具': 0,
+  '日常工具': 3,
+  'AI 文案写作': 3,
   'AI 图片创作': 3,
-  'AI 音频视频': 4,
-  'AI 智能体与编程': 5,
+  'AI 音频视频': 3,
+  'AI 智能体与编程': 3,
 }
 
 function sortToolCategories(cats: ToolCategory[]): ToolCategory[] {
@@ -354,7 +429,7 @@ export function MarketContent({
   /**
    * 短暂高亮某个子分类（用于场景胶囊筛选点击后 1.5s 闪烁）
    */
-  briefHighlight?: ToolSlug | null
+  briefHighlight?: ToolSlug | string | null
   /**
    * 自研工具区块的外部 ref（用于 ?tab=self_tools 自动滚动 + 3s 高亮）
    * 绑定到外层 wrapper div（id="self-tools"）
@@ -407,18 +482,18 @@ export function MarketContent({
    * 流量型 OPC 精准推荐配置
    * ------------------------------------------------------------
    * recommendLevel === 'flow' 时：
-   *   1) 仅「AI自媒体运营项目」「AI工具销售推广项目」标记为 isHighlighted
+   *   1) 仅「AI自媒体群项目」「AI工具推广项目」标记为 isHighlighted
    *   2) 这两个项目置顶到网格最前面
    *   3) 其他项目的"优先推荐"徽章自动消失
    *
-   * trader 模式沿用：AI数字网店项目 + AI无货源实物网店项目
+   * trader 模式沿用：AI数字店群项目 + AI无货源店群项目
    * system / asset 模式暂未配置置顶集合（保持原顺序 + level 匹配高亮）
    * ------------------------------------------------------------
    */
   const PRIORITY_TITLES_BY_LEVEL: Record<NonNullable<typeof recommendLevel>, string[]> = {
-    trader: ['AI数字网店项目', 'AI无货源实物网店项目'],
-    flow: ['AI自媒体运营项目', 'AI工具销售推广项目'],
-    system: ['AI编程系统开发项目', 'AI企业GEO项目'],
+    trader: ['AI数字店群项目', 'AI无货源店群项目'],
+    flow: ['AI自媒体群项目', 'AI工具推广项目'],
+    system: ['AI编程开发项目', 'AI企业GEO项目'],
     asset: ['AI跨境电商项目', 'AI数字产品项目'],
   }
 
@@ -475,7 +550,7 @@ export function MarketContent({
     // 优先弹出推荐弹窗，引导至协作匹配而非简单勾选
     if (
       collaborationHighlight &&
-      (id === 'opc-coaching' || id === 'shop-daiyun')
+      (id === 'opc-coaching' || id === 'shop-group-daiyun')
     ) {
       const svc = serviceItems.find((s) => s.id === id)
       if (svc) {
@@ -689,10 +764,11 @@ export function MarketContent({
           </TabsList>
           )}
 
-        {/* ════════ AI智富工具库：双层循环渲染 9 个子分类（自研工具置顶） ════════ */}
+        {/* ════════ AI智富工具库：4 大顶级分类（按 思维导图 顺序） ════════ */}
           <TabsContent value="tools" className="mt-5 space-y-6">
             {sortToolCategories(toolCategories).map((category) => {
-              const isSelfTools = category.title === '自研工具'
+              // 自研工具（兼容旧 title '自研工具'）的 wrapper 锚点 + 高亮
+              const isSelfTools = category.title === 'AI自研工具' || category.title === '自研工具'
               const section = (
                 <ToolCategorySection
                   category={category}
@@ -717,7 +793,7 @@ export function MarketContent({
             })}
           </TabsContent>
 
-          {/* ════════ AI智富服务库：多选需求引擎（8 个板块） ════════ */}
+          {/* ════════ AI智富服务库：多选需求引擎（9 个板块） ════════ */}
           <TabsContent value="services" className="mt-5">
             <div className="mb-4 flex items-center gap-2">
               <Briefcase className="text-violet-500" size={18} />
@@ -734,13 +810,13 @@ export function MarketContent({
                   service={svc}
                   selected={selectedServices.includes(svc.id)}
                   onToggle={() => toggleService(svc.id)}
-                  highlighted={collaborationHighlight && (svc.id === 'opc-coaching' || svc.id === 'shop-daiyun')}
+                  highlighted={collaborationHighlight && (svc.id === 'opc-coaching' || svc.id === 'shop-group-daiyun')}
                 />
               ))}
             </div>
           </TabsContent>
 
-          {/* ════════ AI智富项目库：对接匹配引擎（8 个项目方向） ════════ */}
+          {/* ════════ AI智富项目库：对接匹配引擎（9 个项目方向） ════════ */}
           <TabsContent value="projects" className="mt-5">
             <div className="mb-4 flex items-center gap-2">
               <FolderKanban className="text-emerald-500" size={18} />
@@ -801,9 +877,6 @@ export function MarketContent({
                 />
               ))}
             </div>
-
-            {/* ════════ 任务 3：OPC 共创 UGC 投稿列表 ════════ */}
-            <UGCSubmissionSection />
           </TabsContent>
         </Tabs>
 
@@ -980,7 +1053,7 @@ function ToolCategorySection({
 }: {
   category: ToolCategory
   highlightCategory?: ToolSlug
-  briefHighlight?: ToolSlug | null
+  briefHighlight?: ToolSlug | string | null
 }) {
   // 派生锚点 id：用于 /market/tools 顶部快捷分流滚动
   // 显式映射到稳定英文 slug（避免中文字符在 URL 中的兼容问题）
@@ -988,6 +1061,12 @@ function ToolCategorySection({
   const anchorId = `tools-category-${currentSlug}`
   const isHighlighted = highlightCategory === currentSlug
   const isBriefFlash = briefHighlight === currentSlug
+
+  // 统计总平台数（用于右侧徽章）
+  const totalPlatforms = category.subCategories
+    ? category.subCategories.reduce((sum, sub) => sum + sub.platforms.length, 0)
+    : category.platforms?.length || 0
+
   return (
     <section
       id={anchorId}
@@ -995,14 +1074,14 @@ function ToolCategorySection({
         isBriefFlash ? 'ring-2 ring-blue-400/50 bg-blue-50/40 -m-1 p-1' : ''
       }`}
     >
-      {/* 子分类标题 */}
+      {/* 顶级分类标题 */}
       <div className="mb-3 flex items-center gap-2">
         <span className="text-2xl">{category.emoji}</span>
         <div className="min-w-0 flex-1">
           <h3 className="text-sm md:text-base font-bold text-slate-900 flex items-center gap-1.5 flex-wrap">
             {category.title}
             <span className="text-[10px] font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">
-              {category.platforms.length}
+              {totalPlatforms}
             </span>
             {isHighlighted && (
               <span className="text-[10px] font-bold text-blue-600 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-full animate-pulse">
@@ -1014,16 +1093,58 @@ function ToolCategorySection({
         </div>
       </div>
 
-      {/* 卡片网格：移动端 1 列 / 桌面端 2-3 列 */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
-        {category.platforms.map((p, idx) => (
-          <PlatformCard
-            key={p.name}
-            platform={p}
-            highlight={isHighlighted && idx === 0}
-          />
-        ))}
-      </div>
+      {/* 渲染分支：1) 子分类模式（聚合入口）  2) 平铺模式（自研工具） */}
+      {category.subCategories ? (
+        // ════════ 子分类模式：每个子分类渲染一个小标题 + 卡片网格 ═══════
+        <div className="space-y-4">
+          {category.subCategories.map((sub) => {
+            // 单独锚点：AI 辅助工具子分类（支持顶部胶囊快速定位）
+            const auxId = sub.title === 'AI辅助工具' ? 'ai-auxiliary' : undefined
+            return (
+              <div
+                key={sub.title}
+                id={auxId}
+                className={`rounded-2xl bg-white border border-slate-200 p-4 hover:shadow-md transition-shadow ${
+                  auxId ? 'scroll-mt-20' : ''
+                }`}
+              >
+                <div className="mb-3 flex items-center gap-2">
+                  <span className="text-lg">{sub.emoji}</span>
+                  <div className="min-w-0 flex-1">
+                    <h4 className="text-[13px] font-bold text-slate-800 flex items-center gap-1.5">
+                      {sub.title}
+                      <span className="text-[9px] font-bold text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded-full">
+                        {sub.platforms.length}
+                      </span>
+                    </h4>
+                    <p className="text-[10px] text-slate-500 mt-0.5">{sub.subtitle}</p>
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
+                  {sub.platforms.map((p, idx) => (
+                    <PlatformCard
+                      key={p.name}
+                      platform={p}
+                      highlight={isHighlighted && idx === 0}
+                    />
+                  ))}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      ) : (
+        // ════════ 平铺模式：直接渲染 platforms 网格 ═══════
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
+          {category.platforms?.map((p, idx) => (
+            <PlatformCard
+              key={p.name}
+              platform={p}
+              highlight={isHighlighted && idx === 0}
+            />
+          ))}
+        </div>
+      )}
     </section>
   )
 }
@@ -1452,6 +1573,24 @@ function ResourceCard({
                 <span>已解锁 · 立即观看</span>
               </span>
               <ArrowRight className="w-3 h-3 text-emerald-400 group-hover:translate-x-0.5 transition-all" />
+            </Link>
+          )
+        }
+        // 未解锁：若配置了 lockedHref → 跳到指定内部页面（替代弹窗）
+        if (resource.lockedHref) {
+          return (
+            <Link
+              href={resource.lockedHref}
+              className={cn(
+                baseBtn,
+                'border-amber-200 group-hover:bg-amber-50 group-hover:border-amber-300'
+              )}
+            >
+              <span className="flex items-center gap-1.5 text-xs font-semibold text-amber-700">
+                <Lock size={12} className="text-amber-500" />
+                <span>解锁资源 →</span>
+              </span>
+              <ArrowRight className="w-3 h-3 text-amber-400 group-hover:translate-x-0.5 transition-all" />
             </Link>
           )
         }
@@ -2672,7 +2811,7 @@ function MemberLockedModal({
           {/* 操作按钮 */}
           <div className="space-y-2 pt-1">
             <Link
-              href="/member"
+              href="/pricing"
               onClick={onClose}
               className="w-full flex items-center justify-center gap-2 py-3 bg-gradient-to-r from-rose-500 via-pink-500 to-fuchsia-600 text-white text-sm font-bold rounded-xl shadow-md hover:shadow-lg transition-all"
             >

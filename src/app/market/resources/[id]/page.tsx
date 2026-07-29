@@ -79,16 +79,16 @@ interface DetailData {
 
 const CATEGORY_ICONS: Record<ResourceCategory, typeof Package> = {
   'physical-prod': Package,
-  'ai-software': BookOpen,
+  'ai-self-tools': BookOpen,
   'ai-hardware': Cpu,
-  'ai-courses': NotebookPen,
+  'opc-ecology': NotebookPen,
 }
 
 const CATEGORY_COLORS: Record<ResourceCategory, { gradient: string; chip: string; bg: string }> = {
   'physical-prod': { gradient: 'from-emerald-500 to-teal-600', chip: 'bg-emerald-50 text-emerald-700 border-emerald-200', bg: 'bg-emerald-50' },
-  'ai-software': { gradient: 'from-purple-500 to-violet-600', chip: 'bg-purple-50 text-purple-700 border-purple-200', bg: 'bg-purple-50' },
+  'ai-self-tools': { gradient: 'from-violet-500 to-purple-600', chip: 'bg-violet-50 text-violet-700 border-violet-200', bg: 'bg-violet-50' },
   'ai-hardware': { gradient: 'from-amber-500 to-orange-600', chip: 'bg-amber-50 text-amber-700 border-amber-200', bg: 'bg-amber-50' },
-  'ai-courses': { gradient: 'from-rose-500 to-pink-600', chip: 'bg-rose-50 text-rose-700 border-rose-200', bg: 'bg-rose-50' },
+  'opc-ecology': { gradient: 'from-rose-500 to-pink-600', chip: 'bg-rose-50 text-rose-700 border-rose-200', bg: 'bg-rose-50' },
 }
 
 function getDeviceId(): string {

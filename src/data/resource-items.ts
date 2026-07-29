@@ -1,5 +1,5 @@
 /**
- * 资源库 · 6 大资源板块 Mock 数据
+ * 资源库 · 6 大资源板块 Mock 数据（基于新思维导图重构）
  *
  * 引用方：
  *   - src/app/market/page.tsx （前端渲染）
@@ -21,6 +21,16 @@
  *   - 不设置则走内部默认链接 /market
  *
  * 卡片顶部色条（borderTopColor）用于四库统一视觉对比
+ *
+ * ────────────────────────────────────────────────────────────────────
+ *  6 大板块（基于 2026-07 新思维导图）：
+ *    1. 数字产品库       - AI 提示词 / 模板 / PDF 教程
+ *    2. 实物产品库       - 智能硬件周边 / 源头货源
+ *    3. AI 自研工具库    - 豹纹PLUS / 灵犀AI / 先锋派数字人
+ *    4. AI 智能硬件库    - 摄像头 / 数字人设备 / 智能麦克风
+ *    5. AI 招商加盟库    - 城市主理人 / 硬件代理 / 教育招商
+ *    6. OPC 生态资源库  - 视频课 / SOP 文档 / 商业课程
+ * ────────────────────────────────────────────────────────────────────
  */
 
 /** 资源解锁模式（仅 unlock 类型） */
@@ -47,6 +57,8 @@ export interface ResourceItem {
   unlockMode?: UnlockMode
   /** 已解锁时跳转的外链（仅 type === 'unlock' 生效，覆盖 href） */
   externalHref?: string
+  /** 未解锁时跳转的内部链接（仅 type === 'unlock' 生效，覆盖弹窗） */
+  lockedHref?: string
 }
 
 export const resourceItems: ResourceItem[] = [
@@ -77,20 +89,20 @@ export const resourceItems: ResourceItem[] = [
     tagColor: 'bg-emerald-50 text-emerald-600',
   },
   {
-    id: 'ai-software',
-    title: 'AI 自研软件库',
-    desc: '豹纹工坊（豹纹+）、灵犀 AI、先锋派数字人等独家自研工具集。',
+    id: 'ai-self-tools',
+    title: 'AI自研工具库',
+    desc: '豹纹PLUS / 灵犀AI / 先锋派数字人 等独家自研工具集。',
     type: 'internal',
     icon: '🧰',
-    borderTopColor: 'border-t-purple-500',
-    iconBgColor: 'bg-purple-50',
+    borderTopColor: 'border-t-violet-500',
+    iconBgColor: 'bg-violet-50',
     href: '/market/tools?tab=self_tools',
     tag: 'OPC 独家',
-    tagColor: 'bg-purple-50 text-purple-600',
+    tagColor: 'bg-violet-50 text-violet-600',
   },
   {
     id: 'ai-hardware',
-    title: 'AI 智能硬件库',
+    title: 'AI智能硬件库',
     desc: 'AI 摄像头、数字人直播设备、智能麦克风等配套硬件。',
     type: 'external',
     icon: '💻',
@@ -101,21 +113,8 @@ export const resourceItems: ResourceItem[] = [
     tagColor: 'bg-amber-50 text-amber-600',
   },
   {
-    id: 'ai-courses',
-    title: 'AI 精品教程库',
-    desc: '从入门到精通的视频课、实操 SOP 文档、系统化商业课程。',
-    type: 'unlock',
-    unlockMode: 'member-only', // ★ 任务：仅 199/1980 会员可看
-    externalHref: '/market', // 已解锁后默认进入四库总览
-    icon: '📚',
-    borderTopColor: 'border-t-rose-500',
-    iconBgColor: 'bg-rose-50',
-    tag: '会员专享',
-    tagColor: 'bg-rose-50 text-rose-600',
-  },
-  {
     id: 'franchise',
-    title: 'AI 招商加盟库',
+    title: 'AI招商加盟库',
     desc: '城市主理人加盟、AI 硬件代理、AI 教育项目全国招商。',
     type: 'partner',
     icon: '🤝',
@@ -123,5 +122,19 @@ export const resourceItems: ResourceItem[] = [
     iconBgColor: 'bg-indigo-50',
     tag: '招募中',
     tagColor: 'bg-indigo-50 text-indigo-600',
+  },
+  {
+    id: 'opc-ecology',
+    title: 'OPC生态资源库',
+    desc: '从入门到精通的视频课、实操 SOP 文档、系统化商业课程。',
+    type: 'unlock',
+    unlockMode: 'member-only', // ★ 任务：仅 199/1980 会员可看
+    externalHref: '/market', // 已解锁后默认进入四库总览
+    lockedHref: '/market/resources/community-posts', // ★ 未解锁时跳到投稿列表（替代门锁弹窗）
+    icon: '📚',
+    borderTopColor: 'border-t-rose-500',
+    iconBgColor: 'bg-rose-50',
+    tag: '会员专享',
+    tagColor: 'bg-rose-50 text-rose-600',
   },
 ]

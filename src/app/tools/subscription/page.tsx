@@ -211,6 +211,7 @@ export default function ToolSubscriptionPage() {
                     </div>
 
                     <button
+                      onClick={() => { window.location.href = '/pricing' }}
                       className={`w-full mt-2 inline-flex items-center justify-center gap-1 bg-gradient-to-r ${tool.gradient} text-white font-bold py-2.5 rounded-xl shadow-md hover:shadow-lg active:scale-95 transition-all text-sm`}
                     >
                       <span>立即订阅</span>

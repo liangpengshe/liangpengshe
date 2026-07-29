@@ -141,11 +141,12 @@ export async function POST(req: NextRequest) {
       | 'sign-in'
       | 'task-reward'
       | 'apply-discount'
+      | 'redeem-sop'
       | undefined
 
     if (!action) {
       return fail(
-        'action 必填，可选值：sign-in | task-reward | apply-discount',
+        'action 必填，可选值：sign-in | task-reward | apply-discount | redeem-sop',
         400
       )
     }
@@ -243,11 +244,70 @@ export async function POST(req: NextRequest) {
       })
     }
 
+    // ─── 4. 积分兑换 SOP 资料 ───
+    if (action === 'redeem-sop') {
+      return handleRedeemSop(body, userId)
+    }
+
     return fail(`未知 action：${action}`, 400)
   } catch (err) {
     console.error('[points POST] 错误:', err)
     return fail(String(err), 500)
   }
+}
+
+/* ═══════ 任务 1：积分兑换 SOP 资料（独立路由更清晰） ═══════ */
+export async function PUT(req: NextRequest) {
+  // 路由到 redeem-sop（兼容某些 fetch 实现不允许 action 字段）
+  return POST(req)
+}
+
+// 实际 redeem-sop 处理逻辑（被 POST 和 PUT 共用）
+async function handleRedeemSop(body: any, userId: string) {
+  const sopId = body.sopId as string | undefined
+  const costPoints = Number(body.costPoints)
+  if (!sopId) return fail('sopId 必填', 400)
+  if (!costPoints || isNaN(costPoints) || costPoints <= 0) {
+    return fail('costPoints 必填且 > 0', 400)
+  }
+
+  // 校验余额
+  const balance = await getPointsBalance(userId)
+  if (balance.points < costPoints) {
+    return fail(
+      `积分不足！当前 ${balance.points} 积分，无法兑换 ${costPoints} 积分的 SOP`,
+      400
+    )
+  }
+
+  // 扣减积分 + 写流水
+  const result = await changePoints(
+    userId,
+    'EXCHANGE_SOP',
+    -costPoints,
+    `兑换 SOP：${body.sopTitle || sopId}`,
+    sopId
+  )
+
+  // 未来：把兑换记录写到 sop_redemption 表，关联资源中心
+  // 内存兜底
+  const memStore: any[] = ((globalThis as any).__sopRedemptionStore ||= [])
+  memStore.unshift({
+    id: `sop-redemption-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+    userId,
+    sopId,
+    sopTitle: body.sopTitle,
+    costPoints,
+    createdAt: new Date().toISOString(),
+  })
+
+  return ok({
+    sopId,
+    sopTitle: body.sopTitle,
+    costPoints,
+    remainingPoints: result.balance,
+    message: 'SOP 兑换成功！请到资源中心查看',
+  })
 }
 
 // 计算明天日期

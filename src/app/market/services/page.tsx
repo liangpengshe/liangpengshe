@@ -3,7 +3,7 @@
  *
  * 结构:
  *   1. 顶部导航（搜索 / 横幅 / 4 库导航）由 /market/layout.tsx 提供
- *   2. MarketContent 渲染原有的 8 大服务板块（多选 + 企业需求弹窗）
+ *   2. MarketContent 渲染 9 大服务板块（多选 + 企业需求弹窗）
  *   3. 底部新增"OPC 专家申请"横幅 + 模态框（不与原有多选提交互干扰）
  *
  * 任务 4 要求：原"企业需求弹窗"完全保留，底部模块视觉/逻辑独立。
@@ -60,7 +60,7 @@ export default function ServicesPage() {
                 根据您在【{levelLabel}】阶段的选择，系统为您推荐以下资深 OPC 伙伴与代运营服务
               </h3>
               <p className="mt-1 text-[11px] md:text-xs text-slate-600 leading-relaxed">
-                以下服务卡片已被高亮标记：点击 <span className="font-bold text-purple-700">OPC 陪跑</span> 或 <span className="font-bold text-purple-700">AI 网店代运营</span>，
+                以下服务卡片已被高亮标记：点击 <span className="font-bold text-purple-700">OPC 陪跑</span> 或 <span className="font-bold text-purple-700">AI 网店群代运营</span>，
                 即可在弹窗中查看与你所在城市匹配的 CITY_MAINTAINER 主理人/资产型 OPC 专家。
               </p>
             </div>
@@ -76,7 +76,7 @@ export default function ServicesPage() {
         </div>
       )}
 
-      {/* ════════ 原服务库内容（8 大服务板块 + 多选 + 企业需求弹窗）══════ */}
+      {/* ════════ 原服务库内容（9 大服务板块 + 多选 + 企业需求弹窗）══════ */}
       <MarketContent
         defaultTab="services"
         standalone={false}

@@ -2,9 +2,9 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import ClientLayout from '@/components/ClientLayout'
+import ThreeAvatar from '@/components/ThreeAvatar'
 import { ArrowRight, Sparkles, Rocket, Compass, BookOpen, Wrench, TrendingUp, CheckCircle2, Clock, Lock, ShoppingCart, Megaphone, Settings2, Gem } from 'lucide-react'
 import { toast } from '@/components/Toast'
 import { cn } from '@/lib/utils'
@@ -17,17 +17,58 @@ import { cn } from '@/lib/utils'
  */
 
 const stats = [
-  { label: '已赋能企业', value: 300, suffix: '+', unit: '家' },
-  { label: '举办沙龙', value: 50, suffix: '+', unit: '期' },
-  { label: '服务客户', value: 500, suffix: '+', unit: '位' },
-  { label: 'AI 案例', value: 100, suffix: '+', unit: '' },
+  { label: '内测企业', value: 20, suffix: '+', unit: '家' },
+  { label: '内部实战轮', value: 3, suffix: '', unit: '期' },
+  { label: '在线学员', value: 80, suffix: '+', unit: '位' },
+  { label: '实操案例', value: 10, suffix: '+', unit: '' },
 ]
 
 const learningPath = [
-  { step: '01', title: '咨询诊断', desc: 'AI 评估创业起点与瓶颈', status: 'active' as const, icon: Compass },
-  { step: '02', title: '学习入门', desc: '完成账号注册与工具配置', status: 'locked' as const, icon: BookOpen },
-  { step: '03', title: '运营实操', desc: '从项目库精准选品', status: 'locked' as const, icon: Wrench },
-  { step: '04', title: '矩阵放大', desc: '多店/多号矩阵运营', status: 'locked' as const, icon: TrendingUp },
+  {
+    step: '01',
+    title: '咨询诊断',
+    coreValue: '测方向 · 解决"我适合做什么"',
+    icon: Compass,
+    deliverables: [
+      '专属《OPC智富蓝皮书》',
+      '15 分钟专家咨询',
+      '免费社群',
+    ],
+  },
+  {
+    step: '02',
+    title: '学习入门',
+    coreValue: '练技能 · 解决"我第一步应该干什么"',
+    icon: BookOpen,
+    deliverables: [
+      '解锁 8 步 SOP 沉浸式任务',
+      '24 小时 AI 智富私教',
+      '每日积分签到',
+    ],
+  },
+  {
+    step: '03',
+    title: '运营实操',
+    coreValue: '打胜仗 · 解决"怎么干才能成"',
+    icon: Wrench,
+    deliverables: [
+      '3 个月陪跑指导',
+      'AI 生成方案',
+      '解锁矩阵放大功能',
+      '导师 1V1 复盘',
+    ],
+  },
+  {
+    step: '04',
+    title: '矩阵放大',
+    coreValue: '拓版图 · 怎么把生意做成资产',
+    icon: TrendingUp,
+    deliverables: [
+      '城市独家经营与品牌授权',
+      '总部线下沙龙 SOP 物料包',
+      '分站系统与本地化管理',
+    ],
+  },
 ]
 
 const entrepreneurLadder = [
@@ -71,9 +112,9 @@ const entrepreneurLadder = [
 
 const libraryCards = [
   { title: 'AI智富工具库', subtitle: 'AI 自研工具、电商工作台、运营插件', href: '/market/tools', icon: '🔧', tag: '自研' },
-  { title: 'AI智富项目库', subtitle: '数字网店、跨境电商、AI 编程系统', href: '/market/projects', icon: '🚀', tag: '落地案例' },
-  { title: 'AI智富服务库', subtitle: 'OPC 内训、陪跑、代运营、企业 GEO', href: '/market/services', icon: '💼', tag: '陪跑' },
-  { title: 'AI智富资源库', subtitle: 'AI 硬件、精品教程、城市招商加盟', href: '/market/resources', icon: '📚', tag: '链接' },
+  { title: 'AI智富项目库', subtitle: 'AI 数字店群、无货源店群、跨境电商', href: '/market/projects', icon: '🚀', tag: '落地案例' },
+  { title: 'AI智富服务库', subtitle: 'OPC 工具/内训/陪跑/社群、企业 GEO', href: '/market/services', icon: '💼', tag: '陪跑' },
+  { title: 'AI智富资源库', subtitle: 'AI 智能硬件、AI 招商加盟、OPC 生态', href: '/market/resources', icon: '📚', tag: '链接' },
 ]
 
 const statusConfig = {
@@ -93,16 +134,17 @@ interface Activity {
 
 // 兜底活动数据（API 失败时使用）
 // 注：createdAt 必须用静态字符串，禁止 new Date()，否则会导致 SSR/CSR 时间戳不一致触发 hydration 报错
+// 内测初期 · 去身份化文案
 const STATIC_DATE = '2026-07-15T10:00:00.000Z'
 const fallbackActivities: Activity[] = [
-  { id: 'f1', city: '深圳', user: '李总', action: '刚刚完成了 AI 商业诊断', createdAt: STATIC_DATE },
-  { id: 'f2', city: '东莞', user: '王总', action: '下载了 4 库全胜启动包', createdAt: STATIC_DATE },
-  { id: 'f3', city: '乌海', user: '主理人', action: '发布了本地 AI 沙龙', createdAt: STATIC_DATE },
-  { id: 'f4', city: '东莞', user: '王老板', action: '解锁了【矩阵放大】阶段', createdAt: STATIC_DATE },
-  { id: 'f5', city: '柳州', user: '陈姐', action: '用 AI 选品生成 12 个 SKU', createdAt: STATIC_DATE },
-  { id: 'f6', city: '深圳', user: '张总', action: '提交了合伙人申请', createdAt: STATIC_DATE },
-  { id: 'f7', city: '乌海', user: '李主理', action: '1 周招募 12 个种子用户', createdAt: STATIC_DATE },
-  { id: 'f8', city: '柳州', user: '王老板', action: 'AI 商品图 3 天顶 1 月', createdAt: STATIC_DATE },
+  { id: 'f1', city: '内测', user: '首批内测用户', action: '已开启 AI 数字网店实操', createdAt: STATIC_DATE },
+  { id: 'f2', city: '内测', user: 'AI 创业者', action: '加入了第 3 期实战营招募', createdAt: STATIC_DATE },
+  { id: 'f3', city: '直播', user: '首期 AI 商业直播课', action: '即将开播（扫码预约）', createdAt: STATIC_DATE },
+  { id: 'f4', city: '内测', user: 'AI 数字店主', action: '跑通了 AI 选品 → 上架 → 复购闭环', createdAt: STATIC_DATE },
+  { id: 'f5', city: '内测', user: 'AI 自媒体创作者', action: '用 AI 写脚本 3 天涨粉 800+', createdAt: STATIC_DATE },
+  { id: 'f6', city: '直播', user: '本周公开课', action: '主题：用 AI 把生意做成资产（免费）', createdAt: STATIC_DATE },
+  { id: 'f7', city: '内测', user: '城市主理人', action: '正在本地招募 OPC 合伙人', createdAt: STATIC_DATE },
+  { id: 'f8', city: '直播', user: '回放已上线', action: '《AI 数字店群从 0 到 1》', createdAt: STATIC_DATE },
 ]
 
 export default function HomePage() {
@@ -434,18 +476,19 @@ export default function HomePage() {
                 汇聚全国 AI 从業者与企业，共同探索 AI 智富路径在实际落地中的应用与商业价值
               </p>
 
-              <div className="flex flex-col sm:flex-row gap-3">
+              <div className="flex flex-col md:flex-row gap-3">
                 <Link
-                  href="/salon"
-                  className="inline-flex items-center justify-center bg-gradient-to-r from-amber-500 to-orange-500 text-white font-bold py-3 px-5 rounded-xl shadow-lg active:scale-95 transition-transform text-sm md:text-base"
+                  href="/live"
+                  className="w-full md:w-auto inline-flex items-center justify-center bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 text-white font-bold py-3 px-5 rounded-xl shadow-lg shadow-amber-500/30 active:scale-95 transition-transform text-sm md:text-base"
+                  data-testid="hero-live-btn"
                 >
-                  <Sparkles size={18} className="mr-2" />
-                  智富沙龙·立即报名
+                  <span className="mr-1.5 text-base">📺</span>
+                  线上直播公开课
                   <ArrowRight size={16} className="ml-2" />
                 </Link>
                 <Link
                   href="/partner"
-                  className="inline-flex items-center justify-center bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 text-white font-bold py-3 px-5 rounded-xl shadow-lg active:scale-95 transition-transform text-sm md:text-base"
+                  className="w-full md:w-auto inline-flex items-center justify-center bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 text-white font-bold py-3 px-5 rounded-xl shadow-lg active:scale-95 transition-transform text-sm md:text-base"
                 >
                   <Rocket size={18} className="mr-2" />
                   智富主理人·城市招募
@@ -453,66 +496,9 @@ export default function HomePage() {
               </div>
             </div>
 
-            {/* 右：2D 数字人形象（纯 CSS 动画版 · 避免 framer-motion hydration 报错） */}
+            {/* 右：数字人形象（ThreeAvatar 组件 · 移动端自动跳过） */}
             <div className="relative hidden md:flex items-center justify-center">
-              <div className="relative w-full aspect-square max-w-md">
-                {/* 光晕背景 */}
-                <div className="absolute inset-0 bg-gradient-to-br from-blue-500/20 via-purple-500/25 to-pink-500/20 rounded-3xl blur-2xl" />
-                {/* 装饰光带 */}
-                <div className="absolute inset-0 overflow-hidden rounded-3xl pointer-events-none">
-                  <div
-                    className="absolute left-0 right-0 h-24 -translate-y-2 animate-pulse"
-                    style={{
-                      top: '58%',
-                      background:
-                        'linear-gradient(90deg, transparent 0%, rgba(168,85,247,0) 5%, rgba(168,85,247,0.55) 30%, rgba(236,72,153,0.7) 50%, rgba(99,102,241,0.55) 70%, rgba(168,85,247,0) 95%, transparent 100%)',
-                      filter: 'blur(8px)',
-                      mixBlendMode: 'screen',
-                    }}
-                  />
-                  <div
-                    className="absolute left-0 right-0 h-3 -translate-y-2 animate-pulse"
-                    style={{
-                      top: '58%',
-                      background:
-                        'linear-gradient(90deg, transparent 0%, rgba(255,255,255,0) 10%, rgba(255,255,255,0.85) 50%, rgba(255,255,255,0) 90%, transparent 100%)',
-                      filter: 'blur(3px)',
-                      animationDelay: '0.6s',
-                      mixBlendMode: 'screen',
-                    }}
-                  />
-                  <div className="absolute -top-10 -right-10 w-40 h-40 bg-purple-500/40 rounded-full blur-3xl animate-pulse" />
-                  <div
-                    className="absolute -bottom-10 -left-10 w-32 h-32 rounded-full blur-3xl animate-pulse"
-                    style={{
-                      background: 'radial-gradient(circle, rgba(99,102,241,0.5), transparent 70%)',
-                      animationDelay: '1.2s',
-                    }}
-                  />
-                </div>
-                {/* 数字人图片（CSS 浮动） */}
-                <div className="relative w-full h-full animate-float">
-                  <Image
-                    src="/images/liangliang.png"
-                    alt="良良 - 良朋社 AI 数字助手"
-                    width={400}
-                    height={400}
-                    priority
-                    quality={95}
-                    className="relative w-full h-full object-contain drop-shadow-[0_10px_30px_rgba(168,85,247,0.35)]"
-                  />
-                </div>
-                {/* 旋转光圈 */}
-                <div className="absolute -inset-4 border-2 border-blue-400/30 rounded-3xl animate-spin-slow pointer-events-none" />
-                <div className="absolute -inset-8 border border-purple-400/20 rounded-3xl animate-spin-reverse pointer-events-none" />
-                {/* 浮动徽章 */}
-                <div className="absolute top-8 -right-2 bg-white/10 backdrop-blur-md border border-white/20 rounded-full px-3 py-1.5 text-xs text-white shadow-lg">
-                  ✨ AI 智富助理
-                </div>
-                <div className="absolute bottom-12 -left-2 bg-gradient-to-r from-purple-500/80 to-pink-500/80 backdrop-blur-md rounded-full px-3 py-1.5 text-xs text-white shadow-lg">
-                  🎯 一人公司 × 智富引擎
-                </div>
-              </div>
+              <ThreeAvatar />
             </div>
           </div>
         </section>
@@ -537,6 +523,12 @@ export default function HomePage() {
                     <div className="text-[10px] text-white/70 mt-0.5">
                       {stat.label}{stat.unit}
                     </div>
+                    {/* 副标题（仅内测企业展示信任感） */}
+                    {stat.label === '内测企业' && (
+                      <div className="text-[10px] text-slate-400 mt-0.5">
+                        内测即实力，我们已跑通真实商业模型。
+                      </div>
+                    )}
                   </div>
                 ))}
                 <div className="flex-shrink-0 flex items-center gap-1.5 bg-white/10 border border-white/20 rounded-full px-2.5 py-1.5 ml-auto">
@@ -561,10 +553,10 @@ export default function HomePage() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="text-[10px] font-bold text-amber-100 tracking-wider mb-0.5">
-                    🔥 限时免费 · 每天仅 10 个名额
+                    🎯 1v1 诊断 · 平均 5 分钟出报告
                   </div>
-                  <h3 className="text-sm md:text-base font-bold leading-tight">
-                    免费领取：OPC 智富入局诊断
+                  <h3 className="text-sm md:text-base font-extrabold leading-tight">
+                    19.9 元，让 AI 帮你算出最适合你的赚钱赛道。
                   </h3>
                 </div>
                 <Link
@@ -572,14 +564,22 @@ export default function HomePage() {
                   className="flex-shrink-0 inline-flex items-center gap-1 px-3 py-2 bg-white text-orange-600 text-xs font-bold rounded-lg shadow-md active:scale-95 transition-transform"
                 >
                   <Sparkles size={12} />
-                  立即领取
+                  立即咨询
                 </Link>
               </div>
+              {/* 右上角：老手跳过诊断 · 极简文字链接 */}
+              <Link
+                href="/market"
+                className="absolute top-2 right-3 text-xs text-white/70 hover:text-white flex items-center gap-0.5 transition-colors"
+              >
+                <Wrench size={10} />
+                老手跳过诊断 →
+              </Link>
             </div>
           </div>
         </section>
 
-        {/* 4. 学习路径 */}
+        {/* 4. OPC 学习智富路径（STEP 01-04 卡片） */}
         <section className="px-5 pt-5 pb-3">
           <div className="max-w-lg mx-auto md:max-w-6xl">
             <h2 className="text-base md:text-lg font-bold text-slate-800 flex items-center gap-2 mb-3">
@@ -640,7 +640,7 @@ export default function HomePage() {
                     {/* 右上角状态徽章 */}
                     <span
                       className={cn(
-                        'absolute top-2 right-2 text-[9px] font-bold px-1.5 py-0.5 rounded-full whitespace-nowrap',
+                        'absolute top-2 right-2 text-[9px] font-bold px-1.5 py-0.5 rounded-full whitespace-nowrap z-10',
                         badgeConfig.bg,
                         badgeConfig.text,
                         badgeConfig.border,
@@ -650,8 +650,9 @@ export default function HomePage() {
                       {badgeConfig.label}
                     </span>
 
+                    {/* STEP 编号 + 图标 + 标题 */}
                     <div className="flex items-center gap-2 mb-1.5 pr-16">
-                      <div className={cn('w-8 h-8 rounded-full ring-2 ring-white shadow flex items-center justify-center text-white', statusConfig[item.status].bg, 'ring-blue-100')}>
+                      <div className={cn('w-8 h-8 rounded-full ring-2 ring-white shadow flex items-center justify-center text-white', statusConfig[status].bg, 'ring-blue-100')}>
                         <Icon size={14} />
                       </div>
                       <div className="flex-1 min-w-0">
@@ -659,7 +660,24 @@ export default function HomePage() {
                         <div className="text-xs font-bold text-slate-800 leading-tight">{item.title}</div>
                       </div>
                     </div>
-                    <p className="text-[10px] text-slate-500 leading-snug line-clamp-2">{item.desc}</p>
+
+                    {/* 核心价值（已移除价格标签，改为下方统一引导横幅） */}
+                    <p className="text-[10px] text-slate-600 leading-snug mb-1.5 line-clamp-2">
+                      {item.coreValue}
+                    </p>
+
+                    {/* 交付物清单（极简浅色胶囊 · flex-wrap 保证移动端不挤压） */}
+                    <div className="mt-1 flex flex-wrap gap-1">
+                      {item.deliverables.map((d, i) => (
+                        <span
+                          key={i}
+                          className="inline-flex items-center text-[9px] leading-tight bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded-full whitespace-nowrap"
+                        >
+                          {d}
+                        </span>
+                      ))}
+                    </div>
+
                     <div className="mt-1.5 flex items-center justify-end">
                       <ArrowRight size={10} className="text-slate-300" />
                     </div>
@@ -670,17 +688,34 @@ export default function HomePage() {
           </div>
         </section>
 
-        {/* 4. 学习路径 */}
+        {/* 4.5. 落地方案引导横幅 · 4 个 STEP 卡片共享的入口 */}
+        <section className="px-5 pt-1 pb-3">
+          <div className="max-w-lg mx-auto md:max-w-6xl">
+            <div
+              data-testid="home-pricing-cta"
+              className="bg-white/80 backdrop-blur-sm border border-slate-200 rounded-2xl p-4 flex flex-col md:flex-row justify-between items-center gap-4"
+            >
+              <div className="flex-1 min-w-0 text-xs md:text-sm text-slate-700 leading-relaxed">
+                � 只需 1 分钟，看看你离跑通 <span className="font-bold text-slate-900">AI 商业闭环</span> 还差哪一步。
+              </div>
+              <Link
+                href="/diagnosis"
+                className="flex-shrink-0 inline-flex items-center justify-center bg-blue-600 hover:bg-blue-700 text-white font-medium px-4 py-2 rounded-full transition text-xs md:text-sm whitespace-nowrap"
+              >
+                查看落地方案 →
+              </Link>
+            </div>
+          </div>
+        </section>
+
+        {/* 5. OPC四层智富阶梯 */}
         <section className="px-5 pt-5 pb-3">
           <div className="max-w-lg mx-auto md:max-w-6xl">
-            <div className="flex items-center justify-between mb-3">
+            <div className="mb-3">
               <h2 className="text-base md:text-lg font-bold text-slate-900 flex items-center gap-2">
                 <span className="text-xl">📈</span>
                 OPC四层智富阶梯
               </h2>
-              <Link href="/market" className="text-[11px] font-bold text-slate-600 hover:text-blue-700 bg-white border border-slate-300 px-2.5 py-1 rounded-full">
-                🛠️ 我是老手 →
-              </Link>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {entrepreneurLadder.map((item) => (

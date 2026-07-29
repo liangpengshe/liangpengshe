@@ -12,7 +12,7 @@ import { isSubmittableCategory, type ResourceCategory } from '@/lib/resource-cat
  *   提交新投稿（默认状态 PENDING，等待审核）
  *   Body: { authorId, authorName?, authorLevel?, title, description, category, fileUrl? }
  *
- * GET /api/resources/submit?status=PENDING&category=ai-software
+ * GET /api/resources/submit?status=PENDING&category=ai-self-tools
  *   获取投稿列表（按 status / category 过滤）
  * ------------------------------------------------------------
  */

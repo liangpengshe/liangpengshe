@@ -31,9 +31,11 @@ import {
   type StageDetail,
   type DiagnosisRecord,
 } from '@/lib/member-dashboard'
+import { useUserProgressFacade } from '@/lib/user-progress-facade'
 import { arrFromDb } from '@/lib/json-array'
 import { buildExpiringBanner } from '@/lib/subscription-middleware'
 import { useAudio } from '@/hooks/useAudio'
+import { PointsExchangeCard } from './_components/PointsExchangeCard'
 import {
   User,
   Mail,
@@ -331,6 +333,11 @@ export default function MemberPage() {
           />
         </section>
 
+        {/* 💎 任务 1：我的积分面板（积分消耗场景） */}
+        <section className="px-4 pt-3 md:px-6">
+          <PointsExchangeCard points={pointsBalance} />
+        </section>
+
         {/* 🌅 商业作战地图 · 顶部概览（替换原 Hero） */}
         <section className="px-4 pt-4 md:px-6 md:pt-6">
           <ProfileHeader
@@ -579,6 +586,9 @@ function LearningGapCard() {
   const [unlock, setUnlock] = useState<boolean>(false)
   const [loading, setLoading] = useState(true)
 
+  // W5.2：接入 useUserProgressFacade（单一数据源，替代原 localStorage 直读）
+  const facade = useUserProgressFacade()
+
   useEffect(() => {
     if (typeof window === 'undefined') return
     const read = () => {
@@ -612,6 +622,19 @@ function LearningGapCard() {
       window.removeEventListener('storage', onStorage)
     }
   }, [])
+
+  // W5.2：当 facade ready 且数据更新时，优先用 facade 覆盖本地值
+  // 目的：验证 facade 接入不破坏既有 localStorage 降级链路
+  useEffect(() => {
+    if (!facade.ready) return
+    if (facade.learning) {
+      setScore(facade.learning.score)
+      setUnlock(facade.learning.canUnlockPractice)
+    }
+    if (facade.learning?.opcLevel) {
+      setLevel(facade.learning.opcLevel)
+    }
+  }, [facade.ready, facade.learning])
 
   // 未诊断 / 已完成 / 加载中 → 不显示
   if (loading) return null
@@ -2368,3 +2391,9 @@ function DailySignInCard({
     </div>
   )
 }
+
+/* ════════════════════════════════════════════════════════════════
+ *  任务 1：我的积分面板（积分消耗场景开启）
+ *  包含：当前积分展示 + 积分兑换 SOP 资料弹窗 + 积分抵扣续费跳转
+ *  P0-1 拆分：PointsExchangeCard 已抽到 _components/PointsExchangeCard.tsx
+ * ════════════════════════════════════════════════════════════════ */

@@ -3,26 +3,22 @@
  *
  * 结构:
  *   1. 顶部导航（搜索 / 横幅 / 4 库导航）由 /market/layout.tsx 提供
- *   2. MarketContent 渲染原有的 6 大资源板块
- *   3. 新增"AI 社区脉冲仪表板" - 替代传统论坛的社区风向标
- *   4. 新增"OPC 内部供需广场"社区入口
+ *   2. MarketContent 渲染原有的 6 大资源板块（含紫色 OPC 生态成员横幅）
+ *   3. 内部供需广场入口（绿色 section）
+ *
+ * [精简] 已删除原"极简文字入口：成员实战投稿 / 本周 OPC 风向标"两个独立 div，
+ *       避免与 MarketContent 内部已有入口重复 + 减少上下两块横幅之间的白色留白
  */
 import { MarketContent } from '@/components/market/MarketContent'
-import { AICommunityDashboard } from '@/components/community/AICommunityDashboard'
 
 export default function ResourcesPage() {
   return (
     <div>
-      {/* 原资源库内容（6 大资源板块 + UGC 投稿） */}
+      {/* 原资源库内容（6 大资源板块 + 紫色 OPC 生态成员横幅） */}
       <MarketContent defaultTab="resources" standalone={false} />
 
-      {/* AI 动态供需情报站（替代传统社区） */}
-      <div className="mt-6">
-        <AICommunityDashboard />
-      </div>
-
-      {/* 社区入口 */}
-      <section className="mt-4 p-4 bg-white border border-slate-200 rounded-2xl flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+      {/* 内部供需广场（绿色 section）· 用 -mt-24 抵销 MarketContent <main py-6 pb-6> 24px + 紫色横幅 pb-8 32px + 隐式间距 ≈ 96px，紧贴紫色横幅 */}
+      <section className="-mt-24 p-4 bg-white border border-slate-200 rounded-2xl flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center">
             <span className="text-lg">💬</span>

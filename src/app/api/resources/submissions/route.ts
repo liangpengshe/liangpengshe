@@ -11,7 +11,7 @@ import { isSubmittableCategory, type ResourceCategory } from '@/lib/resource-cat
  * ------------------------------------------------------------
  * GET /api/resources/submissions
  *   Query:
- *     category: 物理产品库 / ai-software / ai-hardware / ai-courses（可选）
+ *     category: 物理产品库 / ai-self-tools / ai-hardware / opc-ecology（可选）
  *     limit:    返回数量上限（默认 20）
  *   Response:
  *     items: ResourceSubmissionRecord[] （仅返回 APPROVED 状态的）

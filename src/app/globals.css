@@ -83,6 +83,16 @@
   .animate-float {
     animation: floatY 4s ease-in-out infinite;
   }
+
+  /* ════════ 全局锚点偏移（统一规则，避免被 sticky 导航栏遮挡）══════
+     - 适用于 [id^="plan-"]（价格档）、[id^="section-"]（内容区块）等
+     - 等价 Tailwind scroll-mt-20，但可一处声明全局生效
+     - 5rem = 80px ≈ 顶部导航(56-64px) + 安全间距
+  */
+  [id^="plan-"],
+  [id^="section-"] {
+    scroll-margin-top: 5rem;
+  }
 }
 
 @keyframes slideUp {

@@ -776,7 +776,7 @@ export default function ServicesPage() {
                   </li>
                 </ul>
                 <button
-                  onClick={() => { window.location.href = '/booking?p=diagnose-1000' }}
+                  onClick={() => { window.location.href = '/pricing' }}
                   className="w-full inline-flex items-center justify-center gap-1.5 px-5 py-3 bg-white text-orange-600 text-sm font-bold rounded-xl shadow-lg hover:shadow-xl hover:scale-[1.02] active:scale-95 transition-all"
                 >
                   立即购买诊断

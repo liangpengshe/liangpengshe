@@ -74,7 +74,7 @@ export function CollaborationMatchModal({
   onClose,
   onSubmitForm,
 }: {
-  /** 当前点击的服务（opc-coaching / shop-daiyun） */
+  /** 当前点击的服务（opc-coaching / shop-group-daiyun） */
   service: ServiceItem
   /** 用户 OPC 类型（从 localStorage 'opc_level' 读取） */
   opcLevel?: 'TRADER' | 'FLOW' | 'SYSTEM' | 'ASSET' | null

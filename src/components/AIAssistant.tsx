@@ -311,6 +311,52 @@ export default function AIAssistant() {
     }
   }, [dwellSec, ctx.kind, isOpen, dismissedHint, suppressed, sceneHint])
 
+  // ════════ [任务 2] 项目页主动关怀：停留 10s 弹出引导气泡（5s 自动淡出）══════
+  // 仅在 /projects/ 路由下生效；用户点击任何步骤或打开 AI 面板时重置计时。
+  const [showActiveHint, setShowActiveHint] = useState(false)
+  const activeHintShownRef = useRef<string>('') // 记录本次 pathname 已触发的 hint，避免重复弹
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const p = pathname || ''
+    // 仅 /projects/[slug] 页面触发（排除纯 /projects 列表）
+    if (!p.startsWith('/projects/') || p === '/projects') {
+      activeHintShownRef.current = ''
+      setShowActiveHint(false)
+      return
+    }
+    // 用户已打开 AI 面板时不再触发（避免打扰）
+    if (isOpen) {
+      setShowActiveHint(false)
+      return
+    }
+    // 同一 pathname 不重复触发
+    if (activeHintShownRef.current === p) return
+    activeHintShownRef.current = p
+    const timer = setTimeout(() => {
+      setShowActiveHint(true)
+      // 5 秒后自动淡出
+      const autoClose = setTimeout(() => {
+        setShowActiveHint(false)
+      }, 5000)
+      // 清理：pathname 变化时也会重新触发
+      return () => clearTimeout(autoClose)
+    }, 10000)
+    return () => clearTimeout(timer)
+  }, [pathname, isOpen])
+
+  // 监听全局点击/打卡事件：用户与页面交互时立即关闭主动气泡
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    if (!showActiveHint) return
+    const handler = () => setShowActiveHint(false)
+    window.addEventListener('lps:open-ai-assistant', handler)
+    window.addEventListener('click', handler, { once: true })
+    return () => {
+      window.removeEventListener('lps:open-ai-assistant', handler)
+    }
+  }, [showActiveHint])
+
   // 首次打开 AI 面板：附上下文欢迎语
   useEffect(() => {
     if (isOpen && messages.length === 0) {
@@ -545,8 +591,37 @@ export default function AIAssistant() {
         </div>
       )}
 
-      {/* ════════ 呼吸光晕 3D 悬浮球 ═══════ */}
-      <div className="fixed bottom-24 right-4 z-50">
+      {/* ════════ [任务 2] /projects/ 页面 10s 主动关怀气泡（5s 自动淡出 + 可手动关闭）══════ */}
+      {!isOpen && showActiveHint && (
+        <div
+          className="fixed bottom-28 right-6 z-50 max-w-[260px] animate-fade-in"
+          role="status"
+          aria-live="polite"
+        >
+          <div className="relative bg-white border border-blue-200 shadow-xl rounded-2xl px-3.5 py-3 text-xs leading-relaxed text-slate-800">
+            <button
+              type="button"
+              onClick={(ev) => {
+                ev.stopPropagation()
+                setShowActiveHint(false)
+              }}
+              className="absolute top-1.5 right-1.5 w-5 h-5 flex items-center justify-center text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-100 transition"
+              aria-label="关闭主动提示"
+            >
+              <X size={12} />
+            </button>
+            <div className="flex items-start gap-2 pr-4">
+              <span aria-hidden="true" className="text-base shrink-0">💡</span>
+              <span>需要我帮你梳理当前步骤的操作清单吗？你可以随时问我。</span>
+            </div>
+            {/* 指向悬浮球的小三角 */}
+            <div className="absolute -bottom-1.5 right-6 w-3 h-3 bg-white border-r border-b border-blue-200 rotate-45" />
+          </div>
+        </div>
+      )}
+
+      {/* ════════ 呼吸光晕 3D 悬浮球（[任务 1·修复] 移动端提升至 bottom-24 避开 MobileBottomNav 遮挡，桌面端保持 bottom-6）══════ */}
+      <div className="fixed right-6 z-50 bottom-24 md:bottom-6">
         <div className="absolute inset-0 -m-2 rounded-full bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 opacity-60 blur-xl animate-pulse" />
         <div className="absolute inset-0 -m-1 rounded-full bg-gradient-to-br from-blue-400 to-purple-500 opacity-40 animate-ping" />
         <button
@@ -571,12 +646,12 @@ export default function AIAssistant() {
               }, 350)
             }
           }}
-          className="relative w-14 h-14 bg-gradient-to-br from-blue-500 via-indigo-500 to-purple-600 rounded-full shadow-2xl shadow-purple-500/40 flex items-center justify-center text-white hover:scale-110 active:scale-95 transition-all duration-300 border border-white/30"
+          className="relative w-14 h-14 bg-blue-600 hover:bg-blue-700 text-white rounded-full p-4 shadow-xl flex items-center justify-center hover:scale-110 active:scale-95 transition-all duration-300 border-2 border-white/40"
         >
           {isOpen ? (
-            <X size={24} className="transition-transform duration-200 drop-shadow" />
+            <X size={22} className="transition-transform duration-200 drop-shadow" />
           ) : (
-            <Sparkles size={24} className="drop-shadow animate-pulse" />
+            <MessageCircle size={22} className="drop-shadow" />
           )}
         </button>
       </div>

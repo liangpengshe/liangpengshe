@@ -127,7 +127,7 @@ export function buildCopilotContext(pathname: string | null): CopilotContext {
       kind: 'market-tools',
       bubble: '你正在看工具库——告诉我你现在的痛点（降本/引流/客户运营），我帮你匹配最合适的 3 个工具。',
       dwell30Bubble: '工具太多挑花眼？告诉我你的预算和团队规模，我帮你精准推荐。',
-      dwell60Bubble: '需要工具教程吗？AI 精品教程库里有 200+ 实战视频。',
+      dwell60Bubble: '需要工具教程吗？OPC生态资源库里有 200+ 实战视频。',
       cta: { label: 'AI 智能推荐工具', href: '/market/tools?advisor=1' },
       systemHint: '用户当前停留在 /market/tools 页面（工具库）。请主动询问用户的痛点（降本 / 引流 / 客户运营 / 内容生产），并推荐 3 个最匹配的工具。',
       style: 'blue',

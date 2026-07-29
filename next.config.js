@@ -23,6 +23,23 @@ const nextConfig = {
         destination: '/partner',
         permanent: true,
       },
+      // W4.1 演进：旧城市站路径 301 → /city/[slug]
+      // SEO 友好：保留外链权重 + 自动跳转
+      {
+        source: '/dongguan',
+        destination: '/city/dongguan',
+        permanent: true,
+      },
+      {
+        source: '/liuzhou',
+        destination: '/city/liuzhou',
+        permanent: true,
+      },
+      {
+        source: '/wuhai',
+        destination: '/city/wuhai',
+        permanent: true,
+      },
     ]
   },
   async headers() {
