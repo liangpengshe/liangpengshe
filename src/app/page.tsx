@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import ClientLayout from '@/components/ClientLayout'
 import ThreeAvatar from '@/components/ThreeAvatar'
-import { ArrowRight, Sparkles, Rocket, Compass, BookOpen, Wrench, TrendingUp, CheckCircle2, Clock, Lock, ShoppingCart, Megaphone, Settings2, Gem } from 'lucide-react'
+import { ArrowRight, Sparkles, Rocket, Compass, BookOpen, Wrench, Briefcase, TrendingUp, CheckCircle2, Clock, Lock, ShoppingCart, Megaphone, Settings2, Gem } from 'lucide-react'
 import { toast } from '@/components/Toast'
 import { cn } from '@/lib/utils'
 
@@ -110,11 +110,12 @@ const entrepreneurLadder = [
   },
 ]
 
+// [Task: 四库顺序] 固定为：项目 → 工具 → 服务 → 资源（与 /market/layout.tsx Tab 顺序对齐）
 const libraryCards = [
-  { title: 'AI智富工具库', subtitle: 'AI 自研工具、电商工作台、运营插件', href: '/market/tools', icon: '🔧', tag: '自研' },
-  { title: 'AI智富项目库', subtitle: 'AI 数字店群、无货源店群、跨境电商', href: '/market/projects', icon: '🚀', tag: '落地案例' },
-  { title: 'AI智富服务库', subtitle: 'OPC 工具/内训/陪跑/社群、企业 GEO', href: '/market/services', icon: '💼', tag: '陪跑' },
-  { title: 'AI智富资源库', subtitle: 'AI 智能硬件、AI 招商加盟、OPC 生态', href: '/market/resources', icon: '📚', tag: '链接' },
+  { title: 'AI智富项目库', subtitle: 'AI 数字店群、无货源店群、跨境电商', href: '/market/projects', icon: Rocket, iconColor: 'text-amber-600', iconBg: 'bg-amber-50', tag: '落地案例' },
+  { title: 'AI智富工具库', subtitle: 'AI 自研工具、电商工作台、运营插件', href: '/market/tools', icon: Wrench, iconColor: 'text-blue-600', iconBg: 'bg-blue-50', tag: '自研' },
+  { title: 'AI智富服务库', subtitle: 'OPC 工具/内训/陪跑/社群、企业 GEO', href: '/market/services', icon: Briefcase, iconColor: 'text-emerald-600', iconBg: 'bg-emerald-50', tag: '陪跑' },
+  { title: 'AI智富资源库', subtitle: 'AI 智能硬件、AI 招商加盟、OPC 生态', href: '/market/resources', icon: BookOpen, iconColor: 'text-rose-600', iconBg: 'bg-rose-50', tag: '链接' },
 ]
 
 const statusConfig = {
@@ -688,26 +689,6 @@ export default function HomePage() {
           </div>
         </section>
 
-        {/* 4.5. 落地方案引导横幅 · 4 个 STEP 卡片共享的入口 */}
-        <section className="px-5 pt-1 pb-3">
-          <div className="max-w-lg mx-auto md:max-w-6xl">
-            <div
-              data-testid="home-pricing-cta"
-              className="bg-white/80 backdrop-blur-sm border border-slate-200 rounded-2xl p-4 flex flex-col md:flex-row justify-between items-center gap-4"
-            >
-              <div className="flex-1 min-w-0 text-xs md:text-sm text-slate-700 leading-relaxed">
-                � 只需 1 分钟，看看你离跑通 <span className="font-bold text-slate-900">AI 商业闭环</span> 还差哪一步。
-              </div>
-              <Link
-                href="/diagnosis"
-                className="flex-shrink-0 inline-flex items-center justify-center bg-blue-600 hover:bg-blue-700 text-white font-medium px-4 py-2 rounded-full transition text-xs md:text-sm whitespace-nowrap"
-              >
-                查看落地方案 →
-              </Link>
-            </div>
-          </div>
-        </section>
-
         {/* 5. OPC四层智富阶梯 */}
         <section className="px-5 pt-5 pb-3">
           <div className="max-w-lg mx-auto md:max-w-6xl">
@@ -754,18 +735,20 @@ export default function HomePage() {
                 <span className="text-xl">🏆</span>
                 AI四库全胜系统
               </h2>
-              <Link href="/market" className="text-xs text-blue-600 hover:text-blue-700">查看全部 →</Link>
+              <Link href="/market/projects" className="text-xs text-blue-600 hover:text-blue-700">查看全部 →</Link>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {libraryCards.map((card) => (
+              {libraryCards.map((card) => {
+                const Icon = card.icon
+                return (
                 <Link
                   key={card.href}
                   href={card.href}
                   className="group block rounded-2xl bg-white border border-slate-200 p-4 min-h-[110px] hover:shadow-md hover:-translate-y-0.5 transition-all"
                 >
                   <div className="flex items-start justify-between mb-2">
-                    <div className="w-9 h-9 rounded-xl bg-slate-50 flex items-center justify-center text-xl">
-                      <span>{card.icon}</span>
+                    <div className={`w-9 h-9 rounded-xl ${card.iconBg} flex items-center justify-center`}>
+                      <Icon size={18} className={card.iconColor} strokeWidth={2.2} />
                     </div>
                     <span className="bg-slate-100 text-slate-500 text-[9px] px-1.5 py-0.5 rounded-full font-medium">
                       {card.tag}
@@ -779,17 +762,9 @@ export default function HomePage() {
                     </span>
                   </div>
                 </Link>
-              ))}
+                )
+              })}
             </div>
-          </div>
-        </section>
-
-        {/* 6.5 技术底座（半透明 · 文字标识 · 替换原 Logo 墙） */}
-        <section className="px-5 pt-3 pb-3 mb-8 md:mb-12">
-          <div className="max-w-6xl mx-auto text-center">
-            <p className="text-xs text-slate-400/60">
-              AI 算力驱动：硅基流动 · 灵犀AI · Dify · Midjourney
-            </p>
           </div>
         </section>
 

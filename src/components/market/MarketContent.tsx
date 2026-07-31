@@ -482,10 +482,11 @@ export function MarketContent({
    * 流量型 OPC 精准推荐配置
    * ------------------------------------------------------------
    * recommendLevel === 'flow' 时：
-   *   1) 「AI图文自媒体项目」「AI视频自媒体项目」「AI工具推广项目」标记为 isHighlighted
-   *   2) 这 3 个项目置顶到网格最前面
+   *   1) 「AI图文自媒体项目」「AI视频自媒体项目」标记为 isHighlighted
+   *   2) 这 2 个项目置顶到网格最前面
    *   3) 其他项目的"优先推荐"徽章自动消失
-   *   [任务:拆分自媒体项目] 原 AI自媒体群项目 已拆为 AI图文 + AI视频 两个独立项目
+   *   [任务:拆分自媒体项目 + 流量型精减] 原 AI自媒体群项目 已拆为 AI图文 + AI视频
+   *       AI工具推广项目（level=flow 但属于渠道销售分类）不再进入流量型优先推荐
    *
    * trader 模式沿用：AI数字店群项目 + AI无货源店群项目
    * system / asset 模式暂未配置置顶集合（保持原顺序 + level 匹配高亮）
@@ -493,8 +494,9 @@ export function MarketContent({
    */
   const PRIORITY_TITLES_BY_LEVEL: Record<NonNullable<typeof recommendLevel>, string[]> = {
     trader: ['AI数字店群项目', 'AI无货源店群项目'],
-    // [任务:拆分自媒体项目] 原 'AI自媒体群项目' 拆为 'AI图文自媒体项目' + 'AI视频自媒体项目'，均置顶优先推荐
-    flow: ['AI图文自媒体项目', 'AI视频自媒体项目', 'AI工具推广项目'],
+    // [任务:拆分自媒体项目 + 流量型精减] 流量型 OPC 仅推荐 AI图文 + AI视频 两个新拆分的项目
+    // AI工具推广项目虽然 level=flow，但因属于"渠道销售"分类，不再进入流量型优先推荐
+    flow: ['AI图文自媒体项目', 'AI视频自媒体项目'],
     system: ['AI编程开发项目', 'AI企业GEO项目'],
     asset: ['AI跨境电商项目', 'AI数字产品项目'],
   }

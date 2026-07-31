@@ -102,6 +102,20 @@ const TRADER_CARDS: ReadonlyArray<TraderCard> = [
       { label: '周转', value: '少量周转金（几千块）即可启动第一家 AI 数字网店' },
     ],
   },
+  {
+    key: 'T4',
+    title: '店群经营避坑指南',
+    subtitle: '拒绝加盟 · 拒绝空想 · 专注 AI 工具驱动',
+    icon: ShieldAlert,
+    accent: 'from-amber-500 to-red-600',
+    iconBg: 'bg-amber-50',
+    iconColor: 'text-amber-700',
+    points: [
+      { label: '坑一', value: '拒绝加盟与缴纳分润 · 任何先交钱才能赚钱的承诺都先停一停' },
+      { label: '坑二', value: '拒绝空想先行 · 先动手验证（开 1 个店 + 跑通 1 单）' },
+      { label: '坑三', value: '专注 AI 工具驱动的高效闭环 · 不做高人力的伪效率项目' },
+    ],
+  },
 ]
 
 // 流量型 OPC 核心 4 卡（核心命题 / 核心心法 / 5 步变现 / 避坑）
@@ -226,7 +240,7 @@ export default function MindsetPage() {
                 className="flex-shrink-0 inline-flex items-center gap-1.5 bg-amber-50 border border-amber-200 hover:bg-amber-100 transition-colors px-3 py-1.5 rounded-full text-[12px] font-extrabold text-amber-800"
               >
                 <Coins size={13} className="text-amber-600" />
-                💰 AI 店群思维（交易型）
+                💰 AI 网店群思维（交易型）
               </a>
               <a
                 href="#flow-engine"
@@ -262,7 +276,7 @@ export default function MindsetPage() {
                   ENGINE 01
                 </div>
                 <h2 className="text-base md:text-lg font-extrabold text-slate-900 leading-tight">
-                  💰 AI 店群思维（交易型）
+                  💰 AI 网店群思维（交易型）
                 </h2>
               </div>
               <span className="text-[10px] font-bold text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full whitespace-nowrap">
@@ -535,7 +549,7 @@ export default function MindsetPage() {
                 className="group inline-flex items-center justify-center gap-2 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white px-6 py-3 rounded-xl text-sm font-extrabold shadow-lg hover:shadow-xl hover:scale-[1.02] active:scale-[0.98] transition-all"
               >
                 <Coins size={14} />
-                我选 AI 店群，立马实操
+                我选 AI 网店群，立马实操
                 <ArrowRight size={14} className="group-hover:translate-x-0.5 transition-transform" />
               </Link>
 

@@ -45,7 +45,26 @@ interface NavTab {
   }
 }
 
+// [Task:Tab 默认排序] 优先级：项目库 → 工具库 → 服务库 → 资源库
+// 激活态高亮完全由 usePathname() 动态匹配 href，与数组顺序无关，重排零风险
 const NAV_TABS: NavTab[] = [
+  {
+    href: '/market/projects',
+    label: 'AI智富项目库',
+    short: '项目',
+    icon: FolderKanban,
+    brand: {
+      idleBg: 'bg-amber-50',
+      idleText: 'text-amber-700',
+      idleBorder: 'border-amber-200',
+      hoverBg: 'hover:bg-amber-100',
+      activeFrom: 'from-amber-500',
+      activeTo: 'to-orange-500',
+      activeShadow: 'shadow-amber-500/40',
+      indicator: 'bg-amber-500',
+      dot: 'bg-amber-500',
+    },
+  },
   {
     href: '/market/tools',
     label: 'AI智富工具库',
@@ -78,23 +97,6 @@ const NAV_TABS: NavTab[] = [
       activeShadow: 'shadow-emerald-500/40',
       indicator: 'bg-emerald-500',
       dot: 'bg-emerald-500',
-    },
-  },
-  {
-    href: '/market/projects',
-    label: 'AI智富项目库',
-    short: '项目',
-    icon: FolderKanban,
-    brand: {
-      idleBg: 'bg-amber-50',
-      idleText: 'text-amber-700',
-      idleBorder: 'border-amber-200',
-      hoverBg: 'hover:bg-amber-100',
-      activeFrom: 'from-amber-500',
-      activeTo: 'to-orange-500',
-      activeShadow: 'shadow-amber-500/40',
-      indicator: 'bg-amber-500',
-      dot: 'bg-amber-500',
     },
   },
   {

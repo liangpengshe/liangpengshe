@@ -123,6 +123,27 @@ const FREE_MAIN_STEPS = 2
 // - false: 走真实付费逻辑（默认生产配置）
 // - 其他店群项目（无货源/有货源/跨境/AI自媒体）不受此开关影响，由各自的 stepIdx 拦截判断
 const UNLOCK_ALL_STEPS_FOR_TESTING = false
+// ════════════════════════════════════════════════════════════════
+// [Task:复用数字店群付费逻辑] 两段式付费项目白名单
+// 这 3 个项目统一采用"前 3 步免费 + 第 4 步起锁定"的两段式付费闭环：
+//   1. AI 数字店群项目 (ai-digital-shop-group) - 电商系
+//   2. AI 图文自媒体项目 (ai-image-text-media) - 流量系
+//   3. AI 视频自媒体项目 (ai-video-media)       - 流量系
+// 其他项目（无货源/有货源/跨境）保持原 FREE_MAIN_STEPS=2 单段式逻辑
+// ════════════════════════════════════════════════════════════════
+const TWO_TIER_PRICING_SLUGS = new Set<string>([
+  'ai-digital-shop-group',
+  'ai-image-text-media',
+  'ai-video-media',
+])
+/** 判断当前 slug 是否属于两段式付费项目（决定前 3 步免费还是前 2 步免费） */
+function isTwoTierPricing(slug: string): boolean {
+  return TWO_TIER_PRICING_SLUGS.has(slug)
+}
+/** 当前 slug 的免费步数（两段式项目 = 3，其他 = FREE_MAIN_STEPS=2） */
+function getFreeSteps(slug: string): number {
+  return isTwoTierPricing(slug) ? 3 : FREE_MAIN_STEPS
+}
 
 function readProgress(slug: string): number {
   if (typeof window === 'undefined') return 0
@@ -592,6 +613,39 @@ function buildSOPTasks(project: ProjectItem): SOPTask[] {
     return buildWithSubs(project, filtered.map((s, idx) => ({ ...s, id: idx + 1 })))
   }
 
+  // ════════════════════════════════════════════════════════════════
+  // AI 自媒体矩阵项目 · 9 步 SOP（图文 / 视频）
+  // 第 1 步差异化（小红书 vs 抖音），第 2-9 步通用
+  // ════════════════════════════════════════════════════════════════
+
+  // 通用 9 步基础（项目间差异：仅 steps[0]）
+  const MEDIA_9_STEPS_BASE: Omit<SOPTask, 'subSteps'>[] = [
+    { id: 2, title: '第 2 步 · 运营工具', desc: '配置 AI 图文/视频批量生成工具与多平台分发插件。', actionUrl: 'https://www.lingxixai.com', actionLabel: '🦊 打开灵犀 AI' },
+    { id: 3, title: '第 3 步 · 基础设置', desc: '完善账号头像、简介，绑定收款渠道与基础安全配置。', actionUrl: XHS_CREATOR, actionLabel: '📕 打开小红书创作者中心' },
+    { id: 4, title: '第 4 步 · 精准选题', desc: '利用 AI 分析平台爆款，锁定 3-5 个适合自身定位的精准内容方向。', actionUrl: 'https://www.baowenplus.com', actionLabel: '🐆 打开豹纹工坊（豹纹+）' },
+    { id: 5, title: '第 5 步 · 内容制作', desc: '利用 AI 批量生成爆款图文或短视频脚本，并完成素材生产。', actionUrl: MIDJOURNEY, actionLabel: '🎨 打开 Midjourney' },
+    { id: 6, title: '第 6 步 · 账号运营', desc: '制定内容矩阵发布策略，进行粉丝互动与基础数据观察。', actionUrl: DOUYIN_CREATOR, actionLabel: '🎵 打开抖音创作者中心' },
+    { id: 7, title: '第 7 步 · 私域维护', desc: '建立粉丝社群，利用 AI 辅助私域话术，提升粉丝忠诚度。' },
+    { id: 8, title: '第 8 步 · 数据分析', desc: '分析账号播放量、互动率、涨粉速度，优化下一阶段的内容策略。', actionUrl: 'https://www.dianzhentan.com', actionLabel: '🕵️ 打开店侦探分析数据' },
+    { id: 9, title: '第 9 步 · 矩阵放大', desc: '将已验证的内容 SOP 复制到 2-3 个新账号，通过矩阵放大流量与收益。', actionUrl: 'https://www.xianfengpai.com.cn', actionLabel: '🎬 打开先锋派数字人矩阵' },
+  ]
+
+  // 项目 5：AI图文自媒体项目 (slug: ai-image-text-media) · 第 1 步 = 小红书
+  if (slug === 'ai-image-text-media') {
+    return buildWithSubs(project, [
+      { id: 1, title: '第 1 步 · 账号申请', desc: '完成小红书平台账号注册、实名认证与基础资料搭建。', actionUrl: XHS_CREATOR, actionLabel: '📕 打开小红书创作者中心' },
+      ...MEDIA_9_STEPS_BASE,
+    ])
+  }
+
+  // 项目 6：AI视频自媒体项目 (slug: ai-video-media) · 第 1 步 = 抖音
+  if (slug === 'ai-video-media') {
+    return buildWithSubs(project, [
+      { id: 1, title: '第 1 步 · 账号申请', desc: '完成抖音平台账号注册、实名认证与基础资料搭建。', actionUrl: DOUYIN_CREATOR, actionLabel: '🎵 打开抖音创作者中心' },
+      ...MEDIA_9_STEPS_BASE,
+    ])
+  }
+
   // AI 自媒体运营项目 · 8 步
   if (slug === 'ai-self-media') {
     return buildWithSubs(project, [
@@ -912,9 +966,13 @@ export default function ProjectSOPPage() {
             // 条件：1) 当前是 ai-digital-shop-group；2) 完成的是第 3 步（stepIdx=2）；3) 用户未付费
             // [测试模式] UNLOCK_ALL_STEPS_FOR_TESTING 为 true 时跳过拦截
             // 已完成所有子步骤的 subDone 仍会写入 localStorage，仅阻止 currentStep 推进
+            // [Task:复用数字店群付费逻辑] 两段式付费项目（数字店群 + 图文 + 视频自媒体）
+            // 第 3 步（stepIdx=2）完成时拦截：阻止进入第 4 步核心 AI 玩法（精准选品 / 精准选题）
+            // 条件：1) 当前是两段式项目；2) 完成的是第 3 步（stepIdx=2）；3) 用户未付费
+            // [测试模式] UNLOCK_ALL_STEPS_FOR_TESTING 为 true 时跳过拦截
             if (
               !UNLOCK_ALL_STEPS_FOR_TESTING &&
-              slug === 'ai-digital-shop-group' &&
+              isTwoTierPricing(slug) &&
               stepIdx === 2 &&
               !isPaidMember
             ) {
@@ -924,9 +982,9 @@ export default function ProjectSOPPage() {
               setShowUnlockBanner(true)
               return next
             }
-            // [Task 3] ai-digital-shop-group 第 3 步（已付费用户）：子步骤全完成时也展示横幅
+            // [Task 3] 两段式付费项目第 3 步（已付费用户）：子步骤全完成时也展示横幅
             // （即便已付费，横幅仍可作为"已解锁享受完整 SOP"的正向激励）
-            if (slug === 'ai-digital-shop-group' && stepIdx === 2) {
+            if (isTwoTierPricing(slug) && stepIdx === 2) {
               setShowUnlockBanner(true)
             }
             // 推进到下一个主步骤
@@ -1696,11 +1754,12 @@ export default function ProjectSOPPage() {
                       // [Task 2] 例外：ai-digital-shop-group 第 3 步（idx=2）允许打卡
                       // [阶段一·两段式付费闭环] 扩展为 ai-digital-shop-group 前 3 步（idx<3）均不锁
                       // [测试模式] 例外：idx >= 3 的步骤强制解锁
+                      // [Task:复用数字店群付费逻辑] 两段式付费项目前 3 步免费（idx<3），第 4 步起锁
+                      // 单段式项目（无货源/有货源/跨境等）仍走 idx >= FREE_MAIN_STEPS=2 拦截
                       const isSubLocked =
                         !UNLOCK_ALL_STEPS_FOR_TESTING &&
                         !isPaidMember &&
-                        idx >= FREE_MAIN_STEPS &&
-                        !(slug === 'ai-digital-shop-group' && idx < 3)
+                        idx >= getFreeSteps(slug)
                       return (
                         <div
                           key={sub.id}
@@ -1830,8 +1889,9 @@ export default function ProjectSOPPage() {
                           - [测试模式] idx >= 3 不显示付费横幅 */}
                     {(() => {
                       if (UNLOCK_ALL_STEPS_FOR_TESTING && idx >= 3) return null
-                      const isAiShopStep3 = slug === 'ai-digital-shop-group' && idx === 2
-                      const shouldShow = isAiShopStep3
+                      // [Task:复用数字店群付费逻辑] 两段式付费项目第 3 步横幅统一显示
+                      const isStep3Free = isTwoTierPricing(slug) && idx === 2
+                      const shouldShow = isStep3Free
                         ? showUnlockBanner && !isPaidMember
                         : !isPaidMember && idx >= FREE_MAIN_STEPS
                       if (!shouldShow) return null
@@ -1851,10 +1911,10 @@ export default function ProjectSOPPage() {
                             </div>
                             <div className="flex-1 min-w-0">
                               <div className="text-sm font-extrabold text-amber-900 leading-tight">
-                                🔒 完成该步骤需要加入实操会员
+                                前三步配置已经完成！即将进入 AI 核心选题与内容制作实战
                               </div>
                               <p className="mt-1 text-xs text-amber-800/80 leading-relaxed">
-                                您当前已完成前 {currentStep} 步，离这个进阶玩法只差一步之遥。加入会员，您不仅能看到详细清单，还能获得 AI 随行教练的实时反馈。
+                                加入 69 元/月 实操会员，解锁完整爆款选题清单与 AI 创作教练。
                               </p>
                               <Link
                                 href="/pricing#plan-monthly-69"
@@ -2179,9 +2239,9 @@ export default function ProjectSOPPage() {
         )}
       </AnimatePresence>
 
-      {/* ════════ [Task 2] 第 3 步完成时的"精准选品"付费解锁拦截（仅 ai-digital-shop-group）══════ */}
+      {/* ════════ [Task 2] 第 3 步完成时的付费解锁拦截（3 个两段式付费项目共用）══════ */}
       <AnimatePresence>
-        {unlockStepModal.open && slug === 'ai-digital-shop-group' && (
+        {unlockStepModal.open && isTwoTierPricing(slug) && (
           <motion.div
             key="unlock-step-modal"
             initial={{ opacity: 0 }}
@@ -2216,18 +2276,31 @@ export default function ProjectSOPPage() {
                   <Lock size={26} className="text-white" />
                 </div>
                 <h3 className="text-lg md:text-xl font-extrabold text-slate-900 leading-tight">
-                  🔓 解锁核心选品权限
+                  {(slug === 'ai-image-text-media' || slug === 'ai-video-media') ? '🔓 解锁 AI 核心选题权限' : '🔓 解锁核心选品权限'}
                 </h3>
-                <p className="mt-3 text-sm text-slate-600 leading-relaxed text-left">
-                  精准选品是店群项目的核心。要解锁后续步骤与完整 AI 选品支持，请加入<strong className="text-slate-900">实操会员</strong>或<strong className="text-slate-900">陪跑计划</strong>。
-                </p>
+                <p
+                  className="mt-3 text-sm text-slate-600 leading-relaxed text-left"
+                  dangerouslySetInnerHTML={{
+                    __html: (slug === 'ai-image-text-media' || slug === 'ai-video-media')
+                      ? '精准选题与 AI 内容制作是自媒体项目的核心。要解锁后续步骤与完整 AI 创作支持，请加入<strong className="text-slate-900">实操会员</strong>或<strong className="text-slate-900">陪跑计划</strong>。'
+                      : '精准选品是店群项目的核心。要解锁后续步骤与完整 AI 选品支持，请加入<strong className="text-slate-900">实操会员</strong>或<strong className="text-slate-900">陪跑计划</strong>。',
+                  }}
+                />
 
                 <div className="mt-5 space-y-2.5 text-left">
-                  {[
-                    { emoji: '🎯', label: '解锁 4-8 步精准选品 SOP + AI 选品工具栈' },
-                    { emoji: '🧠', label: 'AI 随行教练 7×24 实操答疑' },
-                    { emoji: '📈', label: '精准选品后 100% 复购方向 + 客单提升' },
-                  ].map((b) => (
+                  {(
+                    slug === 'ai-image-text-media' || slug === 'ai-video-media'
+                      ? [
+                          { emoji: '🎯', label: '解锁 4-9 步核心选题 SOP + AI 创作工具链' },
+                          { emoji: '🧠', label: 'AI 随行教练 7×24 实操答疑' },
+                          { emoji: '📈', label: '精准选题后 100% 爆款方向 + 内容产出跃升' },
+                        ]
+                      : [
+                          { emoji: '🎯', label: '解锁 4-8 步精准选品 SOP + AI 选品工具栈' },
+                          { emoji: '🧠', label: 'AI 随行教练 7×24 实操答疑' },
+                          { emoji: '📈', label: '精准选品后 100% 复购方向 + 客单提升' },
+                        ]
+                  ).map((b) => (
                     <div key={b.label} className="flex items-start gap-2 text-xs text-slate-700">
                       <span>{b.emoji}</span>
                       <span className="leading-relaxed">{b.label}</span>

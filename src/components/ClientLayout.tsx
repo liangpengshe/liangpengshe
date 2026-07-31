@@ -350,17 +350,17 @@ export default function ClientLayout({
 
               {!authLoading && !isAuthenticated && (
                 <>
-                  {/* 未登录态：登录（白色描边）+ 注册（蓝紫渐变实体） */}
+                  {/* 未登录态：登录（描边胶囊 · 半透白底适配白底 header） */}
                   <Link
                     href="/auth/login"
-                    className="text-sm font-bold text-slate-700 bg-white border border-slate-300 px-3.5 py-1.5 rounded-lg hover:bg-slate-50 hover:border-slate-400 transition-colors"
+                    className="text-sm font-medium text-slate-700 bg-transparent border border-slate-300 hover:bg-slate-100 hover:border-slate-400 px-3 py-1.5 rounded-full transition-colors"
                     data-testid="nav-login"
                   >
                     登录
                   </Link>
                   <Link
                     href="/auth/signup"
-                    className="text-sm font-extrabold text-white bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 px-3.5 py-1.5 rounded-lg shadow-sm hover:shadow-md transition-all"
+                    className="text-sm font-extrabold text-white bg-gradient-to-r from-blue-500 to-indigo-500 hover:opacity-90 px-4 py-1.5 rounded-full shadow-sm hover:shadow-md transition"
                     data-testid="nav-signup"
                   >
                     注册

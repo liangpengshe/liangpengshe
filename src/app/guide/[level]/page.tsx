@@ -96,9 +96,10 @@ const LEVEL_META: Record<Level, {
     badge: '第二层 · 放大',
     bg: 'bg-gradient-to-br from-rose-500 to-pink-600',
     ring: 'ring-rose-300/60',
-    // 任务 3B 改造：flow 从抖音改为公众号（统一自媒体图文运营入口）
+    // 任务 3B 改造：flow 流量型 OPC 任务 2 注册入口（小红书创作者中心）
+    // 2025 改：原微信公众号 → 小红书（更适配图文/笔记类自媒体起步）
     registerUrls: [
-      { label: '📱 微信公众号', url: 'https://mp.weixin.qq.com/' },
+      { label: '📱 小红书创作者中心', url: 'https://creator.xiaohongshu.com/' },
     ],
     // 流量型 OPC 任务 3 改造：跳转豹纹PLUS（豹纹工坊）AI 内容工具
     downloadUrl: 'https://www.baowenplus.com/',
@@ -581,7 +582,7 @@ export default function LevelGuidePage() {
   /**
    * 任务清单文案 · 按 OPC level 差异化（任务 3B 覆盖）
    * trader: 淘宝店 + 抖店（双入口，文案统一）
-   * flow: 微信公众号（统一自媒体图文运营入口）
+   * flow: 小红书（统一自媒体图文运营入口）—— 2025 改：原微信公众号 → 小红书
    * system/asset: 保持差异化
    */
   const TASK_TEXTS_BY_LEVEL: Record<Level, {
@@ -605,9 +606,9 @@ export default function LevelGuidePage() {
       task3Icon: '⚙️',
     },
     flow: {
-      task2Title: '注册你的第一个微信公众号（+40 分）',
+      task2Title: '注册你的第一个小红书账号（+40 分）',
       task2Score: 40,
-      task2Desc: 'AI 自媒体图文运营统一从公众号起步',
+      task2Desc: 'AI 自媒体图文运营统一从小红书起步',
       task2Icon: '📱',
       task3Title: '体验AI工具（+40 分）',
       task3Score: 40,
