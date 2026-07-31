@@ -144,8 +144,8 @@ function ProjectsPageInner() {
     if (recommend === 'flow') {
       return {
         title: `${recommendMeta.emoji} ${recommendMeta.label} · 精准推荐`,
-        body: '根据您【流量型 OPC】的诊断与学习阶段，系统优先为您推荐 AI 自媒体群项目 或 AI 跨境电商项目 开始实操。请选择您的起点。',
-        suggestedNames: ['AI自媒体群项目', 'AI跨境电商项目'],
+        body: '根据您【流量型 OPC】的诊断与学习阶段，系统优先为您推荐 AI 图文自媒体项目、AI 视频自媒体项目 或 AI 跨境电商项目 开始实操。请选择您的起点。',
+        suggestedNames: ['AI图文自媒体项目', 'AI视频自媒体项目', 'AI跨境电商项目'],
       }
     }
     if (recommend === 'system') {

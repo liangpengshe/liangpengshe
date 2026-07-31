@@ -37,7 +37,7 @@ import {
  * 转化漏斗：
  *   mindset → /diagnosis（最终让 AI 辅助决定）
  *   左侧 CTA → /market/projects?slug=ai-digital-shop-group
- *   右侧 CTA → /market/projects?slug=ai-self-media-group
+ *   右侧 CTA → /market/projects?recommend=flow （流量型项目推荐聚合页，含 AI图文/AI视频/AI工具/AI跨境）
  * ------------------------------------------------------------
  */
 
@@ -422,12 +422,12 @@ export default function MindsetPage() {
               )
             })}
 
-            {/* 右侧底部 CTA → 自媒体 SOP */}
+            {/* 右侧底部 CTA → 流量型项目推荐（原 ai-self-media-group 已拆为图文/视频两个，CTA 改为流量型推荐聚合页） */}
             <Link
-              href="/market/projects?slug=ai-self-media-group"
+              href="/market/projects?recommend=flow"
               className="group inline-flex items-center justify-center gap-2 bg-gradient-to-r from-blue-500 to-violet-600 hover:from-blue-600 hover:to-violet-700 text-white px-5 py-3 rounded-2xl text-sm font-extrabold shadow-md hover:shadow-lg hover:scale-[1.01] active:scale-[0.99] transition-all"
             >
-              📈 前往 AI 自媒体 SOP
+              📈 前往流量型项目推荐（图文 + 视频）
               <ArrowRight size={14} className="group-hover:translate-x-0.5 transition-transform" />
             </Link>
           </div>
