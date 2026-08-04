@@ -151,6 +151,8 @@ export default function PhoneLoginPage() {
           window.localStorage.setItem('loginAt', String(Date.now()))
           // 兼容旧版 key（与 ClientLayout 共享）
           window.localStorage.setItem('opc_device_id', data.user?.phone || trimmedPhone)
+          // [关键] 派发自定义事件，让 ClientLayout 立即刷新 nav 状态（不等 storage 事件）
+          window.dispatchEvent(new Event('opc:auth-changed'))
         }
 
         setSuccess(data.message || (data.isNewUser ? '注册成功' : '登录成功'))

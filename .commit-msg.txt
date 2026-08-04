@@ -1,0 +1,27 @@
+fix: 登录后导航栏状态切换三重兜底 + 退出登录卡死修复
+
+问题描述：
+- /auth/login 通过 /api/auth/mock-verify-code 仅写 localStorage（isLoggedIn/true 等 4 个 key）
+  不写 supabase auth session，导致 ClientLayout 的 onAuthStateChange 无法感知登录成功
+- 退出登录时 await supabase.auth.signOut() 在 supabaseUrl 缺失时永远 pending
+  后续清理代码（localStorage.removeItem）永远不执行
+- 登录态切换不持久（跨页面）或不一致
+
+核心修复（src/components/ClientLayout.tsx）：
+1. 新增 useEffect 监听 isLoggedIn localStorage + storage 事件 + opc:auth-changed 自定义事件
+   三重兜底：mount 时立即同步 / 跨标签页 / 同标签页立即生效
+2. handleSignOut 用 Promise.race + 2s 超时降级，避免 supabase.auth.signOut 永远 pending
+3. 退出时清理 4 个 mock localStorage key（isLoggedIn/opc_token/opc_user/opc_device_id）
+   并派发 opc:auth-changed 事件让所有 ClientLayout 实例同步
+
+辅助修复（src/app/auth/login/page.tsx）：
+- 登录成功后派发 opc:auth-changed 事件，让 ClientLayout 不等 storage 事件立即生效
+
+测试（tests/browser-test/）：
+- 新增 test-login-flow-nav.js 完整闭环 4/4 PASS：
+  1) 登录→/member nav 立即切换
+  2) 跨页面 nav 持久
+  3) 退出登录跳 /auth/login + 清理 localStorage
+  4) 退出后首页 nav 切回未登录态
+
+Co-Authored-By: Claude <noreply@anthropic.com>

@@ -167,6 +167,41 @@ export default function ClientLayout({
     }
   }, [])
 
+  // 同步本地 Mock 登录态：监听 isLoggedIn localStorage + 自定义 opc:auth-changed 事件
+  // [原因] 登录页通过 /api/auth/mock-verify-code 仅写 localStorage，不写 supabase session
+  //        所以仅靠 onAuthStateChange 无法感知 mock 登录成功，需用此 useEffect 兜底
+  useEffect(() => {
+    const syncFromLocal = () => {
+      try {
+        if (typeof window === 'undefined') return
+        const flag = window.localStorage.getItem('isLoggedIn') === 'true'
+        if (flag && !authUser) {
+          // 构造轻量 authUser（让 nav 切换到登录态）
+          const raw = window.localStorage.getItem('opc_user')
+          let id = 'mock-user', phone: string | null = null
+          try { if (raw) { const u = JSON.parse(raw); id = u.id || id; phone = u.phone || null } } catch { /* noop */ }
+          setAuthUser({ id, email: null, phone })
+        } else if (!flag && authUser) {
+          // 登出场景
+          setAuthUser(null)
+        }
+      } catch { /* noop */ }
+    }
+    syncFromLocal()
+    // 跨标签页同步
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === 'isLoggedIn' || e.key === 'opc_user') syncFromLocal()
+    }
+    // 同一标签页登录页派发的事件
+    const onAuthChanged = () => syncFromLocal()
+    window.addEventListener('storage', onStorage)
+    window.addEventListener('opc:auth-changed', onAuthChanged)
+    return () => {
+      window.removeEventListener('storage', onStorage)
+      window.removeEventListener('opc:auth-changed', onAuthChanged)
+    }
+  }, [authUser])
+
   // 点击头像外侧关闭 dropdown
   useEffect(() => {
     if (!avatarOpen) return
@@ -195,14 +230,28 @@ export default function ClientLayout({
   /** 退出登录 */
   const handleSignOut = useCallback(async () => {
     setAvatarOpen(false)
+    // [Bug 修复] supabase.auth.signOut() 在 supabaseUrl 缺失时永远 pending
+    // 用 Promise.race + 2s 超时降级 + 优先清理 localStorage
     try {
       const supabase = createClient()
       if (supabase) {
-        await supabase.auth.signOut()
+        const signOutPromise = supabase.auth.signOut()
+        const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 2000))
+        await Promise.race([signOutPromise, timeoutPromise])
       }
     } catch {
       // 静默降级
     }
+    // [Mock 登录态] 清理 localStorage + 派发事件让所有 ClientLayout 实例同步
+    try {
+      if (typeof window !== 'undefined') {
+        window.localStorage.removeItem('isLoggedIn')
+        window.localStorage.removeItem('opc_token')
+        window.localStorage.removeItem('opc_user')
+        window.localStorage.removeItem('opc_device_id')
+        window.dispatchEvent(new Event('opc:auth-changed'))
+      }
+    } catch { /* noop */ }
     // 清理本地用户态
     setAuthUser(null)
     router.push('/auth/login', { scroll: false })
